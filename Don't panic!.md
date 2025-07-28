@@ -265,7 +265,10 @@ Except
 
 🚧 **TODO**
    
-   - Except as an enhanced `Option` with an error message
+   - Except as an enhanced `Option` with error information
+     (message or something else)
+
+   - `Except.toOption`
 
    - JSON example
 
