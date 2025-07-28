@@ -224,7 +224,58 @@ def getCoords (string : String) : Option (Nat × Nat) :=
 -- none
 ```
 
+Imperative style with the `do` block:
+
+```lean
+def getCoords' (string : String) : Option (Nat × Nat) := do
+  let parts := string.splitOn " "
+  let x_str <- parts[0]?
+  let y_str <- parts[1]?
+  let x <- x_str.toNat?
+  let y <- y_str.toNat?
+  return (x, y)
+
+#eval getCoords' "3 4"
+-- some (3, 4)
+
+#eval getCoords' "douze quarante-deux"
+-- none
+```
+
+As a monad, `Option`:
+
+  - lifts an element `a : `α` to `some a : Option α`,
+
+  - chains operations by returning the first `Option.none` which
+    occurs, or `some` of the final result if all operations succeed.
+
+```lean
+def pure : α → Option α := Option.some
+
+def bind : Option α → (α → Option β) → Option β
+  | none,   _ => none
+  | some a, f => f a
+```
+
+
+
 
 Except
 --------------------------------------------------------------------------------
 
+🚧 **TODO**
+   
+   - Except as an enhanced `Option` with an error message
+
+   - JSON example
+
+   - try catch syntax (instantiate `MonadExcept`)
+
+ IO
+ ----------------------------
+
+   - instantiate MonadExcept (try catch syntax)
+
+   - list / use "POSIX"-like error set
+
+   - custom error types with IO (EIO and replace `IO.Error` with custom error type)
