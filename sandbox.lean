@@ -1,18 +1,27 @@
 
+def getCoords (string : String) : Option (Nat × Nat) :=
+  let parts := string.splitOn " "
+  let xy_str := match parts[0]? with
+  | none => none
+  | some x => match parts[1]? with
+    | none => none
+    | some y => some (x, y)
+  match xy_str with
+  | none => none
+  | some (x, y) => match x.toNat? with
+    | none => none
+    | some x' => match y.toNat? with
+      | none => none
+      | some y' => some (x', y')
 
-structure MyType where
-  val : Nat
-  deriving Inhabited, Repr
+#eval getCoords "3 4"
+-- some (3, 4)
 
-def myFunction : MyType :=
-  panic! "This function is not implemented yet!"
+#eval getCoords "douze quarante-deux"
+-- none
 
-inductive Nat' where
-  | zero : Nat'
-  | succ (n : Nat') : Nat'
-  deriving Inhabited, Repr
+def a := [1, 2, 3]
 
-#eval Nat'.zero
-#eval Nat'.succ Nat'.zero
+#eval a[42]!
 
-#eval (default : Empty)
+#eval getElem! a 42

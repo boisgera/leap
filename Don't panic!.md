@@ -1,6 +1,10 @@
 Don't panic!
 ================================================================================
 
+![Don't panic! This is fine.](images/this-is-fine.webp)
+
+Panic!
+--------------------------------------------------------------------------------
 
 In Lean, we can use `panic!` to signal an error and exit the program with a message:
 
@@ -31,11 +35,43 @@ def kthxbye : IO Unit := do
   panic! "bye!"
 ```
 
+In the Lean standard library, `panic!` is for example raised to access an element of a list at index which may be out ouf bounds.
+When `arr` is a collection of elements of type `elem`, the syntax `arr[i]!` 
+returns the i'th element of the collection if the index is within the collection
+bounds, or otherwise -- returns the default term from `Inhabited elem` for type-checking purposes and effectively -- panics at runtime.
+
+
+```lean
+def a := [1, 2, 3]
+
+#eval a[0]!
+-- 0
+
+#eval a[42]!
+-- PANIC at _private.Init.GetElem.0.List.get!Internal ...: invalid index
+-- ...
+```
+
+The signature of `getElem!` is:
+
+```lean
+
+The syntax is actually a shortcut for `getElem!`:
+
+```lean
+#eval a.getElem! 0
+-- 0  
+
+#eval a.getElem! 42
+PANIC at _private.Init.GetElem.0.List.get!Internal Init.GetElem:325:18: invalid index
+```
+
+
 Not that there is no way to recover from a panic, so it is best to use it
 only for situations that are truly unrecoverable (or as a temporary measure
 in prototyping).
 
-### Do not mess with the type cheker
+### Do not mess with the type checker
 
 Lean does not suspend the type checker when evaluating `panic!`. 
 Instead, it follows the following compile-time rule:
@@ -137,7 +173,7 @@ except Exception:
     print("🛑")
 ```
 
-will fail and print 👋[^1].
+will fail and print 👋.
 
 ### Details
 
@@ -160,3 +196,35 @@ except:
 ```
 
 Both these code snippers will succeed and print 🛑.
+
+
+Option
+--------------------------------------------------------------------------------
+
+```lean
+def getCoords (string : String) : Option (Nat × Nat) :=
+  let parts := string.splitOn " "
+  let xy_str := match parts[0]? with
+  | none => none
+  | some x => match parts[1]? with
+    | none => none
+    | some y => some (x, y)
+  match xy_str with
+  | none => none
+  | some (x, y) => match x.toNat? with
+    | none => none
+    | some x' => match y.toNat? with
+      | none => none
+      | some y' => some (x', y')
+
+#eval getCoords "3 4"
+-- some (3, 4)
+
+#eval getCoords "douze quarante-deux"
+-- none
+```
+
+
+Except
+--------------------------------------------------------------------------------
+
