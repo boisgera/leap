@@ -9,3 +9,8 @@ version = "0.1.0"
 
 [dependencies]
 pandoc = ">=3.7.0.2,<4"
+python = ">=3.13.5,<3.14"
+curl = ">=8.14.1,<9"
+
+[pypi-dependencies]
+raylib = ">=5.5.0.2, <6"
