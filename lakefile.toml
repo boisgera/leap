@@ -1,13 +1,16 @@
 name = "leap"
 version = "0.1.0"
-defaultTargets = ["Python", "graph", "snake"]
+defaultTargets = ["Python", "Raylib", "maze", "snake"]
 
 [[lean_lib]]
 name = "Python"
 
+[[lean_lib]]
+name = "Raylib"
+
 [[lean_exe]]
-name = "graph"
-root = "Graph"
+name = "maze"
+root = "Maze"
 
 [[lean_exe]]
 name = "snake"
