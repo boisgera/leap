@@ -1,5 +1,8 @@
 import Std
+import Python
+
 open Std (HashSet)
+open Python (eval exec)
 
 abbrev Node := Nat × Nat
 
@@ -86,7 +89,7 @@ def WIDTH := 32
 def HEIGHT := 18
 def SCALE := 25 -- 800 x 450 size (16:9 aspect ratio)
 
-partial def getRandomPoints (count : Nat) (seed : Nat := 42) : List Point2 :=
+partial def getRandomPoints (count : Nat) (seed : Nat := 0) : List Point2 :=
   let rec loop (gen : StdGen) (n : Nat) (acc : List Point2) :=
     if n == 0 then
       acc.reverse
@@ -96,7 +99,7 @@ partial def getRandomPoints (count : Nat) (seed : Nat := 42) : List Point2 :=
       loop gen'' (n - 1) ((x, y) :: acc)
   loop (mkStdGen seed) count []
 
-def blocks := (getRandomPoints 300 (seed := 42)).filter (fun (x, y) => (x, y) != (0, 0))
+def blocks := (getRandomPoints 250 (seed := 0) ).filter (fun (x, y) => (x, y) != (0, 0))
 
 def Graph.ofBlocks (blocks : List Point2) : Graph := Id.run do
   let mut nodes : HashSet Node := {}
@@ -123,21 +126,6 @@ def Graph.ofBlocks (blocks : List Point2) : Graph := Id.run do
           if !blocks.contains neighbor then
             edges <- edges.insert (node, neighbor)
   return { nodes := nodes, edges := edges }
-
-
--- Interface to the Python Kernel
-namespace Python
-
-def eval (code : String) : IO String := do
-    IO.FS.writeFile "input" code
-    IO.FS.readFile "output"
-
-def exec (code : String) : IO Unit := do
-    let data <- eval code
-    if data != "None" then
-        panic! s!"Expected 'None' but got: {data}"
-
-end Python
 
 -- Python Bindings for raylib (mostly)
 def import_ (module : String) : IO Unit := do

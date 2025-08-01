@@ -1,17 +1,6 @@
+import Python
 
--- Interface to the Python Kernel
-namespace Python
-
-def eval (code : String) : IO String := do
-    IO.FS.writeFile "input" code
-    IO.FS.readFile "output"
-
-def exec (code : String) : IO Unit := do
-    let data <- eval code
-    if data != "None" then
-        panic! s!"Expected 'None' but got: {data}"
-
-end Python
+open Python (eval exec)
 
 -- Python Bindings for raylib (mostly)
 def import_ (module : String) : IO Unit := do
@@ -91,8 +80,6 @@ def UP : Vector2 := (0, -1)
 def DOWN : Vector2 := (0, 1)
 def LEFT : Vector2 := (-1, 0)
 def RIGHT : Vector2 := (1, 0)
-
--- -----------------------------------------------------------------------------
 
 structure GameState where
     snake_direction : Vector2
