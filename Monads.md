@@ -8,7 +8,7 @@
 
   - call counter example
 
-  - functions with computation graphs (?)
+  - functions with computation graphs (ie tracing)
 
   - PasswordProtected monad (?)
 
