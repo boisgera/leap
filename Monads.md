@@ -2,6 +2,17 @@
 
 **TODO:**
 
+
+  - POW: >>= easier than "bind"
+
+  - POW: easier to understand >>= if |> is understood first
+    example:
+
+    (give and example of |> in the context of a data pipeline
+    process?)
+
+    #eval IO.FS.readFile "collatz.py" >>= IO.println
+
   - do block
 
   - do block with pure functions : `Id.run`
