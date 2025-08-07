@@ -56,9 +56,9 @@ def parseNull (input : String): Option Json :=
     none
 
 def parseBool (input : String): Option Json :=
-  if input == "true" then
+  if input.startsWith "true" then
     some (Json.bool true)
-  else if input == "false" then
+  else if input.startsWith "false" then
     some (Json.bool false)
   else
     none
@@ -106,9 +106,9 @@ def parseNull (input : String): Option Json :=
     none
 
 def parseBool (input : String): Option Json :=
-  if input == "true" then
+  if input.startsWith "true" then
     some (Json.bool true)
-  else if input == "false" then
+  else if input.startsWith "false" then
     some (Json.bool false)
   else
     none
@@ -160,9 +160,9 @@ def parseNull (input : String): Option (Json × String) :=
     none
 
 def parseBool (input : String): Option (Json × String) :=
-  if input == "true" then
+  if input.startsWith "true" then
     some (Json.bool true, input.drop 4)
-  else if input == "false" then
+  else if input.startsWith "false" then
     some (Json.bool false, input.drop 5)
   else
     none
@@ -220,33 +220,45 @@ def parseNull (input : String): Option (Json × String) :=
     none
 
 def parseBool (input : String): Option (Json × String) :=
-  if input == "true" then
+  if input.startsWith "true" then
     some (Json.bool true, input.drop 4)
-  else if input == "false" then
+  else if input.startsWith "false" then
     some (Json.bool false, input.drop 5)
   else
     none
 
--- -- We need a more generic version of parseEverything
--- def parseEverything (parser : String → Option (α × String)) (input : String) : Option α :=
---   match parser input with
---   | some (json, rest) => if rest == "" then some json else none
---   | none => none
-
 mutual
 
+  -- one or more, comma-separated values (greedy)
   partial def parseValues (input : String) : Option (List Json × String) :=
-  sorry -- we need that to be greedy too, right?
+    match Json.parse input with
+    | none => none
+    | some (json, rest) =>
+      if rest.startsWith "," then
+        match parseValues (rest.drop 1) with
+        | none => none
+        | some (elements, rest) => some (json :: elements, rest)
+      else
+        some ([json], rest)
 
+  -- TODO: again here we kinda see some "monadic" pattern emerge...
+
+  -- TODO: don't we have higher order patterns that could come in handy here?
+  -- Like I want that, then that then that? (or I fail). That should be
+  -- (almost?) exactly the monadic stuff on options (?)
   partial def parseArray (input : String) : Option (Json × String) :=
     if input.startsWith "[" then
-      match parseValues (input.drop 1) with
-      | none => none
-      | some (elements, rest) =>
-        if rest.startsWith "]" then
-          return (Json.array elements, rest.drop 1)
-        else
-          none
+      let rest := input.drop 1
+      if rest.startsWith "]" then
+          pure (Json.array [], rest.drop 1)
+      else
+        match parseValues rest with
+        | none => none
+        | some (elements, rest) =>
+          if rest.startsWith "]" then
+            pure (Json.array elements, rest.drop 1)
+          else
+            none
     else
       none
 
@@ -260,33 +272,123 @@ def parseEverything (parser : String → Option (Json × String)) (input : Strin
   | some (json, rest) => if rest == "" then some json else none
   | none => none
 
-#eval Json.parse "null"
--- some (v4.Json.null, "")
+#eval Json.parse "[null]"
+-- some (v4.Json.array [v4.Json.null], "")
 
-#eval parseEverything Json.parse "null"
--- some (v4.Json.null)
-
-#eval Json.parse "null and more"
--- some (v4.Json.null, " and more")
-
-#eval parseEverything Json.parse "null and more"
--- none
-
-#eval Json.parse "false"
--- some (v4.Json.bool false, "")
+#eval Json.parse "[null,null]"
+-- some (v4.Json.array [v4.Json.null, v4.Json.null], "")
 
 #eval Json.parse "true"
 -- some (v4.Json.bool true, "")
 
-#eval Json.parse "null null"
--- some (v4.Json.null, " null")
+#eval Json.parse "[true]"
+-- some (v4.Json.array [v4.Json.bool true], "")
 
-#eval Json.parse "  null"
--- none
+#eval Json.parse "[]"
+-- some (v4.Json.array [], "")
+
+#eval Json.parse "[null,false,true]"
+-- some (v4.Json.array [v4.Json.null, v4.Json.bool false, v4.Json.bool true], "")
 
 end v4
 
+
 namespace v5
+/-
+Introduction of arrays (without whitespace). -> Need for mutually recursive
+functions!
+-/
+
+inductive Json
+| null : Json
+| bool (b : Bool) : Json
+| array (elements : List Json) : Json
+deriving Repr
+
+def parseNull (input : String): Option (Json × String) :=
+  if input.startsWith "null" then
+    some (Json.null, input.drop 4)
+  else
+    none
+
+def parseBool (input : String): Option (Json × String) :=
+  if input.startsWith "true" then
+    some (Json.bool true, input.drop 4)
+  else if input.startsWith "false" then
+    some (Json.bool false, input.drop 5)
+  else
+    none
+
+mutual
+
+  -- one or more, comma-separated values (greedy)
+  partial def parseValues (input : String) : Option (List Json × String) := do
+    let (json, input') <- Json.parse input
+    if input'.startsWith "," then
+      let (elements, input'') <- parseValues (input'.drop 1)
+      return (json :: elements, input'')
+    else
+      return ([json], input')
+
+  -- Is there no way to get rid of the "else none" here? If the actual type
+  -- was m Unit that would work ... YES! See the guarded version below.
+  partial def parseArray₀ (input : String) : Option (Json × String) := do
+    if input.startsWith "[" then
+      let input' := input.drop 1
+      if input'.startsWith "]" then
+          return (Json.array [], input'.drop 1)
+      let (elements, input'') <- parseValues input'
+      if input''.startsWith "]" then
+        return (Json.array elements, input''.drop 1)
+      else
+        none
+    else
+      none
+
+  partial def parseArray₁ (input : String) : Option (Json × String) := do
+    guard (input.startsWith "[")
+    let input' := input.drop 1
+    if input'.startsWith "]" then
+        return (Json.array [], input'.drop 1)
+    let (elements, input'') <- parseValues input'
+    guard (input''.startsWith "]")
+    return (Json.array elements, input''.drop 1)
+
+  partial def parseArray := parseArray₁
+
+  partial def Json.parse (input : String) : Option (Json × String) :=
+    parseNull input <|> parseBool input <|> parseArray input
+
+end
+
+def parseEverything (parser : String → Option (Json × String)) (input : String) : Option Json :=
+  match parser input with
+  | some (json, rest) => if rest == "" then some json else none
+  | none => none
+
+#eval Json.parse "[null]"
+-- some (v5.Json.array [v5.Json.null], "")
+
+#eval Json.parse "[null,null]"
+-- some (v5.Json.array [v5.Json.null, v5.Json.null], "")
+
+#eval Json.parse "true"
+-- some (v5.Json.bool true, "")
+
+#eval Json.parse "[true]"
+-- some (v5.Json.array [v5.Json.bool true], "")
+
+#eval Json.parse "[]"
+-- some (v5.Json.array [], "")
+
+#eval Json.parse "[null,false,true]"
+-- some (v5.Json.array [v5.Json.null, v5.Json.bool false, v5.Json.bool true], "")
+
+end v5
+
+
+
+namespace v999
 /-
 Parse whitespace. Two important concept here:
   - in the JSON spec, whitespace is actually *optional* whitespace :
@@ -297,4 +399,4 @@ Arf, fuck our whitespace is not represented in the Json structure,
 it needs a different signature. Actually can we just use trimLeft?
 Does it match the JSON spec?
 -/
-end v5
+end v999
