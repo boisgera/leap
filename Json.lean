@@ -384,11 +384,17 @@ def parseEverything (parser : String → Option (Json × String)) (input : Strin
 #eval Json.parse "[null,false,true]"
 -- some (v5.Json.array [v5.Json.null, v5.Json.bool false, v5.Json.bool true], "")
 
+#eval Json.parse "[[],[],[[null]]]"
+
 end v5
 
 
 
-namespace v999
+
+
+
+namespace v6
+
 /-
 Parse whitespace. Two important concept here:
   - in the JSON spec, whitespace is actually *optional* whitespace :
@@ -397,6 +403,259 @@ Parse whitespace. Two important concept here:
 
 Arf, fuck our whitespace is not represented in the Json structure,
 it needs a different signature. Actually can we just use trimLeft?
-Does it match the JSON spec?
+Does it match the JSON spec? Apparenrtly, yes.
+
+But's that's a bit hackish/ugly since it does not really give to WhiteSpace
+the same parser status than the other blocks ... Make a real parser out of
+Whitespace in the sequel?
+
+We *could* introduce some
+
+-- TODO: understand that like in the JSON spec, that's OPTIONAL whitespace
+def parseWhitespace (input : String) : Option (Unit × String) :=
+  return ((), input.trimLeft)
+
+but AFAICT, it is not worth it unless we manage to get a proper parser
+combinator framework on top of all this (later?).
 -/
-end v999
+
+inductive Json
+| null : Json
+| bool (b : Bool) : Json
+| array (elements : List Json) : Json
+deriving Repr
+
+-- Not used. trimLeft is all we need ATM
+def String.isWhiteSpace (s : String) : Bool :=
+  s |>.toList |>.all Char.isWhitespace
+
+
+def parseNull (input : String): Option (Json × String) := do
+  guard (input.startsWith "null")
+  return (Json.null, input.drop 4)
+
+def parseBool (input : String): Option (Json × String) :=
+  if input.startsWith "true" then
+    some (Json.bool true, input.drop 4)
+  else if input.startsWith "false" then
+    some (Json.bool false, input.drop 5)
+  else
+    none
+
+mutual
+
+  partial def parseValue (input : String) : Option (Json × String) := do
+    let input' := input.trimLeft
+    let (json, input'') <-
+      parseNull input'
+      <|> parseBool input'
+      <|> parseNumber input'
+      <|> parseArray input'
+    return (json, input''.trimLeft)
+
+  -- one or more, comma-separated values (greedy)
+  partial def parseValues (input : String) : Option (List Json × String) := do
+    let (json, input) <- Json.parse input.trimLeft
+    let input := input.trimLeft
+    if input.startsWith "," then
+      let (elements, input) <- parseValues (input.drop 1)
+      return (json :: elements, input.trimLeft)
+    else
+      return ([json], input)
+
+  partial def parseArray (input : String) : Option (Json × String) := do
+    guard (input.startsWith "[")
+    let input' := (input.drop 1).trimLeft
+    if input'.startsWith "]" then
+        return (Json.array [], input'.drop 1)
+    let (elements, input'') <- parseValues input'
+    guard (input''.startsWith "]")
+    return (Json.array elements, input''.drop 1)
+
+  partial def Json.parse (input : String) : Option (Json × String) :=
+    parseNull input <|> parseBool input <|> parseArray input
+
+end
+
+def parseEverything (parser : String → Option (Json × String)) (input : String) : Option Json :=
+  match parser input with
+  | some (json, rest) => if rest == "" then some json else none
+  | none => none
+
+#eval parseValue "  [null, [true\n, \n false, [ ] ]   ]   "
+-- some (v6.Json.array [v6.Json.null, v6.Json.array [v6.Json.bool true, v6.Json.bool false, v6.Json.array []]], "")
+
+
+end v6
+
+
+namespace v7
+
+/-
+Parse numbers (as Float or as a custom structure? Let's say Float for now).
+-/
+
+
+inductive Json
+| null : Json
+| bool (b : Bool) : Json
+| number (n : Float) : Json
+| array (elements : List Json) : Json
+deriving Repr
+
+
+def parseNull (input : String): Option (Json × String) := do
+  guard (input.startsWith "null")
+  return (Json.null, input.drop 4)
+
+def parseBool (input : String): Option (Json × String) :=
+  if input.startsWith "true" then
+    some (Json.bool true, input.drop 4)
+  else if input.startsWith "false" then
+    some (Json.bool false, input.drop 5)
+  else
+    none
+
+def parseSign (input : String) : Option (Float × String) :=
+  if input.startsWith "-" then
+    some (-1.0, input.drop 1)
+  else
+    some (1.0, input)
+
+def parseDigit (input : String) : Option (Nat × String) := do
+  let char <- input.get? 0
+  guard char.isDigit
+  let digit := char.toNat - '0'.toNat
+  return (digit, input.drop 1)
+
+def parseInteger (input : String) : Option (Float × String) := do
+  let (first, input) <- parseDigit input
+  if first == 0 then
+    return (0, input)
+  else
+    let mut current := first.toFloat
+    let mut input := input
+    repeat
+      let next? := parseDigit input
+      match next? with
+      | some (digit, input_) =>
+        current := current * 10 + digit.toFloat
+        input := input_
+      | none => break
+    return (current, input)
+
+#eval parseInteger "123"
+-- some (123, "")
+
+#eval parseInteger "-123"
+-- some (-123, "")
+
+#eval parseInteger "0123"
+-- some (0, "123")
+
+def parseFraction (input : String) : Option (Float × String) := do
+  if input.startsWith "." then
+    let input := input.drop 1
+    let mut current := 0.0
+    let mut factor := 0.1
+    let mut input := input
+    repeat
+      let next? := parseDigit input
+      match next? with
+      | some (digit, input_) =>
+        current := current + factor * digit.toFloat
+        factor := factor / 10.0
+        input := input_
+      | none => break
+    return (current, input)
+  else
+    return (0.0, input)
+
+#eval parseFraction ".123"
+-- some (0.123000, "")
+
+def parseExponent (input : String) : Option (Float × String) := do
+  if (input.startsWith "e" || input.startsWith "E") then
+    let input := input.drop 1
+    let (sign, input) <- parseSign input
+    let mut (integer, input) <- parseInteger input
+    repeat
+      let next? := parseDigit input
+      match next? with
+      | some (digit, input_) =>
+        integer := integer * 10 + digit.toFloat
+        input := input_
+      | none => break
+    return (10.0 ^ (sign * integer), input)
+  else
+    return (1.0, input)
+
+def parseNumber (input : String) : Option (Json × String) := do
+  let (sign, input) <- parseSign input
+  let (integer, input) <- parseInteger input
+  let (fraction, input) <- parseFraction input
+  let (exponent, input) <- parseExponent input
+  return (Json.number (sign * (integer + fraction) * exponent), input)
+
+#eval parseNumber "123.456e-2"
+-- some (1.234560, "")
+
+#eval parseNumber "123.456"
+-- some (123.456000, "")
+
+#eval parseNumber "-123.456e2"
+-- some (-12345.6000000, "")
+
+#eval parseNumber "-123.456e007"
+-- some (-1234560000.000000, "")
+
+
+mutual
+
+  partial def parseValue (input : String) : Option (Json × String) := do
+    let input' := input.trimLeft
+    let (json, input'') <- parseNull input' <|> parseBool input' <|> parseArray input'
+    return (json, input''.trimLeft)
+
+  -- one or more, comma-separated values (greedy)
+  partial def parseValues (input : String) : Option (List Json × String) := do
+    let (json, input) <- Json.parse input.trimLeft
+    let input := input.trimLeft
+    if input.startsWith "," then
+      let (elements, input) <- parseValues (input.drop 1)
+      return (json :: elements, input.trimLeft)
+    else
+      return ([json], input)
+
+  partial def parseArray (input : String) : Option (Json × String) := do
+    guard (input.startsWith "[")
+    let input' := (input.drop 1).trimLeft
+    if input'.startsWith "]" then
+        return (Json.array [], input'.drop 1)
+    let (elements, input'') <- parseValues input'
+    guard (input''.startsWith "]")
+    return (Json.array elements, input''.drop 1)
+
+  partial def Json.parse (input : String) : Option (Json × String) :=
+    parseNull input
+    <|> parseBool input
+    <|> parseNumber input
+    <|> parseArray input
+
+end
+
+def parseEverything (parser : String → Option (Json × String)) (input : String) : Option Json :=
+  match parser input with
+  | some (json, rest) => if rest == "" then some json else none
+  | none => none
+
+#eval parseValue "[1.0, 3.14, null, true, 1e-3]"
+
+end v7
+
+namespace v8
+-- do we go for objects or strings now? In any case, that's similar respectively
+-- to how we have handled arrays and digits respectively.
+-- NOTA: we NEED strings to manage objects (obviously ...), so that's string
+-- first. Actually, this is gonna be easy AFAICT. Great!
+end v8
