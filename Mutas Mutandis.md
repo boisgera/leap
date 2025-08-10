@@ -144,11 +144,53 @@ TODO: let, x and x', shadowing, let mut (do block only) that can't be shadowed.
     be shadowed (it can only be reassigned)
   - `let mut x = ...; x = ...` is a reassignment, not a mutation
 
-How are "variables" called in the FP literature?
+How are "variables" called in the FP literature? OK, "variables", because the
+rhs my be the argument of a function, so they effectively can refer to different
+values.
 
 Copilot : In functional programming, "variables" are often referred to as "bindings" or "names". This is because they are not mutable in the same way as in imperative programming. Once a binding is established, it cannot be changed to refer to a different value.
 
 Warning: names denotes data **in a given context**.
+
+Nota: at first sight you may assume that immutable variables and shadowing are
+good enough to emulate directly all imperatives patterns, but consider:
+
+```lean
+def f (n : Nat) : Nat := Id.run do
+  if n % 2 == 0 then
+    let m := n / 2
+  else
+    let m := 3 * n + 1
+  return m
+```
+
+It doesn't work! Because the scoping of the variable `m` is limited to the
+if branch ... So either you can go functional (if is an expression):
+
+```lean
+def f (n : Nat) : Nat :=
+  if n % 2 == 0 then
+    n / 2
+  else
+    3 * n + 1
+```
+
+or you embrace mutable variables:
+
+
+```lean
+def f (n : Nat) : Nat := Id.run do
+  let mut n := 0
+  if n % 2 == 0 then
+    m := n / 2
+  else
+    m := 3 * n + 1
+  return m
+```
+
+The same issue happens for for loops.
+
+
 
 Immutable Data Structures
 --------------------------------------------------------------------------------
