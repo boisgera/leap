@@ -60,11 +60,11 @@ def zeroOrMore {α : Type} (p : Parser α) : Parser (List α) := do
   let mut out : List α := []
   repeat
     let input <- get
-    match p input with
-    | none => break
-    | some (a, input) =>
-      set input
-      out := a :: out
+      match p input with
+      | none => break
+      | some (a, input) =>
+        set input
+        out := a :: out
   return out.reverse
 
 -- TODO: test with more abstract version where we try to parse directly
@@ -138,23 +138,33 @@ def Char.isHexDigit (c : Char) : Bool :=
   ('a' ≤ c ∧ c ≤ 'f') ∨
   ('A' ≤ c ∧ c ≤ 'F')
 
-def hexCharToNat (c : Char) : Nat :=
+def hexCharToNat? (c : Char) : Option Nat := do
   if '0' ≤ c ∧ c ≤ '9' then
-    c.toNat - '0'.toNat
+    return c.toNat - '0'.toNat
   else if 'a' ≤ c ∧ c ≤ 'f' then
-    10 + (c.toNat - 'a'.toNat)
+    return 10 + (c.toNat - 'a'.toNat)
   else if 'A' ≤ c ∧ c ≤ 'F' then
-    10 + (c.toNat - 'A'.toNat)
+    return 10 + (c.toNat - 'A'.toNat)
   else
-    panic! s!"Invalid hex character: {c}"
+    none
 
-def hexStringToNat (s : String) : Nat :=
-  s.foldl (init := 0) fun acc c =>
-    let d := hexCharToNat c
-    acc * 16 + d
+partial def hexStringToNat? (s : String) : Option Nat :=
+  List.foldl (do
+    let a <- ·
+    let n <- hexCharToNat? ·
+    return a * 16 + n
+  ) (some 0) s.toList
 
-#eval hexStringToNat "0041"
--- 65
+def hexStringToNat! (s : String) : Nat :=
+  match hexStringToNat? s with
+  | some n => n
+  | none => panic! "Invalid hex string: " ++ s
+
+#eval hexStringToNat! "0041"
+
+#eval hexStringToNat! "ff"
+
+#eval hexStringToNat! "100"
 
 def parseHexDigit : Parser Char := do
   let input <- get
@@ -178,7 +188,7 @@ def parse4HexDigits : Parser String := do
 def parseUnicodeCharacter : Parser Char := do
   _ <- parseLiteral "\\u"
   let hex <- parse4HexDigits
-  return (hex |> hexStringToNat |> Char.ofNat)
+  return (hex |> hexStringToNat! |> Char.ofNat)
 
 def parseEscapedCharacter : Parser Char := do
   _ <- parseLiteral "\\"
@@ -260,24 +270,41 @@ mutual
     let value <- parseElement
     return (key, value)
 
+  -- TODO members are (in this order, since trailing comma is not allowed)
+  --   - members "," member
+  --   - member
+  --   - nothing
+  -- UPDATE: Nope, find better.
+
+  -- TODO: reimplement
   partial def parseMembers : Parser (List (String × Json)) := do
     let mut members : List (String × Json) := []
     repeat
-      match (parseMember) with
+      let input <- get
+      match parseMember input with
       | none => break
-      | some member => members := members ++ [member]
+      | some (member, input) =>
+        members := members ++ [member]
+        set input
     return members
 
   partial def parseObject : Parser Json := do
     _ <- parseLiteral "{"
-    parseWhitespace
     let members <- parseMembers
     _ <- parseLiteral "}"
     return members |> HashMap.Raw.ofList |> Json.object
 
 end
 
-def Json.parse (input : String) : Option Json := do
+def Json.parse? (input : String) : Option Json := do
   let (json, input) <- parseValue input
   guard input.isEmpty -- input fully consumed
   return json
+
+-- #eval Json.parse? r#"{"iss_position": {"latitude": "38.9459", "longitude": "-96.0481"}, "message": "success", "timestamp": 1754944042}"#
+
+#eval Json.parse? r#"{"latitude": "38.9459", "longitude": "-96.0481"}"#
+
+#eval parseObject r#"{"latitude": "38.9459", "longitude": "-96.0481"}"#
+
+#eval parseMembers r#""latitude": "38.9459", "longitude": "-96.0481""#
