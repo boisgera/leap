@@ -222,12 +222,14 @@ mutual
     parseWhitespace
     return json
 
-  partial def parseValue : Parser Json :=
-    parseNull
-    <|> parseBool
-    <|> parseString
-    <|> parseArray
-    <|> parseObject
+  partial def parseValue : Parser Json := do
+    (
+      parseNull
+      <|> parseBool
+      <|> parseString
+      <|> parseArray
+      <|> parseObject
+    )
 
   -- one or more, comma-separated values (greedy)
   partial def parseElements : Parser (List Json) := do
@@ -259,30 +261,23 @@ mutual
     return (key, value)
 
   partial def parseMembers : Parser (List (String × Json)) := do
-    let mut members := []
+    let mut members : List (String × Json) := []
     repeat
       match (parseMember) with
-      | none =>
-        break
-      | some member =>
-        sorry
-        -- members := members ++ [member]
+      | none => break
+      | some member => members := members ++ [member]
     return members
 
-  partial def parseObject (input : String) : Option (Json × String) := do
-    let (_, input) <- parseLiteral "{" input
-    let input := input.trimLeft
-    match parseLiteral "}" input with
-    | some (_, input) =>
-      return ([] |> HashMap.Raw.ofList |> Json.object, input)
-    | none =>
-      let (members, input) <- parseMembers input
-      let (_, input) <- parseLiteral "}" input
-      return (members |> HashMap.Raw.ofList |> Json.object, input)
+  partial def parseObject : Parser Json := do
+    _ <- parseLiteral "{"
+    parseWhitespace
+    let members <- parseMembers
+    _ <- parseLiteral "}"
+    return members |> HashMap.Raw.ofList |> Json.object
 
 end
 
 def Json.parse (input : String) : Option Json := do
-  let (json, input) <- parseElement input
+  let (json, input) <- parseValue input
   guard input.isEmpty -- input fully consumed
   return json
