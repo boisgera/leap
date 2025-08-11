@@ -13,8 +13,12 @@
 
   - Lean ADT -> GADT -> Dependent types
 
+  - Become a better programmer in any language
+
 Limitations:
 
   - not a lot of API use
 
   - Lean is a "niche" language
+
+  - New course (expect sharp edges)

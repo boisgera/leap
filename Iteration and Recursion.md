@@ -73,6 +73,7 @@ from the Wikipedia article. And therefore I guess that if all you want to
 do is a proof (and you will use induction, you won't actually compute the
 lists), foldr is nicer.
 
+TODO: foldl and foldr to parse integers & decimal expansion
 )
 
 ```lean
