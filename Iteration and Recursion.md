@@ -13,6 +13,8 @@ And then if you can't/don't want to use monads & for loops:
      not tail-recursive, recomputes values => explosion ; collatz is fine? 
      (kinda))
 
+  - mention tail recursivity and tail call optimization
+
 ```lean
 def collatz (x0 n : Nat) : Nat :=
   match n with 
@@ -22,7 +24,11 @@ def collatz (x0 n : Nat) : Nat :=
   -- better than collatz (collatz x0 n) 1? Why? More friendly to the call stack!
 ```
 
-TODO: illustrate stack recursion limit in Python (which is NOT tail-recursive).
+TODO: illustrate stack recursion limit in Python (which doesn't have TCO).
+
+TODO: Trampoline in Python? 
+  - Trampoline in Python: <https://elc.github.io/posts/recursion-python/>
+
 
 ```lean
 def factorial (n : Nat) : Nat :=
