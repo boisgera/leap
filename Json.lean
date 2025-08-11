@@ -271,10 +271,11 @@ mutual
     return (key, value)
 
   -- TODO members are (in this order, since trailing comma is not allowed)
+  --   - nothing
   --   - members "," member
   --   - member
-  --   - nothing
-  -- UPDATE: Nope, find better.
+  -- UPDATE: Nope, find better. Manage the empty case manually first?
+  -- yeah that would actually probably be easier.
 
   -- TODO: reimplement
   partial def parseMembers : Parser (List (String × Json)) := do
