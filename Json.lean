@@ -221,6 +221,7 @@ def parseString : Parser Json := do
   _ <- parseLiteral "\""
   return Json.string (String.mk chars)
 
+-- Should I return the whitespace string instead of ()?
 partial def parseWhitespace : Parser Unit := do
   modify (·.trimLeft)
 
@@ -236,6 +237,7 @@ mutual
     (
       parseNull
       <|> parseBool
+      <|> parseNumber
       <|> parseString
       <|> parseArray
       <|> parseObject
@@ -260,6 +262,7 @@ mutual
     return Json.array elements
 
   partial def parseMember : Parser (String × Json) := do
+    parseWhitespace
     let key_json <- parseString
     let key <- match key_json with
       | Json.string s => some s
@@ -270,42 +273,65 @@ mutual
     let value <- parseElement
     return (key, value)
 
-  -- TODO members are (in this order, since trailing comma is not allowed)
-  --   - nothing
-  --   - members "," member
-  --   - member
-  -- UPDATE: Nope, find better. Manage the empty case manually first?
-  -- yeah that would actually probably be easier.
+  partial def parseCommaMember : Parser (String × Json) := do
+    _ <- parseLiteral ","
+    let member <- parseMember
+    return member
 
-  -- TODO: reimplement
   partial def parseMembers : Parser (List (String × Json)) := do
-    let mut members : List (String × Json) := []
-    repeat
-      let input <- get
-      match parseMember input with
-      | none => break
-      | some (member, input) =>
-        members := members ++ [member]
-        set input
-    return members
+    let member <- parseMember
+    let members <- zeroOrMore parseCommaMember
+    return member :: members
 
-  partial def parseObject : Parser Json := do
+  partial def parseEmptyObjectAsList : Parser (List (String × Json)) := do
+    _ <- parseLiteral "{"
+    parseWhitespace
+    _ <- parseLiteral "}"
+    return []
+
+  partial def parseNonEmptyObjectAsList : Parser (List (String × Json)) := do
     _ <- parseLiteral "{"
     let members <- parseMembers
     _ <- parseLiteral "}"
-    return members |> HashMap.Raw.ofList |> Json.object
+    return members
+
+  partial def parseObject : Parser Json := do
+    let list <- parseEmptyObjectAsList <|> parseNonEmptyObjectAsList
+    return (list |> HashMap.Raw.ofList |> Json.object)
 
 end
 
+-- We use parseElement rather than parseValue (trimmed string)
+-- That's probably more convenient for the end user
 def Json.parse? (input : String) : Option Json := do
-  let (json, input) <- parseValue input
+  let (json, input) <- parseElement input
   guard input.isEmpty -- input fully consumed
   return json
 
--- #eval Json.parse? r#"{"iss_position": {"latitude": "38.9459", "longitude": "-96.0481"}, "message": "success", "timestamp": 1754944042}"#
+#eval Json.parse? r#"
+{
+  "iss_position": {
+    "latitude": "38.9459",
+    "longitude": "-96.0481"
+  },
+  "message": "success",
+  "timestamp": 1754944042
+}
+"#
+
+#eval parseValue r#"{
+"iss_position": {"latitude": "38.9459", "longitude": "-96.0481"}, "message": "success", "timestamp": 1754944042}"#
+
+#eval Json.parse? r#"{"iss_position": null, "message": "success", "timestamp": 1}"#
+
+#eval Json.parse? "1"
 
 #eval Json.parse? r#"{"latitude": "38.9459", "longitude": "-96.0481"}"#
 
 #eval parseObject r#"{"latitude": "38.9459", "longitude": "-96.0481"}"#
 
 #eval parseMembers r#""latitude": "38.9459", "longitude": "-96.0481""#
+
+#eval parseCommaMember r#", "longitude": "-96.0481""#
+
+#eval parseMember r#"  "longitude": "-96.0481"        "#
