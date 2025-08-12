@@ -56,6 +56,10 @@ def parseDigit : Parser Nat := do
   let digit := char.toNat - '0'.toNat
   return digit
 
+
+-- TODO: generalize with prefix, postfix and separator
+-- (and a trailing sep option?) to help parse arrays and
+-- objects. Adapt oneOrMore afterwards.
 def zeroOrMore {α : Type} (p : Parser α) : Parser (List α) := do
   let mut out : List α := []
   repeat
@@ -255,6 +259,7 @@ mutual
       parseWhitespace
       return json :: []
 
+  -- BUG: we did not handle the case where the array is empty
   partial def parseArray : Parser Json := do
     _ <- parseLiteral "["
     let elements <- parseElements
