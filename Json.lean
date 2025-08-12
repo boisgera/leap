@@ -57,38 +57,71 @@ def parseDigit : Parser Nat := do
   return digit
 
 
--- TODO: generalize with prefix, postfix and separator
--- (and a trailing sep option?) to help parse arrays and
--- objects. Adapt oneOrMore afterwards.
-def zeroOrMore {α : Type} (p : Parser α) : Parser (List α) := do
-  let mut out : List α := []
+def parseNothing : Parser Unit := do
+  return ()
+
+
+mutual
+
+partial def oneOrMore {α : Type} (p : Parser α)
+  (parsePrefix := parseNothing)
+  (parsePostfix := parseNothing)
+  (parseSeparator : Parser Unit := parseNothing) : Parser (List α) := do
+  parsePrefix
+  let first <- p
+  let mut items := [first]
   repeat
     let input <- get
-      match p input with
-      | none => break
-      | some (a, input) =>
-        set input
-        out := a :: out
-  return out.reverse
+    let parseSeparatorThenP := do {parseSeparator ; p}
+    match  parseSeparatorThenP input with
+    | none => break
+    | some (item, input) =>
+      items := items ++ [item]
+      set input
+  parsePostfix
+  return items
 
--- TODO: test with more abstract version where we try to parse directly
---       if the none appears, do we get out of the function of the repeat
---       block? Can we avoid that with an extra "do"?
 
-#eval zeroOrMore (parseLiteral "a") "aaabbb"
--- some (["a", "a", "a"], "bbb")
-#eval zeroOrMore (parseLiteral "a") "bbb"
+partial def zeroOrMore {α : Type} (p : Parser α)
+  (parsePrefix := parseNothing)
+  (parsePostfix := parseNothing)
+  (parseSeparator := parseNothing) : Parser (List α) := do
+
+  let zero := do
+    parsePrefix
+    parsePostfix
+    return []
+
+  (oneOrMore p parsePrefix parsePostfix parseSeparator) <|> zero
+
+end
+
+#eval (zeroOrMore (parseLiteral "a")) "bbb"
 -- some ([], "bbb")
 
-def oneOrMore {α : Type} (p : Parser α) : Parser (List α) := do
-  let head <- p
-  let tail <- zeroOrMore p
-  return head :: tail
-
-#eval zeroOrMore (parseLiteral "a") "aaabbb"
+#eval (zeroOrMore (parseLiteral "a")) "aaabbb"
 -- some (["a", "a", "a"], "bbb")
-#eval zeroOrMore (parseLiteral "a") "bbb"
--- some ([], "bbb")
+
+#eval (oneOrMore (parseLiteral "a")) "bbb"
+-- none
+
+#eval (oneOrMore (parseLiteral "a")) "aaabbb"
+-- some (["a", "a", "a"], "bbb")
+
+
+def parseMany := zeroOrMore (parseLiteral "a") (discard (parseLiteral "[")) (discard (parseLiteral "]")) (discard (parseLiteral ","))
+
+#eval parseMany "[]"
+-- some ([], "")
+#eval parseMany "[a]"
+-- some (["a"], "")
+#eval parseMany "[a,a]"
+-- some (["a", "a"], "")
+#eval parseMany "[a,a,a]"
+-- some (["a", "a", "a"], "")
+#eval parseMany "[a,a,a,]" -- the trailing comma doesn't work
+-- none
+
 
 def parseInteger : Parser Float := do
   let first <- parseDigit
@@ -259,6 +292,7 @@ mutual
       parseWhitespace
       return json :: []
 
+  -- TODO: use zeroOrMore here
   -- BUG: we did not handle the case where the array is empty
   partial def parseArray : Parser Json := do
     _ <- parseLiteral "["
@@ -300,6 +334,7 @@ mutual
     _ <- parseLiteral "}"
     return members
 
+  -- TODO: use zeroOrMore here
   partial def parseObject : Parser Json := do
     let list <- parseEmptyObjectAsList <|> parseNonEmptyObjectAsList
     return (list |> HashMap.Raw.ofList |> Json.object)
