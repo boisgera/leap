@@ -1,4 +1,4 @@
--- Linear Memory Allocation in a 16-bit Address Space
+-- Linear Memory Allocation on a 16-bit memory space
 
 /-
 Note: many interesting properties that we could prove here:
@@ -12,67 +12,138 @@ Note: many interesting properties that we could prove here:
   - etc.
 -/
 
-abbrev Byte := UInt8
 
-abbrev Pointer := UInt16
--- There is no "null" pointer in this context, so we use 0 as the base pointer.
--- Failure is described by Option types
+abbrev Pointer := Nat
 
-abbrev Size := UInt32 -- we need up to 2^16, not 2^16-1 ...
--- Unless we purposedly describe blocks as "(ptr, size - 1)", then we can
--- deal with only UInt16 integers. Apart from the care that we then have
--- to take with arithmetic, we would probably need to patch the representation
--- of blocks to make them more palatable (readable).
--- Then Blocks would probably be better as a new type (structure) ?
--- OR, make blocks describe (first, last), that works too.
+abbrev Size := Nat
 
 abbrev Block := Pointer × Size
 
+def Block.ptr (block : Block) : Pointer := block.1
+
+def Block.size (block : Block) : Size := block.2
+
+-- Past-the-end pointer
+def Block.end (block : Block) : Pointer := block.ptr + block.size
+
 abbrev Blocks := List Block
 
--- abbrev Memory := Vector Byte (2^16)
-
 structure Allocator where
-  -- memory:  Memory := Vector.replicate 2^16 (0 : Byte)
   freeList : Blocks := [(0, 2^16)] -- sorted by first argument (ptr)
   usedList : Blocks := [] -- could/should we use a HashMap instead?
 deriving Repr
 
--- TODO: actually allow to read/write into the memory? Or direct access via .memory?
---       Yay, that's simpler after all ... But then the allocator doesn't NEED
---       to manage the memory, just the free and used lists info.
---
-
--- Find the first free block in the memory large enough to contain the requested number of Bytes.
--- Return before, current and after blocks (maybe stupid, we could just do a List.find afterwards).
--- Dunno. Keep it like that ATM.
-def Allocator.findFreeBlock (allocator : Allocator) (size: Size) : Option (Blocks × Block × Blocks) := do
+-- The returned Nat refers the pointer.
+def Allocator.alloc₀ (allocator : Allocator) (size: Nat) : Option (Nat × Allocator) := do
+  if size == 0 then
+    return (0, allocator) -- Any pointer would work for size 0
   let freeList := allocator.freeList
   guard !freeList.isEmpty
-  let mut before : Blocks := []
-  let mut current_and_after : Blocks := freeList
-  while !current_and_after.isEmpty do
-    let (ptr, freeSize) := current_and_after.head!
-    if size <= freeSize then
-      return (before.reverse, current_and_after.head!, current_and_after.tail!)
+  let mut done : Blocks := []
+  let mut todo : Blocks := freeList
+  while !todo.isEmpty do
+    let (ptr, currentSize) := List.head! todo
+    if size <= currentSize then
+      let newFreeBlocks : Blocks := if (size < currentSize) then
+        -- chop the first free block on the left
+        [(ptr + size, currentSize - size)]
+      else
+        [] -- perfect fit, remove the free block entirely
+      let freeList := done ++ newFreeBlocks ++ todo.tail!
+      let usedList := (ptr, size) :: allocator.usedList
+      return (ptr, { allocator with freeList, usedList })
     else
-      before := (ptr, freeSize) :: before
-      current_and_after := current_and_after.tail!
+      done := done ++ ([(ptr, currentSize)] : Blocks)
+      todo := todo.tail!
   none -- failure
 
-def Allocator.alloc (allocator : Allocator) (size: Size) : Option (Pointer × Allocator) := do
+def findBlock (size: Size) (done_todo : Blocks × Blocks) : Blocks × Blocks :=
+  let (done, todo) := done_todo
+  match todo with
+  | [] => (done, todo) -- failure
+  | (ptr, currentSize) :: rest =>
+    if size <= currentSize then
+      (done, todo) -- found a suitable block
+    else
+      findBlock size (done ++ [(ptr, currentSize)], rest)
+  termination_by
+    done_todo.2.length -- That was surprisingly easy!
+
+def Allocator.alloc₁ (allocator : Allocator) (size: Size) : Option (Pointer × Allocator) :=
   if size == 0 then
-    return (0, allocator) -- No allocation needed for size 0
-  let (before, current, after) <- findFreeBlock allocator size
-  let (ptr, freeSize) := current
-  let newFreeBlocks := if (size < freeSize) then
-    -- chop the first free block on the left
-    [(ptr + size.toUInt16, freeSize - size)]
+    (0, allocator) -- No allocation needed for size 0, return any pointer
   else
-    [] -- perfect fit, remove the free block entirely
-  let freeList := before ++ newFreeBlocks ++ after
-  let usedList := (ptr, size) :: allocator.usedList
-  return (ptr, { allocator with freeList, usedList })
+    let (done, todo) := findBlock size ([], allocator.freeList)
+    match (done, todo) with
+    | (_, []) => none -- failure
+    | (done, (ptr, currentSize) :: rest) =>
+      let newFreeBlocks : Blocks := if (size < currentSize) then
+          -- chop the first free block on the left
+          [(ptr + size, currentSize - size)]
+      else
+          [] -- perfect fit, remove the free block entirely
+      let freeList := done ++ newFreeBlocks ++ rest
+      let usedList := (ptr, size) :: allocator.usedList
+      some (ptr, { allocator with freeList, usedList })
+
+def Allocator.alloc := Allocator.alloc₁
+
+#eval do
+  let allocator : Allocator := {}
+  let (ptr₁, allocator) <- allocator.alloc 512
+  let (ptr₂, allocator) <- allocator.alloc 1024
+  let (ptr₃, allocator) <- allocator.alloc 0
+  let (ptr₄, allocator) <- allocator.alloc 1024
+  return ([ptr₁, ptr₂, ptr₃, ptr₄], allocator)
+-- some (
+--   [0, 512, 0, 1536],
+--   {
+--     freeList := [(2560, 62976)],
+--     usedList := [(1536, 1024), (512, 1024), (0, 512)]
+--   })
+
+-- Step 2: Freeing memory
+partial def Allocator.free (allocator : Allocator) (ptr: Pointer) : Option Allocator := do
+  let freeList := allocator.freeList
+  let usedList := allocator.usedList
+  let block <- usedList.find? (·.1 == ptr)
+  let usedList := usedList.filter (· != block)
+  let freeList := (block :: freeList) |>.mergeSort (·.1 < ·.1)
+  return { allocator with freeList, usedList }.compact
+
+
+-- Later : reconsider "compaction" of free blocks.
+
+-- -- Find the first free block in the memory large enough to contain the requested number of Bytes.
+-- -- Return before, current and after blocks (maybe stupid, we could just do a List.find afterwards).
+-- -- Dunno. Keep it like that ATM.
+-- def Allocator.findFreeBlock (allocator : Allocator) (size: Size) : Option (Blocks × Block × Blocks) := do
+--   let freeList := allocator.freeList
+--   guard !freeList.isEmpty
+--   let mut before : Blocks := []
+--   let mut current_and_after : Blocks := freeList
+--   while !current_and_after.isEmpty do
+--     let (ptr, freeSize) := current_and_after.head!
+--     if size <= freeSize then
+--       return (before.reverse, current_and_after.head!, current_and_after.tail!)
+--     else
+--       before := (ptr, freeSize) :: before
+--       current_and_after := current_and_after.tail!
+--   none -- failure
+
+-- def Allocator.alloc (allocator : Allocator) (size: Size) : Option (Pointer × Allocator) := do
+--   if size == 0 then
+--     return (0, allocator) -- No allocation needed for size 0
+--   let (before, current, after) <- findFreeBlock allocator size
+--   let (ptr, freeSize) := current
+--   let newFreeBlocks := if (size < freeSize) then
+--     -- chop the first free block on the left
+--     [(ptr + size.toUInt16, freeSize - size)]
+--   else
+--     [] -- perfect fit, remove the free block entirely
+--   let freeList := before ++ newFreeBlocks ++ after
+--   let usedList := (ptr, size) :: allocator.usedList
+--   return (ptr, { allocator with freeList, usedList })
 
 
 -- Compact contiguous free blocks in allocator.
