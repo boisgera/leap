@@ -1,22 +1,19 @@
 
-def getCoords' (string : String) : Option (Nat × Nat) := do
-  let parts := string.splitOn " "
-  let x_str <- parts[0]?
-  let y_str <- parts[1]?
-  let x <- x_str.toNat?
-  let y <- y_str.toNat?
-  return (x, y)
+def f (n : Nat) : Nat :=
+  let list := List.range (n + 1)
+  have h : n / 2 < list.length := by
+    rw [List.length_range] -- n : Nat ⊢ n / 2 < n + 1
+    apply Nat.lt_succ_of_le -- n : Nat ⊢ n / 2 ≤ n
+    exact Nat.div_le_self n 2
+  list[n / 2]
 
-#eval getCoords' "3 4"
--- some (3, 4)
-
-#eval getCoords' "douze quarante-deux"
--- none
-
-def a := [1, 2, 3]
-
-#eval a[42]!
-
-#eval getElem! a 42
-
-#print instMonadOption
+#eval f 0
+-- 0
+#eval f 1
+-- 0
+#eval f 2
+-- 1
+#eval f 3
+-- 1
+#eval f 4
+-- 2
