@@ -251,7 +251,7 @@ While this is handy, the "panic!" function should be used with care:
 ### ⚠️ When `panic!` fails ...
 
 Lean does not suspend the type checker when evaluating `panic!`. 
-The documentation of [Lean.Parser.Term.panic] states that at 
+The documentation of `[Lean.Parser.Term.panic]` states that at 
 compile-time:
 
 > `panic! msg` formally evaluates to `@Inhabited.default α` if the expected 
