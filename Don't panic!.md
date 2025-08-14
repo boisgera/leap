@@ -6,7 +6,7 @@ Don't panic!
 Panic!
 --------------------------------------------------------------------------------
 
-In Lean, we can use `panic!` to signal an error and exit the program with a message:
+In Lean, we can use `panic!` to exit the program with a message:
 
 ```lean
 def pred (n : Nat) : Nat :=
@@ -18,16 +18,16 @@ def pred (n : Nat) : Nat :=
 
 ```lean
 #eval pred 7
-6
+-- 6
 ```
 
 ```lean
 #eval pred 0
-PANIC at pred ...: No pred for 0
-...
+-- PANIC at pred ...: No pred for 0
+-- backtrace:
 ```
 
-Similarly, panic can be used for example in the `IO` context:
+Similarly, panic can be used in the `IO` context:
 
 ```lean
 def kthxbye : IO Unit := do
@@ -35,37 +35,54 @@ def kthxbye : IO Unit := do
   panic! "bye!"
 ```
 
-In the Lean standard library, `panic!` is for example raised to access an element of a list at index which may be out ouf bounds.
-When `arr` is a collection of elements of type `elem`, the syntax `arr[i]!` 
-returns the i'th element of the collection if the index is within the collection
-bounds, or otherwise -- returns the default term from `Inhabited elem` for type-checking purposes and effectively -- panics at runtime.
-
-
 ```lean
-def a := [1, 2, 3]
-
-#eval a[0]!
--- 0
-
-#eval a[42]!
--- PANIC at _private.Init.GetElem.0.List.get!Internal ...: invalid index
--- ...
+#eval kthxbye
+-- OK, thanks
+-- PANIC at kthxbye ...: bye!
+-- backtrace:
 ```
 
-The signature of `getElem!` is:
+Another example from the standard library: try to access the element of a list
+at an arbitrary index, you can use:
 
 ```lean
+def list := [1, 2, 3]
 
-The syntax is actually a shortcut for `getElem!`:
-
-```lean
-#eval a.getElem! 0
--- 0  
-
-#eval a.getElem! 42
-PANIC at _private.Init.GetElem.0.List.get!Internal Init.GetElem:325:18: invalid index
+#eval list[0]!
+--1
+#eval list[1]!
+-- 2
+#eval list[2]!
+-- 3
 ```
 
+Note however that this will panic if the index is out of bounds:
+
+```lean
+#eval list[3]!
+-- PANIC at List.get!Internal Init.GetElem:327:18: invalid index
+backtrace:
+```
+
+> [!TIP] The use of the exclamation mark `!` indicates here that the function 
+> will panic in case of an error. This is a convention that is frequently used 
+> in the standard library and something we should mimic. So ro begin with 
+> we should rename our previous functions `pred` and `kthxbye` to 
+> `pred!` and `kthxbye!` respectively:
+>
+> ```lean
+> def pred! (n : Nat) : Nat :=
+>   if n > 0 then
+>     n - 1
+>   else
+>     panic! "No pred for 0"
+> ```
+>
+> ```lean
+> def kthxbye! : IO Unit := do
+>   IO.println "OK, thanks"
+>   panic! "bye!"
+> ```
 
 Not that there is no way to recover from a panic, so it is best to use it
 only for situations that are truly unrecoverable (or as a temporary measure
