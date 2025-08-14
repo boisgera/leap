@@ -64,9 +64,10 @@ Note however that this will panic if the index is out of bounds:
 backtrace:
 ```
 
-> [!TIP] The use of the exclamation mark `!` indicates here that the function 
-> will panic in case of an error. This is a convention that is frequently used 
-> in the standard library and something we should mimic. So ro begin with 
+> [!TIP] 
+> The use of the exclamation mark `!` indicates here that the function will 
+> panic in case of an error. This is a convention that is frequently used 
+> in the standard library and something we should mimic. So to begin with 
 > we should rename our previous functions `pred` and `kthxbye` to 
 > `pred!` and `kthxbye!` respectively:
 >
