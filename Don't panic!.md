@@ -231,7 +231,7 @@ While this is handy, the "panic!" function should be used with care:
       have h : n / 2 < list.length := by
         rw [List.length_range] -- n : Nat ⊢ n / 2 < n + 1
         apply Nat.lt_succ_of_le -- n : Nat ⊢ n / 2 ≤ n
-        exact Nat.div_le_self n 2
+        exact Nat.div_le_self n 2 -- ✅
       list[n / 2]
 
     #eval f 0
