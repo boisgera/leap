@@ -1,3 +1,9 @@
+#check List.length_range
+-- ⊢ ∀ {n : Nat}, (List.range n).length = n
+#check Nat.lt_succ_of_le
+-- ⊢ ∀ {n m : Nat}, n ≤ m → n < m.succ
+#check Nat.div_le_self
+-- ⊢ ∀ (n k : Nat), n / k ≤ n
 
 def f (n : Nat) : Nat :=
   let list := List.range (n + 1)
