@@ -65,11 +65,12 @@ backtrace:
 ```
 
 > [!TIP] 
-> The use of the exclamation mark `!` indicates here that the function will 
-> panic in case of an error. This is a convention that is frequently used 
-> in the standard library and something we should mimic. So to begin with 
-> we should rename our previous functions `pred` and `kthxbye` to 
-> `pred!` and `kthxbye!` respectively:
+> The use of the exclamation mark `!` indicates here that the function 
+> is "dangerous", "unsafe" and can panic in case of an error. 
+> This is a convention that is frequently used 
+> in the standard library and something we should mimic. 
+> So to begin with we should rename our previous functions 
+> `pred` and `kthxbye` to  `pred!` and `kthxbye!` respectively:
 >
 > ```lean
 > def pred! (n : Nat) : Nat :=
@@ -89,69 +90,70 @@ Not that there is no way to recover from a panic, so it is best to use it
 only for situations that are truly unrecoverable (or as a temporary measure
 in prototyping).
 
-### Do not mess with the type checker
-
-Lean does not suspend the type checker when evaluating `panic!`. 
-Instead, it follows the following compile-time rule:
-
-> panic! msg formally evaluates to @Inhabited.default α if the expected type α 
-> implements Inhabited. 
-
-And later:
-
-> At runtime, msg and the file position are printed to stderr unless the C
-> function lean_set_panic_messages(false) has been executed before. 
-> If the C function lean_set_exit_on_panic(true) has been executed before, 
-> the process is then aborted.
-
-So our `pred` function is typechecked as if it returned a default value of the
-
-```lean
-#eval (default : Nat)
-0
-```
-
-So the `pred` function is effectively typechecked as: 
-
-```lean
-def pred (n : Int) : Int :=
-  if n > 0 then
-    n - 1
-  else
-    0
-```
-
-So effectively, you cannot used `panic!` instead of a type which has not declared
-a default value. Hopefully, Lean declares default values for most types; 
-but it cannot do anything for `Empty` for example
-
-```lean
-inductive Nat' where
-  | zero : Nat'
-  | succ (n : Nat') : Nat'
-
-
-def fail : Nat' :=
-  panic! "Nope"
-```
-
-
-```lean
-instance : Inhabited Nat' where
-  default := Nat'.zero
-
-def fail' : Nat' :=
-  panic! "Nope"
-```
-
-You can also let Lean automatically select a default value for you:
-
-```lean
-inductive Nat' where
-  | zero : Nat'
-  | succ (n : Nat') : Nat'
-  deriving Inhabited
-```
+> [Warning!]
+> 
+> ### Do not mess with the type checker
+>
+> Lean does not suspend the type checker when evaluating `panic!`. 
+> Instead, it follows the following compile-time rule:
+>
+> > `panic! msg` formally evaluates to `@Inhabited.default α` if the expected 
+> > type `α` implements `Inhabited`. 
+> 
+> And later:
+>
+> > At runtime, `msg` and the file position are printed to stderr unless the C
+> > function `lean_set_panic_messages(false)` has been executed before. 
+> > If the C function `lean_set_exit_on_panic(true)` has been executed before, 
+> > the process is then aborted.
+>
+> So our `pred` function is typechecked as if it returned a default value of the
+> 
+> ```lean
+> #eval (default : Nat)
+> -- 0
+> ```
+> 
+> So the `pred` function is effectively typechecked as: 
+> 
+> ```lean
+> def pred (n : Int) : Int :=
+>   if n > 0 then
+>    n - 1
+> else
+>    0
+> ```
+>
+> So effectively, you cannot used `panic!` instead of a type which has not declared
+> a default value. Hopefully, Lean declares default values for most types; 
+> but it cannot do anything for `Empty` for example
+> 
+> ```lean
+> inductive Nat' where
+>   | zero : Nat'
+>   | succ (n : Nat') : Nat'
+> 
+> 
+> def fail : Nat' :=
+>   panic! "Nope"
+> ```
+>
+>
+> ```lean
+> instance : Inhabited Nat' where
+>   default := Nat'.zero
+>
+> def fail' : Nat' :=
+>   panic! "Nope"
+> ```
+> In most cases, you can also let Lean automatically select a default value for you:
+>
+> ```lean
+> inductive Nat' where
+>  | zero : Nat'
+>  | succ (n : Nat') : Nat'
+>  deriving Inhabited
+> ```
 
 ### TODO: what's going on with `IO`?
 
