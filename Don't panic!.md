@@ -1,7 +1,13 @@
 Don't panic!
 ================================================================================
 
-![Don't panic! This is fine.](images/this-is-fine.webp)
+![Don't panic! This is fine.]
+
+[Don't panic! This is fine.]: https://media.npr.org/assets/img/2023/01/14/this-is-fine_custom-b7c50c845a78f5d7716475a92016d52655ba3115.jpg?s=800&c=85&f=webp
+
+<!-- 
+Web archive backup: https://web.archive.org/web/20250703145700im_/https://media.npr.org/assets/img/2023/01/14/this-is-fine_custom-b7c50c845a78f5d7716475a92016d52655ba3115.jpg?s=800&c=85&f=webp 
+-->
 
 Panic!
 --------------------------------------------------------------------------------
