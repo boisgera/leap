@@ -251,7 +251,7 @@ While this is handy, the "panic!" function should be used with care:
 ### ⚠️ When `panic!` fails ...
 
 Lean does not suspend the type checker when evaluating `panic!`. 
-The documentation of [Lean.Parser.Term.panic] states that at 
+The documentation of `[Lean.Parser.Term.panic]` states that at 
 compile-time:
 
 > `panic! msg` formally evaluates to `@Inhabited.default α` if the expected 
@@ -262,7 +262,7 @@ and later at runtime:
 > At runtime, `msg` and the file position are printed to stderr [...] 
 > the process is then aborted.
 
-[Lean.Parser.Term.panic]: https://leanprover-community.github.io/mathlib4_docs/Lean/Parser/Term.html#Lean.Parser.Term.panic)
+[Lean.Parser.Term.panic]: https://leanprover-community.github.io/mathlib4_docs/Lean/Parser/Term.html#Lean.Parser.Term.panic
 
 So our `pred` function is typechecked as if it returned a default value of the
 
