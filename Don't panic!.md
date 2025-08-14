@@ -90,9 +90,9 @@ Not that there is no way to recover from a panic, so it is best to use it
 only for situations that are truly unrecoverable (or as a temporary measure
 in prototyping).
 
-> [!WARNING] Test hjgshdg
+> [!WARNING] 
 > 
-> ### Do not mess with the type checker
+> ### When `panic!` fails ...
 >
 > Lean does not suspend the type checker when evaluating `panic!`. 
 > Instead, it follows the following compile-time rule:
