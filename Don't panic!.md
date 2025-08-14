@@ -245,6 +245,18 @@ While this is handy, the "panic!" function should be used with care:
     #eval f 4
     -- 2
     ```
+
+    Note that we have used the following theorems provided by Lean:
+
+    ```lean
+    #check List.length_range
+    -- ⊢ ∀ {n : Nat}, (List.range n).length = n
+    #check Nat.lt_succ_of_le
+    -- ⊢ ∀ {n m : Nat}, n ≤ m → n < m.succ
+    #check Nat.div_le_self
+    -- ⊢ ∀ (n k : Nat), n / k ≤ n
+    ```
+
     At this final stage, you have avoided all operations that may panic.
 
 
