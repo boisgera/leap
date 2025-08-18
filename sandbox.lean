@@ -1,7 +1,8 @@
-structure Point where
-  x : Float
-  y : Float
 
-def origin : Point := { x := 0.0, y := 0.0 }
+def xs := [1, 2, 3]
 
-#eval origin
+#eval xs[0]
+--1
+#eval xs[1]
+-- 2
+#eval xs[2]

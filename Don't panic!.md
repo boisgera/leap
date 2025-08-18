@@ -9,8 +9,8 @@ Don't panic!
 🐍 Exit
 --------------------------------------------------------------------------------
 
-In Python you can call the function [sys.exit] to terminate a program 
-and provide an error message (and status).
+In Python, the function [sys.exit] terminates a program and provides an error 
+message (and status).
 
 For example the Python program `kthxbye.py`
 
@@ -27,8 +27,7 @@ $ python kthxbye.py
 👋
 ```
 
-and provides an exit code of `1` that signals an error 
-(`0` indicates success).
+and sets an exit code of `1` (an error; `0` indicates success).
 
 ```bash
 $ echo $?
@@ -36,8 +35,8 @@ $ echo $?
 ```
 
 The `sys.exit` function is mostly used in scripts and not in libraries, 
-as it terminates the program. A slightly more realistic usage is given 
-in the `greeter.py` script:
+as it terminates the program. A slightly more realistic usage of it
+is given in the `greeter.py` script:
 
 ```python
 import sys
@@ -50,7 +49,7 @@ else:
     sys.exit("❌ Please provide your name")
 ```
 
-The script is supposed to greet you with the name you have given as arguments:
+The script greets you with the name you give as arguments:
 
 ```bash
 $ python greeter.py John Doe
@@ -64,7 +63,7 @@ $ echo $?
 0
 ```
 
-But if you forget to provide your name, it provides you an error message
+If you forget to provide your name, it provides you an error message
 
 ```bash
 $ python greeter.py
@@ -85,130 +84,119 @@ $ echo $?
 Panic!
 --------------------------------------------------------------------------------
 
-In Lean, we can use `panic!` to exit the program with a message:
-
-```lean
-def pred (n : Nat) : Nat :=
-  if n > 0 then
-    n - 1
-  else
-    panic! "No pred for 0"
-```
-
-```lean
-#eval pred 7
--- 6
-```
-
-```lean
-#eval pred 0
--- PANIC at pred ...: No pred for 0
--- backtrace:
-```
-
-Similarly, panic can be used in the `IO` context:
-
-```lean
-def kthxbye : IO Unit := do
-  IO.println "OK, thanks"
-  panic! "bye!"
-```
-
-```lean
-#eval kthxbye
--- OK, thanks
--- PANIC at kthxbye ...: bye!
--- backtrace:
-```
-
-A common example: to access the element of a list at an arbitrary index, 
-you can use:
-
-```lean
-def list := [1, 2, 3]
-
-#eval list[0]!
---1
-#eval list[1]!
--- 2
-#eval list[2]!
--- 3
-```
-
-Note however that this will panic if the index is out of bounds:
-
-```lean
-#eval list[3]!
--- PANIC at List.get!Internal Init.GetElem:327:18: invalid index
-backtrace:
-```
-
-Similarly, to get the first element of a list, you can use:
-
-```lean
-def list : List Nat := [1, 2, 3]
-
-#eval list.head!
--- 1
-```
-
-Of course, if your list is empty, this will panic:
-
-```lean
-def list : List Nat := []
-
-#eval list.head!
--- PANIC at List.head! ...: empty list
-backtrace:
-```
-
-**TODO.** Useful backtrace example?
-
-### 💡 Naming convention: exclamation point `!`
-
-The use of the exclamation point `!` indicates here that the function 
-is "dangerous" or "unsafe" by which we mean that it can panic in case of an error. 
-This is a convention that is frequently used in the standard library and 
-something we should strive to mimic. 
-So to begin with we should rename our previous functions 
-`pred` and `kthxbye` to  `pred!` and `kthxbye!` respectively:
+In Lean, `panic!` exits the program with a message:
 
 ```lean
 def pred! (n : Nat) : Nat :=
   if n > 0 then
     n - 1
   else
-    panic! "No pred for 0"
-``` 
+    panic! "No predecessor for 0"
+```
 
 ```lean
-def kthxbye! : IO Unit := do
-  IO.println "OK, thanks"
-  panic! "bye!"
+#eval pred! 7
+-- 6
 ```
+
+```lean
+#eval pred! 0
+-- PANIC at pred! ...: No predecessor for 0
+-- backtrace:
+```
+
+Similarly, we can use `panic!` in the `IO` context; the file `KThxBye.lean`
+
+```lean
+def main : IO Unit := do
+  panic! "👋"
+```
+
+behaves like its Python counterpart:
+
+```bash
+$ lean --run KThxBye.lean 
+PANIC at main KThxBye:2:2: 👋
+...
+
+$ echo $?
+1
+```
+
+Many functions and operators of the standard library have a variant 
+that uses `panic!` to signal errors. 
+For example to access the element of a list `xs` at the index `i`, 
+you can use `xs[i]!`:
+
+```lean
+def xs := [1, 2, 3]
+
+#eval xs[0]!
+--1
+#eval xs[1]!
+-- 2
+#eval xs[2]!
+-- 3
+```
+
+This will panic if the index is out of bounds:
+
+```lean
+#eval xs[3]!
+-- PANIC at List.get!Internal Init.GetElem:327:18: invalid index
+-- ...
+```
+
+Similarly, to get the first element of a list, you can use:
+
+```lean
+def xs : List Nat := [1, 2, 3]
+
+#eval xs.head!
+-- 1
+```
+
+Of course, if your list is empty, this will panic:
+
+```lean
+#eval [].head!
+-- PANIC at List.head! ...: empty list
+-- ...
+```
+
+### 💡 Naming convention: exclamation point `!`
+
+The use of the exclamation point `!` usually indicates here that the function 
+is "dangerous" or "unsafe": it can panic if it encounters an error. 
+This is only a convention, not a strict rule, but it's useful! 
 
 ### ℹ️ When should I `panic!`?
 
-Some guidelines (YMMV):
+Some guidelines:
 
-  - When you prototype a function and you realise that there is a corner case
-    that you don't want to deal with right now, you can use `panic!` to
-    quickly satisfy the type checker.
+  - In a script, it's often acceptable to use `panic!` for error handling.
+
+  - When you are prototyping, `panic!` can we a handy tool to provide
+    temporarily a partial implementation. For example, the code
 
     ```lean
-    def inv (x : Float) := Float
-      if x != 0 then
-        panic! "Please don't invert 0"
-      else
-        1.0 / x
+    def divideByTwo (n : Nat) : Nat :=
+      if n % 2 == 0 then
+        n / 2
     ```
 
-    The handy thing is that you don't have the change the function signature
-    (here `Float -> Float`) to continue making some progress.
+    does not compile but
 
-  - Something you in a given context, you know that the `panic!` is unreachable
-    and you don't want to explain to Lean why it is unreachable (at least
-    not right now). For example:
+    ```lean
+    def divideByTwo (n : Nat) : Nat :=
+      if n % 2 == 0 then
+        n / 2
+      else
+        panic! "🚧 odd numbers not handled"
+    ```
+
+  - You can use `panic!` (directly or indirectly) as long as the error 
+    never happens.
 
     ```lean
     def pred! (n : Nat) : Nat :=
@@ -218,121 +206,39 @@ Some guidelines (YMMV):
         panic! "No pred for 0"
 
     def f (n : Nat) : Nat :=
-      pred! (n * n + 1)
+      pred! (n * n + 1) -- This is always fine since n * n + 1 >= 1.
     ```
 
 While this is handy, the "panic!" function should be used with care:
 
-  - It doesn't inform the type checker that some function may fail,
-    which is a pity since if you do, you can use it to help you check
-    that your code handles them properly. To go that route, consider
-    the `Option` or `Except` types instead, introduces later in this 
-    document. A simple example would be to replace `pred!` with:
+  - Since one cannot recover from a `panic!` the user of a code that 
+    may panic has no way to deal with them.
+
+  - Panics rely on convention (the "!" in the name) but are invisible
+    to the type checker. To get help from the type checker in your 
+    error management, consider using `Option` or `Except` 
+    – introduced in the next sections – instead of `panic!`.
+   
+  - If you know that the code path that leads to a `panic!` cannot happen,
+    you may be able to prove it (with Lean) and avoid completely the use 
+    of unsafe code.
+
+    For a very simple example: in the following code, Lean has been able
+    to deduce that `0`, `1` and `2` are valid indices for the constant 
+    list `[1, 2, 3]`, therefore the safe access `xs[]` can be used instead
+    of the unsafe variant `xs[]!`.
 
     ```lean
-    def pred? (n : Nat) : Option Nat :=
-      if n > 0 then
-        some (n - 1)
-      else
-        none
+    def xs := [1, 2, 3]
 
-    #eval pred 7
-    -- some 6
-
-    #eval pred 0
-    -- none
-    ```
-
-  - If you know for sure that an error cannot happen, tell it that to the type 
-    system! Of course, the type system will only accept your argument if you
-    provide a proof. But if you are in a hurry, you can still admit the proof
-    temporarily and come back later to fill in the blanks.
-
-    For example
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      list[n / 2] -- ❌ failed to prove index is valid [...]
-    ```
-
-    but some experimentation with the panicking version of `f`
-    convinces us that the index is always valid:
-
-    ```lean
-    def f' (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      list[n / 2]!
-
-    #eval f' 0
-    -- 0
-    #eval f' 1
-    -- 0
-    #eval f' 2
-    -- 1
-    #eval f' 3
-    -- 1
-    #eval f' 4
+    #eval xs[0]
+    --1
+    #eval xs[1]
     -- 2
+    #eval xs[2]
     ```
+        
 
-    If we are in a hurry, we can instead state the result we need to ensure
-    that the index is valid, admit the proof and use the "dangerous" version
-    `#eval!` of `#eval` instead:
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      have h : n / 2 < list.length := by admit
-      list[n / 2]
-
-    #eval! f 0
-    -- 0
-    #eval! f 1
-    -- 0
-    #eval! f 2
-    -- 1
-    #eval! f 3
-    -- 1
-    #eval! f 4
-    -- 2
-    ```
-
-    When you have more time, you can come back and fill in the proof
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      have h : n / 2 < list.length := by
-        rw [List.length_range] -- n : Nat ⊢ n / 2 < n + 1
-        apply Nat.lt_succ_of_le -- n : Nat ⊢ n / 2 ≤ n
-        exact Nat.div_le_self n 2 -- ✅
-      list[n / 2]
-
-    #eval f 0
-    -- 0
-    #eval f 1
-    -- 0
-    #eval f 2
-    -- 1
-    #eval f 3
-    -- 1
-    #eval f 4
-    -- 2
-    ```
-
-    Note that we have used the following theorems provided by Lean:
-
-    ```lean
-    #check List.length_range
-    -- ⊢ ∀ {n : Nat}, (List.range n).length = n
-    #check Nat.lt_succ_of_le
-    -- ⊢ ∀ {n m : Nat}, n ≤ m → n < m.succ
-    #check Nat.div_le_self
-    -- ⊢ ∀ (n k : Nat), n / k ≤ n
-    ```
-
-    At this final stage, you have avoided all operations that may panic.
 
 
 ### ⚠️ When even `panic!` fails ...
@@ -527,6 +433,97 @@ Except
 
    - try catch syntax (instantiate `MonadExcept`)
 
+---
+failure, throw, andThen, try catch
+
+
+```lean
+def f (i : Nat) : Option Nat := do
+  let value <- list[i]?
+  return value
+
+#eval f 0
+
+#eval f 3
+
+def g (i : Nat) : Option Nat := do
+  match list[i]? with 
+  | none => none
+  | some value => some value
+
+#eval g 0
+
+#eval g 3
+
+def h (i : Nat) : Option Nat := do
+  match list[i]? with 
+  | none => failure
+  | some value => return value
+
+
+#eval h 0
+
+#eval h 3
+
+def k (i : Nat) : Option Nat := do
+  match list[i]? with 
+  | none => throw ()
+  | some value => return value
+
+-- Different behavior now
+
+#eval k 0
+#eval k 3
+
+def get (i : Nat) : Option Nat := do
+  match list[i]? with 
+  | none => return 0
+  | some value => return value
+
+#eval k 0
+#eval k 3
+
+def getOrZero? (i : Nat) : Option Nat := do
+  get i <|> return 0
+
+-- But how do we "unpack" the some (this is a some for certain!). 
+-- We have "lost" the information that it's a success "in the implementation"
+-- unless we match the result (which we can do)
+
+def getOrZero?' (i : Nat) : Option Nat := do
+  let mut result := 0
+  try
+    result <- get i
+  catch _ => 
+    result := 0
+  return result
+
+
+def getOrZero?'' (i : Nat) : Option Nat :=
+  try
+    return (<- get i)
+  catch _ => 
+    return 0
+
+-- Try cannot solve the "ensure there is no error" issue? Try doesn't get us
+-- out of the monad ... We need some good old pattern matching for that.
+-- Even worse, the info that we have handled all possible errors is lost...
+
+-- So try catch is good also long as you want to have alternatives, handle
+-- errors somehow but keeping the possibility of errors here.
+-- That make sense since in some monads we CANNOT unbox the result...
+
+-- def getOrZero?''' (i : Nat) : Nat :=
+--   try
+--     get i
+--   catch _ => 
+--     0
+```
+
+
+
+---
+
  IO
  ----------------------------
 
@@ -535,3 +532,93 @@ Except
    - list / use "POSIX"-like error set
 
    - custom error types with IO (EIO and replace `IO.Error` with custom error type)
+
+
+# Misc/ / Sandbox / Appendix
+
+
+    For example
+
+    ```lean
+    def f (n : Nat) : Nat :=
+      let list := List.range (n + 1)
+      list[n / 2] -- ❌ failed to prove index is valid [...]
+    ```
+
+    but some experimentation with the panicking version of `f`
+    convinces us that the index is always valid:
+
+    ```lean
+    def f' (n : Nat) : Nat :=
+      let list := List.range (n + 1)
+      list[n / 2]!
+
+    #eval f' 0
+    -- 0
+    #eval f' 1
+    -- 0
+    #eval f' 2
+    -- 1
+    #eval f' 3
+    -- 1
+    #eval f' 4
+    -- 2
+    ```
+
+    If we are in a hurry, we can instead state the result we need to ensure
+    that the index is valid, admit the proof and use the "dangerous" version
+    `#eval!` of `#eval` instead:
+
+    ```lean
+    def f (n : Nat) : Nat :=
+      let list := List.range (n + 1)
+      have h : n / 2 < list.length := by admit
+      list[n / 2]
+
+    #eval! f 0
+    -- 0
+    #eval! f 1
+    -- 0
+    #eval! f 2
+    -- 1
+    #eval! f 3
+    -- 1
+    #eval! f 4
+    -- 2
+    ```
+
+    When you have more time, you can come back and fill in the proof
+
+    ```lean
+    def f (n : Nat) : Nat :=
+      let list := List.range (n + 1)
+      have h : n / 2 < list.length := by
+        rw [List.length_range] -- n : Nat ⊢ n / 2 < n + 1
+        apply Nat.lt_succ_of_le -- n : Nat ⊢ n / 2 ≤ n
+        exact Nat.div_le_self n 2 -- ✅
+      list[n / 2]
+
+    #eval f 0
+    -- 0
+    #eval f 1
+    -- 0
+    #eval f 2
+    -- 1
+    #eval f 3
+    -- 1
+    #eval f 4
+    -- 2
+    ```
+
+    Note that we have used the following theorems provided by Lean:
+
+    ```lean
+    #check List.length_range
+    -- ⊢ ∀ {n : Nat}, (List.range n).length = n
+    #check Nat.lt_succ_of_le
+    -- ⊢ ∀ {n m : Nat}, n ≤ m → n < m.succ
+    #check Nat.div_le_self
+    -- ⊢ ∀ (n k : Nat), n / k ≤ n
+    ```
+
+    At this final stage, you have avoided all operations that may panic.
