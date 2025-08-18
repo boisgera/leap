@@ -57,7 +57,7 @@ $ python greeter.py John Doe
 Hello John Doe!
 ```
 
-and we can check that this call was a success:
+We can check that this call was a success:
 
 ```bash
 $ echo $?
