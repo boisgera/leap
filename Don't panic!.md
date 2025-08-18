@@ -322,42 +322,6 @@ def fail! : Nat' :=
   panic! "Nope" -- ✅ analyzed as `Nat'.zero` by the type checker
 ```
 
-#### TODO: what's going on with `IO`?
-
-**Fails** with:
-```lean
-🔴 #eval (default : IO Unit)
-(`Inhabited.default` for `IO.Error`)
-```
-
-**Succeeds** with:
-```lean
-🟢 #eval (default : IO.Error)
-(`Inhabited.default` for `IO.Error`)
-```
-
-
-### Details
-
-Actually, `sys.exit()` raises a `SystemExit` exception, which is a subclass of `BaseException`, not `Exception`. This is why the above code does not catch it.
-But you can still catch it with:
-
-```python
-try:
-    sys.exit("👋")
-except SystemExit as e:
-    print("🛑")
-```
- or with a bare except:
-
-```python
-try:
-    sys.exit("👋")
-except:
-    print("🛑")
-```
-
-Both these code snippers will succeed and print 🛑.
 
 
 Option
@@ -424,6 +388,31 @@ def bind : Option α → (α → Option β) → Option β
 
 Except
 --------------------------------------------------------------------------------
+
+Python: sys.exit is an exception :
+
+
+### Details
+
+Actually, `sys.exit()` raises a `SystemExit` exception, which is a subclass of `BaseException`, not `Exception`. This is why the above code does not catch it.
+But you can still catch it with:
+
+```python
+try:
+    sys.exit("👋")
+except SystemExit as e:
+    print("🛑")
+```
+ or with a bare except:
+
+```python
+try:
+    sys.exit("👋")
+except:
+    print("🛑")
+```
+
+Both these code snippers will succeed and print 🛑.
 
 🚧 **TODO**
    
