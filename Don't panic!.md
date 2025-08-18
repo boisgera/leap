@@ -55,8 +55,9 @@ The script is supposed to work like that:
 ```bash
 $ python greeter.py John Doe
 Hello John Doe!
+```
 
-and we can check that this call was a success.
+and we can check that this call was a success:
 
 ```bash
 $ echo $?
