@@ -207,9 +207,9 @@ Some guidelines:
       pred! (n * n + 1) -- This is always fine since n * n + 1 >= 1.
     ```
 
-While this is handy, the "panic!" function should be used with care:
+While this is handy, the `panic!` function should be used with care:
 
-  - Since one cannot recover from a `panic!` the user of a code that 
+  - Since one cannot recover from a panic the user of a code that 
     may panic has no way to deal with it.
 
   - Panics rely on convention (the "!" in the name) but are invisible
