@@ -7,6 +7,81 @@ Don't panic!
 <!-- The image has been backed up in the Wayback Machine -->
 
 
+Exit
+--------------------------------------------------------------------------------
+
+In Python you can call the function [sys.exit] to terminate a program 
+and provide an error message (and status).
+
+For example consider the Python program `kthxbye.py`:
+
+```python
+import sys
+sys.exit("👋") 
+``` 
+
+Executing it displays the emoji `👋` on the standard error:
+
+
+```bash
+$ python kthxbye.py
+👋
+```
+
+It also provides an exit code of `1` that signals an error 
+(`0` indicates success).
+
+```bash
+$ echo $?
+1
+```
+
+The `sys.exit` function is mostly used in scripts and not in libraries, 
+as it terminates the program. A realistic usage would be the `greeter.py`
+script:
+
+```python
+import sys
+
+args = sys.argv[1:]
+if args:
+    name = " ".join(args)
+    print(f"Hello {name}!")
+else:
+    sys.exit("❌ Please provide your name")
+```
+
+The script is supposed to work like that:
+
+```bash
+$ python greeter.py John Doe
+Hello John Doe!
+
+and we can check that this call was a success.
+
+```bash
+$ echo $?
+0
+```
+
+But if you forget to provide your name:
+
+```bash
+$ python greeter.py
+❌ Please provide your name
+```
+
+and this is indeed signalled as an error:
+
+```bash
+$ echo $?
+1
+```
+
+
+[sys.exit]: https://docs.python.org/3/library/sys.html#sys.exit
+
+
 Panic!
 --------------------------------------------------------------------------------
 
@@ -260,7 +335,7 @@ While this is handy, the "panic!" function should be used with care:
     At this final stage, you have avoided all operations that may panic.
 
 
-### ⚠️ When `panic!` fails ...
+### ⚠️ When even `panic!` fails ...
 
 Lean does not suspend the type checker when evaluating `panic!`. 
 The documentation of [Lean.Parser.Term.panic] states that at 
@@ -338,7 +413,7 @@ def fail! : Nat' :=
   panic! "Nope" -- ✅ analyzed as `Nat'.zero` by the type checker
 ```
 
-### TODO: what's going on with `IO`?
+#### TODO: what's going on with `IO`?
 
 **Fails** with:
 ```lean
@@ -352,31 +427,6 @@ def fail! : Nat' :=
 (`Inhabited.default` for `IO.Error`)
 ```
 
-
-
-----
-
-The Python closest equivalent of `panic!` in Python is `sys.exit()`. 
-
-```python
-import sys
-```
-
-```python
-sys.exit("👋")
-👋
-``` 
-
-So even if you try to catch all the types of exceptions, you will not manage to catch the exit call; the code
-
-```python
-try:
-    sys.exit("👋")
-except Exception:
-    print("🛑")
-```
-
-will fail and print 👋.
 
 ### Details
 
