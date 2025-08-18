@@ -64,14 +64,14 @@ $ echo $?
 0
 ```
 
-But if you forget to provide your name:
+But if you forget to provide your name, it provides you an error message
 
 ```bash
 $ python greeter.py
 ❌ Please provide your name
 ```
 
-and this is indeed signalled as an error:
+and signals a failure:
 
 ```bash
 $ echo $?
