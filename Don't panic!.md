@@ -19,7 +19,7 @@ import sys
 sys.exit("👋") 
 ``` 
 
-will display the emoji `👋` (on the standard error)
+displays the emoji `👋` (on the standard error)
 
 
 ```bash
@@ -27,7 +27,7 @@ $ python kthxbye.py
 👋
 ```
 
-and also provide an exit code of `1` that signals an error 
+and provides an exit code of `1` that signals an error 
 (`0` indicates success).
 
 ```bash
