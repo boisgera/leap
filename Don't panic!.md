@@ -6,8 +6,7 @@ Don't panic!
 [Don't panic! This is fine.]: https://media.npr.org/assets/img/2023/01/14/this-is-fine_custom-b7c50c845a78f5d7716475a92016d52655ba3115.jpg?s=800&c=85&f=webp
 <!-- The image has been backed up in the Wayback Machine -->
 
-
-Exit
+🐍 Exit
 --------------------------------------------------------------------------------
 
 In Python you can call the function [sys.exit] to terminate a program 
