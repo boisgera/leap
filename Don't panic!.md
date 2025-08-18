@@ -228,10 +228,11 @@ While this is handy, the "panic!" function should be used with care:
     def xs := [1, 2, 3]
 
     #eval xs[0]
-    --1
+    -- 1
     #eval xs[1]
     -- 2
     #eval xs[2]
+    -- 3
     ```
 
     On the other hand
@@ -241,19 +242,7 @@ While this is handy, the "panic!" function should be used with care:
     ```
 
     does not type check since Lean fails to prove
-    `3 < xs.length` and you get the following error instead:
-
-    ```
-    failed to prove index is valid, possible solutions:
-      - Use `have`-expressions to prove the index is valid
-      - Use `a[i]!` notation instead, runtime check is performed, and 'Panic' error message is produced if index is not valid
-      - Use `a[i]?` notation instead, result is an `Option` type
-      - Use `a[i]'h` notation instead, where `h` is a proof that index is valid
-    ⊢ 3 < xs.length
-    ```
-        
-
-
+    `3 < xs.length` and you get an error instead.
 
 ### ⚠️ When even `panic!` fails ...
 
