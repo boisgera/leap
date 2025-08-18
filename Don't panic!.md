@@ -50,7 +50,7 @@ else:
     sys.exit("❌ Please provide your name")
 ```
 
-The script is supposed to work like that:
+The script is supposed to greet you with the name you have given as arguments:
 
 ```bash
 $ python greeter.py John Doe
