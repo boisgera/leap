@@ -13,14 +13,14 @@ Exit
 In Python you can call the function [sys.exit] to terminate a program 
 and provide an error message (and status).
 
-For example consider the Python program `kthxbye.py`:
+For example the Python program `kthxbye.py`
 
 ```python
 import sys
 sys.exit("👋") 
 ``` 
 
-Executing it displays the emoji `👋` on the standard error:
+will display the emoji `👋` (on the standard error)
 
 
 ```bash
@@ -28,7 +28,7 @@ $ python kthxbye.py
 👋
 ```
 
-It also provides an exit code of `1` that signals an error 
+and also provide an exit code of `1` that signals an error 
 (`0` indicates success).
 
 ```bash
