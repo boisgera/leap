@@ -219,9 +219,7 @@ While this is handy, the "panic!" function should be used with care:
    
   - If you know that the code path that leads to a `panic!` cannot happen,
     you may be able to prove it (with Lean) and avoid completely the use 
-    of unsafe code.
-
-    For a very simple example: in the following code, Lean has been able
+    of unsafe code. A simple example: in the following code, Lean is able
     to deduce that `0`, `1` and `2` are valid indices for the constant 
     list `[1, 2, 3]`, therefore the safe access `xs[]` can be used instead
     of the unsafe variant `xs[]!`.
@@ -234,6 +232,24 @@ While this is handy, the "panic!" function should be used with care:
     #eval xs[1]
     -- 2
     #eval xs[2]
+    ```
+
+    On the other hand
+
+    ```lean
+    #eval xs[3]
+    ```
+
+    does not type check since Lean fails to prove
+    `3 < xs.length` and you get the following error instead:
+
+    ```
+    failed to prove index is valid, possible solutions:
+      - Use `have`-expressions to prove the index is valid
+      - Use `a[i]!` notation instead, runtime check is performed, and 'Panic' error message is produced if index is not valid
+      - Use `a[i]?` notation instead, result is an `Option` type
+      - Use `a[i]'h` notation instead, where `h` is a proof that index is valid
+    ⊢ 3 < xs.length
     ```
         
 
