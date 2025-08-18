@@ -210,7 +210,7 @@ Some guidelines:
 While this is handy, the "panic!" function should be used with care:
 
   - Since one cannot recover from a `panic!` the user of a code that 
-    may panic has no way to deal with them.
+    may panic has no way to deal with it.
 
   - Panics rely on convention (the "!" in the name) but are invisible
     to the type checker. To get help from the type checker in your 
