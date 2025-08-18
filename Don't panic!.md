@@ -36,8 +36,8 @@ $ echo $?
 ```
 
 The `sys.exit` function is mostly used in scripts and not in libraries, 
-as it terminates the program. A realistic usage would be the `greeter.py`
-script:
+as it terminates the program. A slightly more realistic usage is given 
+in the `greeter.py` script:
 
 ```python
 import sys
