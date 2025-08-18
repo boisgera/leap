@@ -150,9 +150,7 @@ This will panic if the index is out of bounds:
 Similarly, to get the first element of a list, you can use:
 
 ```lean
-def xs : List Nat := [1, 2, 3]
-
-#eval xs.head!
+#eval [1, 2, 3].head!
 -- 1
 ```
 
@@ -176,8 +174,8 @@ Some guidelines:
 
   - In a script, it's often acceptable to use `panic!` for error handling.
 
-  - When you are prototyping, `panic!` can we a handy tool to provide
-    temporarily a partial implementation. For example, the code
+  - When you are prototyping, `panic!` can provide temporarily a partial 
+    implementation. For example, the code
 
     ```lean
     def divideByTwo (n : Nat) : Nat :=
