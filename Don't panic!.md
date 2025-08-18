@@ -162,7 +162,7 @@ Of course, if your list is empty, this will panic:
 -- ...
 ```
 
-### 💡 Naming convention: exclamation point `!`
+### 💡 Exclamation point `!`
 
 The use of the exclamation point `!` usually indicates here that the function 
 is "dangerous" or "unsafe": it can panic if it encounters an error. 
