@@ -1,28 +1,27 @@
-
 import Python
 
 -- Python Bindings for raylib (mostly)
 def import_ (module : String) : IO Unit := do
-    Python.exec! s!"from {module} import *"
+    Python.exec s!"from {module} import *"
 
 def init_window (width: Nat) (height: Nat) (title : String) : IO Unit := do
-    Python.exec! s!"init_window({width}, {height}, \"{title}\")"
+    Python.exec s!"init_window({width}, {height}, \"{title}\")"
 
 def window_should_close : IO Bool := do
-    let status <- Python.eval! "window_should_close()"
+    let status <- Python.eval "window_should_close()"
     return status == "True"
 
 def close_window : IO Unit := do
-    Python.exec! "close_window()"
+    Python.exec "close_window()"
 
 def set_target_fps (fps : Nat) : IO Unit := do
-    Python.exec! s!"set_target_fps({fps})"
+    Python.exec s!"set_target_fps({fps})"
 
 def begin_drawing : IO Unit := do
-    Python.exec! "begin_drawing()"
+    Python.exec "begin_drawing()"
 
 def end_drawing : IO Unit := do
-    Python.exec! "end_drawing()"
+    Python.exec "end_drawing()"
 
 abbrev Color := Nat × Nat × Nat × Nat
 
@@ -31,14 +30,14 @@ def Color.to_string (color : Color) : String :=
     s!"({r}, {g}, {b}, {a})"
 
 def clear_background (color : Color) : IO Unit := do
-    Python.exec! s!"clear_background({color.to_string})"
+    Python.exec s!"clear_background({color.to_string})"
 
 
 def draw_text (text : String) (x y : Nat) (fontSize : Nat) (color : Color) : IO Unit := do
-    Python.exec! s!"draw_text(\"{text}\", {x}, {y}, {fontSize}, {color.to_string})"
+    Python.exec s!"draw_text(\"{text}\", {x}, {y}, {fontSize}, {color.to_string})"
 
 def draw_rectangle (x y : Nat) (width height : Nat) (color : Color) : IO Unit := do
-    Python.exec! s!"draw_rectangle({x}, {y}, {width}, {height}, {color.to_string})"
+    Python.exec s!"draw_rectangle({x}, {y}, {width}, {height}, {color.to_string})"
 
 
 def KEY_UP := 265
@@ -47,19 +46,19 @@ def KEY_LEFT := 263
 def KEY_RIGHT := 262
 
 def is_key_pressed (key : Nat) : IO Bool := do
-    let status <- Python.eval! s!"is_key_pressed({key})"
+    let status <- Python.eval s!"is_key_pressed({key})"
     return status == "True"
 
 def is_key_down (key : Nat) : IO Bool := do
-    let status <- Python.eval! s!"is_key_down({key})"
+    let status <- Python.eval s!"is_key_down({key})"
     return status == "True"
 
 def is_key_released (key : Nat) : IO Bool := do
-    let status <- Python.eval! s!"is_key_released({key})"
+    let status <- Python.eval s!"is_key_released({key})"
     return status == "True"
 
 def is_key_up (key : Nat) : IO Bool := do
-    let status <- Python.eval! s!"is_key_up({key})"
+    let status <- Python.eval s!"is_key_up({key})"
     return status == "True"
 
 def BLACK := (0, 0, 0, 255)

