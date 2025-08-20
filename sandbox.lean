@@ -1,20 +1,48 @@
-import Python
 
-def pythonCode := r#"
-import requests
+def roll : Nat := 3
 
-URL = "https://api.chucknorris.io/jokes/random"
+#check roll
+-- roll: Nat
 
-def get_joke():
-  joke_info = requests.get(URL).json()
-  return joke_info["value"]
-"#
+#check IO.rand
+-- IO.rand (lo hi : Nat) : BaseIO Nat
 
-def randomJoke : IO String := do
-  Python.exec! pythonCode
-  let joke <- Python.eval! "get_joke()"
-  return joke
+def rollDice := IO.rand 1 6
 
-#eval do
-  let joke <- randomJoke
-  IO.println joke
+#check rollDice
+-- rollDice : BaseIO Nat
+
+#eval rollDice
+-- 1
+
+#eval rollDice
+-- 4
+
+def unit : Unit := ()
+
+#check unit
+-- unit : Unit
+
+#eval unit == ()
+-- true
+
+def messageToUnit (s : String) : Unit :=
+  let _ := s -- we have to "use" s.
+  ()
+
+#check messageToUnit "Hello world! 👋"
+-- messageToUnit "Hello world! 👋"
+
+#eval messageToUnit "Hello world! 👋" == ()
+-- true
+
+#check (IO.println (α := String))
+-- IO.println : String → IO Unit
+
+def hello := IO.println "Hello world! 👋"
+
+#check hello
+-- hello : IO Unit
+
+#eval hello
+-- Hello world! 👋
