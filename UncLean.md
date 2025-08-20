@@ -4,7 +4,7 @@ UncLean
 🗑️ Embrace impurity
 --------------------------------------------------------------------------------
 
-In most programming languages, functions can take inputs, process them, and
+In programming, functions can take inputs, process them, and
 return ouputs. But they can also have various kind of side-effects: 
 print messages in you terminal, send e-mails, search the Internet ... 
 even order lunch!
@@ -13,8 +13,127 @@ even order lunch!
 
 [The Enunciation Apocalypse]: https://scontent-cdg4-3.xx.fbcdn.net/v/t39.30808-6/532953901_24490135003936932_7732910830382145601_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=qjzUJrpukJYQ7kNvwFyHj2L&_nc_oc=AdluCJNAJctXdZR9pSI6o8UviHpup3a8cBaudmzpIp5UrLly8vwdyhOj37x-lpcAuAI&_nc_zt=23&_nc_ht=scontent-cdg4-3.xx&_nc_gid=_6IzYZREoGtgmSuKScPszA&oh=00_AfWoe-jWnl7kXSuU5NDTSQjnETbPMptTujsfGxe1OWvhOw&oe=68ABE55A
 
-These functions with potential side-effects are called impure in Lean 
-and are carefully tracked by its type system; 
+In this respect they differ from mathematical functions that do not interact
+with the outside world and will always give the same outputs for the same
+inputs: they are **pure**. They are very simple conceptually!
+
+Functions with potential side-effects – **impure** functions -- 
+are carefully tracked by the Lean type system; in the simplest cases,
+they "live" in the `IO` context.
+
+Consider the `IO.println` function which prints any Lean value
+(which is representable as a `String`)
+
+```lean
+#eval IO.println "Hello world! 👋"
+-- Hello world! 👋
+```
+Its signature (when restricted to inputs of type `String`) is:
+
+```lean
+#check IO.println (α := String)
+-- IO.println : String → IO Unit
+```
+
+which means that it returns outputs of type `IO Unit`.
+A value of type `IO α` is an action that can be executed to yield some side-effects and return a value of type `α`.
+Here `Unit` is a type that contains a single value, the unit, denoted `()`.
+This unit `()` is the Lean equivalent of `None` in Python[^1].
+
+[^1]: and `Unit` is the equivalent of `NoneType`, which is `type(None)`.
+
+Therefor, `hello` which is defined by 
+
+```lean
+def hello := IO.println "Hello world! 👋"
+
+#check hello
+-- hello : IO Unit
+```
+
+is an action that when it's executed, will have a side-effect (print "Hello world! 👋") and return nothing of interest (the unit).
+
+```lean
+#eval hello
+-- Hello world! 👋
+```
+
+Not that `#eval` will happily execute your action and display its result.
+
+Another example, consider the function `IO.rand` that can generate random 
+natural numbers in a given range. Its signature is:
+
+```lean
+#check IO.rand
+-- IO.rand (lo hi : Nat) : BaseIO Nat
+```
+
+`BaseIO` is a context similar to `IO` but more restricted: actions in
+this context are not allowed to throw exceptions. This is largely irrelevant
+for now, Lean will hapilly convert it to an `IO` context when it's needed.
+
+To define that function that rolls a dice, you can define
+
+```lean
+def rollDice := IO.rand 1 6
+
+#check rollDice
+-- rollDice : BaseIO Nat
+```
+
+and to use it
+
+```lean
+#eval rollDice
+-- 1
+#eval rollDice
+-- 4
+#eval rollDice
+-- 6
+```
+
+Consider a moment what you can do with a similar but pure function.
+Its signature would be something like:
+
+```lean
+def rollDiceWithoutIO : Nat :=
+  sorry -- No implementation yet
+
+#check rollDiceWithoutIO
+-- rollDiceWithoutIO: Nat
+```
+
+Thus you can select a "random" number between 1 and 6, but select it carefully
+because it's the only one you'll ever get!
+
+If you pick 3 for example
+
+```lean
+def rollDiceWithoutIO : Nat :=
+  3
+```
+
+then you will get
+
+```lean
+#eval rollDiceWithoutIO
+-- 3
+#eval rollDiceWithoutIO
+-- 3
+#eval rollDiceWithoutIO
+-- 3
+```
+
+There are ways to deal with (pseudo-)random numbers using only pure functions,
+but they require a different interface.
+
+
+
+
+
+
+
+
 
 
 
@@ -23,7 +142,12 @@ and are carefully tracked by its type system;
 Use an Imperative Style
 --------------------------------------------------------------------------------
 
+**TODO.**
+
+  - Pure to impure, 
+  - Composition of actions, etc.
   - Imperative style, do, let mut, <-, := etc. loops, etc (control flow)
+
 
 Live dangerously
 --------------------------------------------------------------------------------

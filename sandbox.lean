@@ -1,5 +1,6 @@
 
-def roll : Nat := 3
+def roll : Nat :=
+  sorry
 
 #check roll
 -- roll: Nat
@@ -36,7 +37,7 @@ def messageToUnit (s : String) : Unit :=
 #eval messageToUnit "Hello world! 👋" == ()
 -- true
 
-#check (IO.println (α := String))
+#check IO.println (α := String)
 -- IO.println : String → IO Unit
 
 def hello := IO.println "Hello world! 👋"
