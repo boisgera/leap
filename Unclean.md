@@ -5,22 +5,33 @@ Cheatsheet for Lean imperative, impure & unsafe code
 Use Python
 --------------------------------------------------------------------------------
 
+Lean has a very limited standard library. 
+In this respect, that's the complete opposite of Python, which comes
+"batteries included"! 
+
+So when you need a functionality that Lean lacks, call Python:
+
 To get access to functionalities not available in Lean, call Python:
-start a [toupie] server, `import Python` in Lean then use
 
-  - `Python.exec!` to execute Python code
+  - start a [toupie] server, 
+  
+  - `import Python` in your lean code, then
 
-    ⚠️ The code is executed *server-side*;
+  - use `Python.exec!` to execute Python code
+
+  - use `Python. eval!` to evaluate Python expressions. 
+
+### ⚠️ Warnings
+
+  - The code is executed *server-side*;
     `Python.exec! "print('Hello world!')"`
-    *won't* display a message in your Lean session.
+    *will not* display a message in your Lean session.
 
-  - `Python. eval!` to evaluate Python expressions. 
-
-    ⚠️ The returned value is always a Lean `String` 
+  - The returned value is always a Lean `String` 
     (even if the Python value is not). 
 
     
-## Examples
+### 🔍 Examples
 
 ```lean
 import Python
