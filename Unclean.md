@@ -26,7 +26,7 @@ start a [toupie] server, `import Python` in Lean then use
 import Python
 
 def main : IO Unit := do
-  let message := Python.eval! "'Hello world!'"
+  let message <- Python.eval! "'Hello world!'"
   IO.println message
 
 #eval main
