@@ -2,7 +2,21 @@
 Cheatsheet for Lean imperative, impure & unsafe code
 ================================================================================
 
-Use Python
+TODO:
+
+  - impure functions ...
+
+  - Imperative style, do, let mut, <-, := etc. loops, etc (control flow)
+
+  - errors: use ! variants, panic, use POSIX-like errors?
+
+
+
+
+
+Use ! variants
+
+🐍 Use Python from Lean
 --------------------------------------------------------------------------------
 
 Lean has a very limited standard library. 
