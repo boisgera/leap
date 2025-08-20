@@ -21,7 +21,7 @@ def draw_fruit (fruit : Point2) : IO Unit := do
 
 def draw (state : GameState) : IO Unit := do
     clear_background WHITE
-    draw_grid
+    -- draw_grid -- We'd rather not hammer the toupi server
     draw_text "Hello Snake!" 190 200 20 VIOLET
     draw_fruit state.fruit
     for point in state.snake_geometry do
@@ -59,7 +59,8 @@ def move (state : GameState) : GameState := Id.run do
 def main : IO Unit := do
     import_ "pyray"
     init_window (WIDTH * SCALE) (HEIGHT * SCALE) "Snake Game"
-    set_target_fps 10
+
+    -- set_target_fps 60
 
     let mut state : GameState := {
         snake_direction : Int × Int := (1, 0),

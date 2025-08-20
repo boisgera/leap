@@ -16,7 +16,6 @@ def exec_output! (code : String) : IO String := do
         "-X", "POST", "http://127.0.0.1:8000",
         "-H", "Content-Type: plain/text",
         "--data-binary", "@-",
-        "http://example.com/upload"
       ],
       cwd := none,
       env := #[],
@@ -33,7 +32,6 @@ def exec! (code : String) : IO Unit := do
   return ()
 
 def eval! (code : String) : IO String := do
-  exec! s!"_ = {code}"
-  exec_output! "print(_, end='', flush=True)"
+  exec_output! s!"_ = {code}; print(_, end='', flush=True)"
 
 end Python
