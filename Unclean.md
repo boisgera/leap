@@ -10,14 +10,14 @@ start a [toupie] server, `import Python` in Lean then use
 
   - `Python.exec!` to execute Python code
 
-    ⚠️ The code is executed *server-side*. 
-    Do not expect a `Python.exec! "print('Hello world!')"`
-    to provide a message in your Lean session.
+    ⚠️ The code is executed *server-side*;
+    `Python.exec! "print('Hello world!')"`
+    *won't* display a message in your Lean session.
 
   - `Python. eval!` to evaluate Python expressions. 
 
-    ⚠️ The returned value is always a Lean `String` (even if the Python
-    value is not). 
+    ⚠️ The returned value is always a Lean `String` 
+    (even if the Python value is not). 
 
     
 ## Examples
@@ -26,7 +26,7 @@ start a [toupie] server, `import Python` in Lean then use
 import Python
 
 def main : IO Unit := do
-  let message : String <- Python.eval! "'Hello world!'"
+  let message := Python.eval! "'Hello world!'"
   IO.println message
 
 #eval main
@@ -37,42 +37,94 @@ def main : IO Unit := do
 import Python
 
 def main : IO Unit := do
-  let sum : String <- Python.eval! "1+1"
+  let sum : String <- Python.eval! "1 + 1"
   IO.println s!"1 + 1 = {sum}"
 
 #eval main
 -- 1 + 1 = 2
 ```
 
-
-**TODO**: example with conversion from str to what you want (ex : Nat)
-```lean
-import Python
-
-def main : IO Unit := do
-    Python.exec! "import math"
-    let pi_str <- Python.eval! "sum_integers_up_to(10)"
-    let pi := pi_str.
-    IO.println s!"1 + 2 + ... + 10 = {sum}"
-
-#eval main
--- 1 + 2 + ... + 10 = 55
-```
-
+You can use `Python.exec!` to define Python constants and/or functions before
+calling `Python.eval!`:
 
 ```lean
 import Python
 
-def pythonDef := "
+def pythonCode := "
 def sum_integers_up_to(n):
     return n * (n + 1) // 2
 "
 
 def main : IO Unit := do
-    Python.exec! pythonDef
+    Python.exec! pythonCode
     let sum : String <- Python.eval! "sum_integers_up_to(10)"
     IO.println s!"1 + 2 + ... + 10 = {sum}"
 
 #eval main
 -- 1 + 2 + ... + 10 = 55
 ```
+
+Convert strings that represent Python objects to native Lean types when needed:
+
+```lean
+import Python
+
+def fact (n : Nat) : IO Nat := do
+  Python.exec! "import math"
+  let factString <- Python.eval! s!"math.factorial({n})"
+  return factString.toNat!
+
+def binomial (n k : Nat) : IO Nat := do
+  let fact_n <- fact n
+  let fact_k <- fact k
+  let fact_n_k <- fact (n - k)
+  return fact_n / fact_k / fact_n_k
+
+#eval binomial 6 3
+-- 20
+```
+
+Snap a toupie server with extra Python libraries when you need them;
+the `requests` library is required for the next example:
+
+```bash
+uvx --with requests --from git+https://github.com/boisgera/toupie toupie
+```
+
+Note that Lean 4 [raw string literals] 
+– especially the hash mark variant – 
+are very handy to define Python code without worrying 
+about escaping backslashes and quotes.
+
+[raw string literals]: https://lean-lang.org/doc/reference/latest//Basic-Types/Strings/#raw-string-literals
+
+
+```lean
+import Python
+
+def pythonCode := r#"
+import requests
+
+URL = "https://api.chucknorris.io/jokes/random"
+
+def get_joke():
+  joke_info = requests.get(URL).json()
+  return joke_info["value"]
+"#
+
+def randomJoke : IO String := do
+  Python.exec! pythonCode
+  let joke <- Python.eval! "get_joke()"
+  return joke
+
+#eval do
+  let joke <- randomJoke
+  IO.println joke
+-- "Everybody Hates Chris" was originally called "Chuck Norris Hates Chris" but 
+-- Chris Rock didn't want to make a series just about how he survive Chuck 
+-- Norris round house kicking him EVERYDAY
+```
+
+
+
+[toupie]: https://github.com/boisgera/toupie
