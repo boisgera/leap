@@ -1,15 +1,32 @@
 UncLean
 ================================================================================
 
-TODO:
+🗑️ Embrace impurity
+--------------------------------------------------------------------------------
 
-  - impure functions ...
+In most programming languages, functions can take inputs, process them, and
+return ouputs. But they can also have various kind of side-effects: 
+print messages in you terminal, send e-mails, search the Internet ... 
+even order lunch!
+
+![The Enunciation Apocalypse]
+
+[The Enunciation Apocalypse]: https://debeste.de/upload/3a58495d9f0c08f5875001d81d5e74331313.jpg
+
+These functions with potential side-effects are called impure in Lean 
+and are carefully tracked by its type system; 
+
+
+
+
+
+Use an Imperative Style
+--------------------------------------------------------------------------------
 
   - Imperative style, do, let mut, <-, := etc. loops, etc (control flow)
 
-  - errors: use ! variants, panic, use POSIX-like errors?
-
-
+Live dangerously
+--------------------------------------------------------------------------------
 
 
 
