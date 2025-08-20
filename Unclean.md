@@ -84,7 +84,7 @@ def binomial (n k : Nat) : IO Nat := do
 -- 20
 ```
 
-Snap a toupie server with extra Python libraries when you need them;
+Spin a toupie server with extra Python libraries when you need them;
 the `requests` library is required for the next example:
 
 ```bash
