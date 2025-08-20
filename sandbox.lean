@@ -1,5 +1,8 @@
-
-
 import Python
 
-#eval Python.eval! "666+1"
+def main : IO Unit := do
+  let message : String <- Python.eval! "'Hello world!'"
+  IO.println message
+
+#eval main
+-- Hello world!
