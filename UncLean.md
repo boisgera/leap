@@ -1,5 +1,4 @@
-
-Cheatsheet for Lean imperative, impure & unsafe code
+UncLean
 ================================================================================
 
 TODO:
