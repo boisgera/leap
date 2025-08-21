@@ -241,19 +241,200 @@ enclosing `IO` context, you cannot turn an impure function into a pure one.
 🔀 Control flow
 --------------------------------------------------------------------------------
 
-  - if (ex: die with verbose option)
+```lean
+def rollDie (verbose : Bool) : IO Nat := do
+  let die <- IO.rand 1 6
+  if verbose then
+    IO.println s!"🎲: {die}"
+  return die
 
-  - mutable variables
+#eval rollDie (verbose := false)
+-- 3
 
-  - loops (while, for, break, continue)
+#eval rollDie (verbose := true)
+-- 🎲: 2
+-- 2
+```
+
+The `if` branch without the corresponding `else` is valid here only
+because the expression `IO.println s!"🎲: {die}"` is of type `IO Unit`. 
+This is actually equivalent to:
+
+```lean
+def pass : IO Unit := do
+  return
+
+def rollDie (verbose : Bool) : IO Nat := do
+  let die <- IO.rand 1 6
+  if verbose then
+    IO.println s!"🎲: {die}"
+  else
+    pass
+  return die
+
+#eval rollDie (verbose := false)
+-- 3
+
+#eval rollDie (verbose := true)
+-- 🎲: 2
+-- 2
+```
+
+For any other type `IO α`, you will need to specify explicitly the else branch:
+
+```lean
+def greeting (use_emoji : Bool): IO String := do
+  if use_emoji then
+    return "Hello! 👋"
+  else
+    return "Hello!"
+
+#eval greeting (use_emoji := false)
+-- "Hello"
+
+#eval greeting (use_emoji := true)
+-- "Hello! 👋"
+```
+
+Lean variables are immutable by default; once declared and assigned a value,
+you cannot change your mind:
+
+```lean
+def print_number : IO Unit := do
+  let number := 1
+  number := 2 -- ❌ `number` cannot be mutated
+  IO.println number
+```
+
+but within in a `do` block, you can declare them explicitly as mutable:
+
+```lean
+def print_number : IO Unit := do
+  let mut number := 1
+  number := 2 -- ✅
+  IO.println number
+
+#eval print_number
+--2 
+```
+
+Mutable variables are handy in loops, which are also available in `do`
+blocks. For example:
+
+```lean
+def roll3d6 : IO (List Nat) := do
+  let mut dices := []
+  for _ in [0:3] do
+    let die <- IO.rand 1 6
+    dices := dices ++ [die]
+  return dices
+
+#eval roll3d6
+-- [3, 3, 1]
+```
+
+You can iterate on ranges like `[1:3]`; you can also iterate on lists:
+
+```lean
+def sum3d6 : IO Nat := do
+  let dices <- roll3d6
+  let mut sum := 0
+  for die in dices do
+    sum := sum + die
+  return sum
+
+#eval sum3d6
+-- 10
+```
+
+Note that there is a handy shortcut to avoid the creation of an extra variables
+that extract a value from a `IO` context when this value is only used once:
+
+```lean
+def sum3d6 : IO Nat := do
+  let mut sum := 0
+  for die in (<- roll3d6) do
+    sum := sum + die
+  return sum
+
+#eval sum3d6
+-- 10
+```
+
+There are also `while` and `repeat` loops and `break` and `continue` statements
+as well:
+
+```lean
+def rollUntil (n : Nat) : IO (List Nat) := do
+    let rollDie := IO.rand 1 6
+    let mut dices := []
+    repeat
+      let die <- rollDie
+      dices := dices ++ [die]
+      if die == n then
+        break
+    return dices
+
+#eval rollUntil 1
+-- [6, 2, 4, 4, 2, 6, 2, 5, 1]
+```
+
+```lean
+def rollUntil3x1 : IO (List Nat) := do
+    let rollDie := IO.rand 1 6
+    let mut dices := []
+    let mut count := 0
+    while count < 3 do
+      let die <- rollDie
+      dices := dices ++ [die]
+      if die == 1 then
+        count := count + 1
+      else
+        count := 0 -- reset
+    return dices
+
+#eval rollUntil3x1
+-- [2, 4, 3, 5, 3, 6, 2, 1, 1, 5, ... , 1, 4, 4, 2, 2, 1, 3, 5, 1, 1, 1]
+```
 
 
 🖤 Live and let die
 --------------------------------------------------------------------------------
 
+While there are many elaborate methods to deal with errors in Lean, I advise
+you to start handling your potential errors with `panic!` which stops the program and display an error message. Functions from the standard Lean library that
+handle errors this way are flagged with a `!`, use these variants until you
+know better.
 
+```lean
+def xs : List Nat := [1, 1, 2, 3, 5, 8, 13, 21]
 
-Use ! variants
+def get (k : Nat) : Nat := xs[k]!
+
+#eval get 7
+-- 21
+
+#eval get 8
+-- PANIC at List.get!Internal Init.GetElem:...
+```
+
+If you want a more friendly error message:
+
+```lean
+def xs : List Nat := [1, 1, 2, 3, 5, 8, 13, 21]
+
+def get (k : Nat) : Nat := 
+  if k < xs.length then
+    xs[k]!
+  else
+    panic s!"out of bounds: index {k} >= list length {xs.length}"
+
+#eval get 7
+-- 21
+
+#eval get 8
+-- out of bounds: index 8 >= list length 8 ...
+```
 
 🐍 Use Python
 --------------------------------------------------------------------------------
