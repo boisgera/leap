@@ -145,11 +145,14 @@ then you will get
 -- 3
 ```
 
-There are actually some ways to deal with (pseudo-)random numbers without `IO`, but they require a different interface.
+There are actually some ways to deal with (pseudo-)random numbers without `IO`, 
+but they require a different interface.
 
 
 ▶️ Let's `do` this
 --------------------------------------------------------------------------------
+
+### 🧩 Solving the puzzle
 
 We are now faced with two issues:
 
@@ -238,8 +241,8 @@ Yes you can "breach" the `IO` context to get a pure `die`,
 but since this is only allowed in an
 enclosing `IO` context, you cannot turn an impure function into a pure one.
 
-🔀 Control flow
---------------------------------------------------------------------------------
+
+### 🔀 Control flow
 
 ```lean
 def rollDie (verbose : Bool) : IO Nat := do
@@ -397,8 +400,8 @@ def rollUntil3x1 : IO (List Nat) := do
 -- [2, 4, 3, 5, 3, 6, 2, 1, 1, 5, ... , 1, 4, 4, 2, 2, 1, 3, 5, 1, 1, 1]
 ```
 
-🔧 Imperative style and purity
---------------------------------------------------------------------------------
+
+### 🔧 Imperative style and purity
 
 The imperative style of programming, with sequences of statements
 that change of the value of mutable variables and whose execution is
