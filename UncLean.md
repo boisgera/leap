@@ -4,8 +4,8 @@ UncLean
 🗑️ Embrace impurity
 --------------------------------------------------------------------------------
 
-In programming, functions can take inputs, process them, and
-return ouputs. But they can also have various kind of side-effects: 
+In programming, functions can take inputs, process them and
+return otuputs. But they can also have various kind of side-effects: 
 print messages in you terminal, send e-mails, search the Internet ... 
 even order lunch!
 
@@ -13,36 +13,38 @@ even order lunch!
 
 [The Enunciation Apocalypse]: https://scontent-cdg4-3.xx.fbcdn.net/v/t39.30808-6/532953901_24490135003936932_7732910830382145601_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=qjzUJrpukJYQ7kNvwFyHj2L&_nc_oc=AdluCJNAJctXdZR9pSI6o8UviHpup3a8cBaudmzpIp5UrLly8vwdyhOj37x-lpcAuAI&_nc_zt=23&_nc_ht=scontent-cdg4-3.xx&_nc_gid=_6IzYZREoGtgmSuKScPszA&oh=00_AfWoe-jWnl7kXSuU5NDTSQjnETbPMptTujsfGxe1OWvhOw&oe=68ABE55A
 
-In this respect they differ from mathematical functions that do not interact
-with the outside world and will always give the same outputs for the same
-inputs: they are **pure**. They are very simple conceptually!
+In this respect they differ from mathematical functions that do not interact with the outside world and will always give the same outputs for the same inputs; such functions are **pure**. These are very strong guarantees and the core of Lean is made to manage only such functions.
 
 Functions with potential side-effects – **impure** functions -- 
-are carefully tracked by the Lean type system; in the simplest cases,
-they "live" in the `IO` context.
+are carefully tracked by the Lean type system; their execution 
+depends on a small Lean runtime that specifically interacts with the external world.
+
+The trick is: as long as you don't execute them, you can deal with impure functions as if they were pure, using only Lean core. And you will get all the guarantees that Lean core provides!
+You simply need to "box" them into "actions" in the `IO` "context"; the choie of the `IO` context here determines the action permissions or "capabilities". 
+
+### Hello world! 👋
 
 Consider the `IO.println` function which prints any Lean value
-(which is representable as a `String`)
+(as long as it is representable as a `String`)
 
 ```lean
 #eval IO.println "Hello world! 👋"
 -- Hello world! 👋
 ```
-Its signature (when restricted to inputs of type `String`) is:
+Its signature (when we restrict it to inputs of type `String`) is:
 
 ```lean
 #check IO.println (α := String)
 -- IO.println : String → IO Unit
 ```
 
-which means that it returns outputs of type `IO Unit`.
+It is a function that accepts strings and returns outputs of type `IO Unit`.
 A value of type `IO α` is an action that can be executed to yield some side-effects and return a value of type `α`.
-Here `Unit` is a type that contains a single value, the unit, denoted `()`.
-This unit `()` is the Lean equivalent of `None` in Python[^1].
+Here `Unit` is a type that has a single value, the unit, denoted `()`.
+The unit `()` is the Lean equivalent of `None` in Python
+(and `Unit` is the equivalent of `NoneType`, which is `type(None)`).
 
-[^1]: and `Unit` is the equivalent of `NoneType`, which is `type(None)`.
-
-Therefor, `hello` which is defined by 
+Therefore, `hello` which is defined by 
 
 ```lean
 def hello := IO.println "Hello world! 👋"
@@ -52,16 +54,36 @@ def hello := IO.println "Hello world! 👋"
 ```
 
 is an action that when it's executed, will have a side-effect (print "Hello world! 👋") and return nothing of interest (the unit).
+Now, you can ask "#eval" – who has access to Lean runtime -- to execute this action:
 
 ```lean
 #eval hello
 -- Hello world! 👋
 ```
 
-Not that `#eval` will happily execute your action and display its result.
+If instead of programming in the playground you want to create a program,
+create a file `Hello.lean` whose contents are:
 
-Another example, consider the function `IO.rand` that can generate random 
-natural numbers in a given range. Its signature is:
+```lean
+def hello := IO.println "Hello world! 👋"
+
+def main := hello
+```
+
+A `main` constant with type `IO Unit` is the program entry point: 
+the action that Lean runtime will execute when you run the program:
+
+```bash
+$ lean --run Hello.lean
+Hello world! 👋
+```
+
+### Random Functions
+
+Let's now try to generate (pseudo-)random numbers with Lean.
+There is in the standard library a function `IO.rand` which 
+can produce random natural numbers in a given range. 
+Its signature is:
 
 ```lean
 #check IO.rand
@@ -70,25 +92,25 @@ natural numbers in a given range. Its signature is:
 
 `BaseIO` is a context similar to `IO` but more restricted: actions in
 this context are not allowed to throw exceptions. This is largely irrelevant
-for now, Lean will hapilly convert it to an `IO` context when it's needed.
+for us right now, since Lean will hapilly convert it to an `IO` context when it's needed.
 
-To define that function that rolls a dice, you can define
+To define that function that generates a random number between 1 and 6, you can define
 
 ```lean
-def rollDice := IO.rand 1 6
+def rollDie := IO.rand 1 6
 
-#check rollDice
--- rollDice : BaseIO Nat
+#check rollDie
+-- rollDie : BaseIO Nat
 ```
 
-and to use it
+Using it several times yields something like:
 
 ```lean
-#eval rollDice
+#eval rollDie
 -- 1
-#eval rollDice
+#eval rollDie
 -- 4
-#eval rollDice
+#eval rollDie
 -- 6
 ```
 
@@ -96,57 +118,136 @@ Consider a moment what you can do with a similar but pure function.
 Its signature would be something like:
 
 ```lean
-def rollDiceWithoutIO : Nat :=
+def rollDieWithoutIO : Nat :=
   sorry -- No implementation yet
 
-#check rollDiceWithoutIO
--- rollDiceWithoutIO: Nat
+#check rollDieWithoutIO
+-- rollDieWithoutIO: Nat
 ```
 
-Thus you can select a "random" number between 1 and 6, but select it carefully
-because it's the only one you'll ever get!
+Thus you select a "random" number between 1 and 6, but 
+you'd better select it carefully because it's the only one you'll ever get!
 
 If you pick 3 for example
 
 ```lean
-def rollDiceWithoutIO : Nat :=
-  3
+def rollDieWithoutIO : Nat := 3
 ```
 
 then you will get
 
 ```lean
-#eval rollDiceWithoutIO
+#eval rollDieWithoutIO
 -- 3
-#eval rollDiceWithoutIO
+#eval rollDieWithoutIO
 -- 3
-#eval rollDiceWithoutIO
+#eval rollDieWithoutIO
 -- 3
 ```
 
-There are ways to deal with (pseudo-)random numbers using only pure functions,
-but they require a different interface.
+There are actually some ways to deal with (pseudo-)random numbers without `IO`, but they require a different and more complex interface.
 
 
-
-
-
-
-
-
-
-
-
-
-
-Use an Imperative Style
+Let's `do` this
 --------------------------------------------------------------------------------
 
-**TODO.**
+We are now faced with two issues:
 
-  - Pure to impure, 
-  - Composition of actions, etc.
-  - Imperative style, do, let mut, <-, := etc. loops, etc (control flow)
+  1. Since the core of Lean is pure and it's pretty handy, how do 
+    we mix pure and impure? 
+  
+  2. How do we chain impure functions to define more complex impure functions?
+
+The first point is rather easy to solve. First note that the answer should be
+very assymetric: it should not be possible to execute impure functions from 
+pure ones, otherwise the careful tracking of impurity would be broken. 
+But we still need to integrate pure functions as impure one, which is quite
+easy, with a `do` block and the `return` keyword.
+
+
+```lean 
+def rollDieWithoutIO : Nat := 3
+
+def rollFake : IO Nat := do
+  return rollDieWithoutIO
+
+#eval rollFake
+-- 3
+```
+
+The `do` block construct also solves most of the chaining problem. 
+To chain actions, simply enumerate them in a do block:
+
+
+```lean
+def rollDie : IO Nat := 
+  IO.rand 1 6
+
+def rollDie' : IO Nat := do
+  IO.println "🎲 Rolling the die ..."
+  rollDie
+
+#eval rollDie'
+-- 🎲 Rolling the die ...
+-- 1
+```
+
+Note that it's useless but OK to write:
+
+```lean
+def rollDie : IO Nat := do
+  IO.rand 1 6
+```
+
+In this context, you chain a single `IO` action...
+
+The real pickle comes if you want to chain two actions and have the 
+second action depend on the result of of the first.
+For example, that's the situation if we want the information message 
+to display the value of the rolled die instead (with the die emoji for context). If we had a `Nat` value `die`, we could use the formatted string 
+construct of Lean
+
+```lean
+def die : Nat := 3
+
+#eval IO.println s!"🎲: {die}"
+```
+
+But unfortunately this is not what `rollDie` generates: it
+produces values of type `IO Nat` instead, so we a bit more help from Lean.
+That comes in the form of a `<-` symbol! In a `IO` context and in a `do` block, you can use `<-` to extract a value of type `IO α` into a value of type `α`.
+
+For us, that means that we can do:
+
+```lean
+def rollDie : IO Nat := do
+  IO.rand 1 6
+
+def rollDie'' : IO Nat := do
+  let die <- rollDie
+  IO.println s!"🎲: {die}"
+  return die
+
+#eval rollDie''
+-- 🎲: 2
+-- 2
+```
+
+And before you ask, no, this is **not** a breach of the `IO` context! 
+Yes you can "breach" the `IO` context to get a pure `die`, 
+but since this is only allowed in an
+enclosing `IO` context, you cannot turn an impure function into a pure one.
+
+
+
+Control flow
+--------------------------------------------------------------------------------
+
+  - if (ex: die with verbose option)
+
+  - mutable variables
+
+  - loops (while, for, break, continue)
 
 
 Live dangerously
