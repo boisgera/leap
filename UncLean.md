@@ -1,7 +1,7 @@
 UncLean
 ================================================================================
 
-✨ Embrace purity
+✨ Embrace impurity
 --------------------------------------------------------------------------------
 
 In programming, functions can take inputs, process them and
