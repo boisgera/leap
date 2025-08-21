@@ -22,7 +22,7 @@ depends on a small Lean runtime that specifically interacts with the external wo
 The trick is: as long as you don't execute them, you can deal with impure functions as if they were pure, using only Lean core. And you will get all the guarantees that Lean core provides!
 You simply need to "box" them into "actions" in the `IO` "context"; the choie of the `IO` context here determines the action permissions or "capabilities". 
 
-### Hello world! 👋
+### 👋 Hello world!
 
 Consider the `IO.println` function which prints any Lean value
 (as long as it is representable as a `String`)
