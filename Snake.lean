@@ -1,4 +1,5 @@
 import Raylib
+import Python
 
 structure GameState where
     snake_direction : Vector2
@@ -19,9 +20,9 @@ def draw_fruit (fruit : Point2) : IO Unit := do
     let (x, y) := fruit
     draw_rectangle (x * SCALE) (y * SCALE) SCALE SCALE STRAWBERRY
 
-def draw (state : GameState) : IO Unit := do
+def draw (state : GameState) : IO Unit := Python.batch do
     clear_background WHITE
-    -- draw_grid -- We'd rather not hammer the toupi server
+    draw_grid -- We'd rather not hammer the toupie server
     draw_text "Hello Snake!" 190 200 20 VIOLET
     draw_fruit state.fruit
     for point in state.snake_geometry do
@@ -60,7 +61,7 @@ def main : IO Unit := do
     import_ "pyray"
     init_window (WIDTH * SCALE) (HEIGHT * SCALE) "Snake Game"
 
-    -- set_target_fps 60
+    set_target_fps 1
 
     let mut state : GameState := {
         snake_direction : Int × Int := (1, 0),
@@ -83,4 +84,24 @@ def main : IO Unit := do
         draw state
         end_drawing
 
+    dbg_trace "*"
     close_window
+    -- Mmm there is the risk that the IO action is not over?
+    -- or is it some caching/flushing issue? Arf, flush! solve this!
+    -- How come??? close_window should not be batched?
+    -- Display the internal state before close_window (should be
+    -- no todos and not batched)
+    Python.flush!
+    dbg_trace "**"
+
+    -- IO.println (<- Python.eval! "'-----'")
+
+
+
+/-
+Batching works wrt perf and snake evolution BUT:
+  - I can't close the window anymore (?)
+  - The toupie server does not display all the commands it should (?)
+    Nah, ok, it's merely because the raylib window freezes when I
+    change workspace, nothing to worry about.
+-/

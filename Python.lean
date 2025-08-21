@@ -36,13 +36,13 @@ def flush! : IO Unit := do
   let codes <- todos.get
   if not codes.isEmpty then
     let code := "\n".intercalate codes
+    todos.set []
     discard (exec_output! code)
 
 def batch {α} (action : IO α) : IO α := do
   shouldBatch.set true
   let result <- action
   flush!
-  shouldBatch.set false
   return result
 
 def exec! (code : String) : IO Unit := do
