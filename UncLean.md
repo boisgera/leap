@@ -54,7 +54,7 @@ def hello := IO.println "Hello world! 👋"
 ```
 
 is an action that when it's executed, will have a side-effect (print "Hello world! 👋") and return nothing of interest (the unit).
-Now, you can ask `#eval` – who has access to Lean runtime -- to execute this action:
+Now, you can ask `#eval` – who has access to Lean runtime – to execute this action:
 
 ```lean
 #eval hello
