@@ -1,7 +1,7 @@
 UncLean
 ================================================================================
 
-✨ Embrace Purity
+✨ Embrace purity
 --------------------------------------------------------------------------------
 
 In programming, functions can take inputs, process them and
@@ -78,7 +78,7 @@ $ lean --run Hello.lean
 Hello world! 👋
 ```
 
-### 🎲 Random Functions
+### 🎲 Random functions
 
 Let's now try to generate (pseudo-)random numbers with Lean.
 There is in the standard library a function `IO.rand` which 
