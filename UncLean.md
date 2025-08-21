@@ -20,7 +20,7 @@ are carefully tracked by the Lean type system; their execution
 depends on a small Lean runtime that specifically interacts with the external world.
 
 The trick is: as long as you don't execute them, you can deal with impure functions as if they were pure, using only Lean core. And you will get all the guarantees that Lean core provides!
-You simply need to "box" them into "actions" in the `IO` "context"; the choie of the `IO` context here determines the action permissions or "capabilities". 
+You simply need to "box" them into "actions" in the `IO` "context"; the choice of the `IO` context here determines the action permissions or "capabilities". 
 
 ### 👋 Hello world!
 
