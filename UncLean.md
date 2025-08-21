@@ -397,6 +397,53 @@ def rollUntil3x1 : IO (List Nat) := do
 -- [2, 4, 3, 5, 3, 6, 2, 1, 1, 5, ... , 1, 4, 4, 2, 2, 1, 3, 5, 1, 1, 1]
 ```
 
+# 🔧 Imperative style and purity
+--------------------------------------------------------------------------------
+
+T imperative style of programming, with sequencing of statements that have
+side-effects via the change of the value of mutable variables, 
+can be beneficial even if you don't need the `IO` context and 
+your function is actually pure. 
+
+If at the moment you don't fancy the classical functional programming style
+
+```lean
+def sum : List Nat → Nat
+| []      => 0
+| x :: xs => x + sum xs
+
+#eval sum [1, 1, 2, 3, 5, 8, 13, 21]
+-- 54
+```
+
+or even
+
+```lean
+def sum (xs : List Nat) : Nat :=
+  xs.foldl (fun acc x => acc + x) 0
+
+#eval sum [1, 1, 2, 3, 5, 8, 13, 21]
+-- 54
+```
+
+then use the `Id` context instead of `IO` which will also allow you to use
+do blocks and the associated constructs:
+
+```lean
+def sum (xs : List Nat) : Nat := Id.run do
+  let mut s := 0
+  for x in xs do
+    s := s + x
+  return s
+
+#eval sum [1, 1, 2, 3, 5, 8, 13, 21]
+-- 54
+```
+
+Contrarily to `IO`, computations in the `Id` context are "runnable" and thus
+we can extract the final value of their computation without interaction with
+the IO runtime. But they can't print message, send e-mails ... or order lunch!
+
 
 🖤 Live and let die
 --------------------------------------------------------------------------------
