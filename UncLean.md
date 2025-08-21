@@ -238,9 +238,7 @@ Yes you can "breach" the `IO` context to get a pure `die`,
 but since this is only allowed in an
 enclosing `IO` context, you cannot turn an impure function into a pure one.
 
-
-
-Control flow
+🔀 Control flow
 --------------------------------------------------------------------------------
 
   - if (ex: die with verbose option)
@@ -250,7 +248,7 @@ Control flow
   - loops (while, for, break, continue)
 
 
-Live dangerously
+🖤 Live and let die
 --------------------------------------------------------------------------------
 
 
