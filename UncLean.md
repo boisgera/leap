@@ -397,11 +397,12 @@ def rollUntil3x1 : IO (List Nat) := do
 -- [2, 4, 3, 5, 3, 6, 2, 1, 1, 5, ... , 1, 4, 4, 2, 2, 1, 3, 5, 1, 1, 1]
 ```
 
-# 🔧 Imperative style and purity
+🔧 Imperative style and purity
 --------------------------------------------------------------------------------
 
-T imperative style of programming, with sequencing of statements that have
-side-effects via the change of the value of mutable variables, 
+The imperative style of programming, with sequences of statements
+that change of the value of mutable variables and whose execution is
+are controlled by branches and loops,
 can be beneficial even if you don't need the `IO` context and 
 your function is actually pure. 
 
