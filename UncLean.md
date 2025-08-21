@@ -114,8 +114,8 @@ Using it several times yields something like:
 -- 6
 ```
 
-Consider a moment what you can do with a similar but pure function.
-Its signature would be something like:
+Consider a moment what you can do with a similar but pure value.
+Its signature would be:
 
 ```lean
 def rollDieWithoutIO : Nat :=
@@ -125,7 +125,7 @@ def rollDieWithoutIO : Nat :=
 -- rollDieWithoutIO: Nat
 ```
 
-Thus you select a "random" number between 1 and 6, but 
+Thus you **can** select a "random" number between 1 and 6, but 
 you'd better select it carefully because it's the only one you'll ever get!
 
 If you pick 3 for example
@@ -145,7 +145,7 @@ then you will get
 -- 3
 ```
 
-There are actually some ways to deal with (pseudo-)random numbers without `IO`, but they require a different and more complex interface.
+There are actually some ways to deal with (pseudo-)random numbers without `IO`, but they require a different interface.
 
 
 Let's `do` this
@@ -158,10 +158,10 @@ We are now faced with two issues:
   
   2. How do we chain impure functions to define more complex impure functions?
 
-The first point is rather easy to solve. First note that the answer should be
-very assymetric: it should not be possible to execute impure functions from 
+First note that the answer to the first point should be
+asymmetric: it should not be possible to execute impure functions from 
 pure ones, otherwise the careful tracking of impurity would be broken. 
-But we still need to integrate pure functions as impure one, which is quite
+But we still need to integrate pure functions as impure ones. This is actually quite
 easy, with a `do` block and the `return` keyword.
 
 
@@ -175,7 +175,7 @@ def rollFake : IO Nat := do
 -- 3
 ```
 
-The `do` block construct also solves most of the chaining problem. 
+The `do` block also solves most of the chaining problem. 
 To chain actions, simply enumerate them in a do block:
 
 
@@ -202,9 +202,9 @@ def rollDie : IO Nat := do
 In this context, you chain a single `IO` action...
 
 The real pickle comes if you want to chain two actions and have the 
-second action depend on the result of of the first.
-For example, that's the situation if we want the information message 
-to display the value of the rolled die instead (with the die emoji for context). If we had a `Nat` value `die`, we could use the formatted string 
+second one depend on the result of the first.
+For example, that's the situation if we want our information message 
+to display the value of the rolled die instead. If we had a `Nat` value `die`, we could use the formatted string 
 construct of Lean
 
 ```lean
