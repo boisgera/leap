@@ -255,7 +255,7 @@ enclosing `IO` context, you cannot turn an impure function into a pure one.
 
 Use ! variants
 
-🐍 Use Python from Lean
+🐍 Use Python
 --------------------------------------------------------------------------------
 
 Lean has a very limited standard library. 
