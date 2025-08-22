@@ -1,7 +1,7 @@
 
 import Python
 
--- Python Bindings for raylib (mostly)
+-- Python Bindings for raylib
 def import_ (module : String) : IO Unit := do
     Python.exec! s!"from {module} import *"
 
@@ -13,9 +13,7 @@ def window_should_close : IO Bool := do
     return status == "True"
 
 def close_window : IO Unit := do
-    dbg_trace ">>>"
     Python.exec! "close_window()"
-    dbg_trace "<<<"
 
 def set_target_fps (fps : Nat) : IO Unit := do
     Python.exec! s!"set_target_fps({fps})"

@@ -22,8 +22,7 @@ def draw_fruit (fruit : Point2) : IO Unit := do
 
 def draw (state : GameState) : IO Unit := Python.batch do
     clear_background WHITE
-    draw_grid -- We'd rather not hammer the toupie server
-    draw_text "Hello Snake!" 190 200 20 VIOLET
+    draw_grid
     draw_fruit state.fruit
     for point in state.snake_geometry do
         let (x, y) := point
@@ -32,9 +31,7 @@ def draw (state : GameState) : IO Unit := Python.batch do
 def forward (state : GameState) : GameState :=
     let (dx, dy) := state.snake_direction
     let snake_geometry := state.snake_geometry
-    let head := match state.snake_geometry.head? with
-      | none => panic! "Snake geometry is empty"
-      | some head => head
+    let head := state.snake_geometry.head!
     let new_head : Point2 := (
         (((Int.ofNat head.1) + dx) % WIDTH).toNat,
         (((Int.ofNat head.2) + dy) % HEIGHT).toNat,
@@ -49,17 +46,14 @@ def trim (state : GameState) : GameState :=
 
 def move (state : GameState) : GameState := Id.run do
     let mut state := forward state
-    let mut head : Point2 := (0, 0)
-    match state.snake_geometry.head? with
-      | none => pure ()
-      | some head_ => head := head_
+    let head := state.snake_geometry.head!
     if not (head == state.fruit) then
         state := trim state
-    state
+    return state
 
 def main : IO Unit := do
     import_ "pyray"
-    init_window (WIDTH * SCALE) (HEIGHT * SCALE) "Snake Game"
+    init_window (WIDTH * SCALE) (HEIGHT * SCALE) "🐍 Snake Game"
 
     set_target_fps 1
 
@@ -84,24 +78,4 @@ def main : IO Unit := do
         draw state
         end_drawing
 
-    dbg_trace "*"
     close_window
-    -- Mmm there is the risk that the IO action is not over?
-    -- or is it some caching/flushing issue? Arf, flush! solve this!
-    -- How come??? close_window should not be batched?
-    -- Display the internal state before close_window (should be
-    -- no todos and not batched)
-    Python.flush!
-    dbg_trace "**"
-
-    -- IO.println (<- Python.eval! "'-----'")
-
-
-
-/-
-Batching works wrt perf and snake evolution BUT:
-  - I can't close the window anymore (?)
-  - The toupie server does not display all the commands it should (?)
-    Nah, ok, it's merely because the raylib window freezes when I
-    change workspace, nothing to worry about.
--/

@@ -43,6 +43,7 @@ def batch {α} (action : IO α) : IO α := do
   shouldBatch.set true
   let result <- action
   flush!
+  shouldBatch.set false
   return result
 
 def exec! (code : String) : IO Unit := do
