@@ -1,4 +1,8 @@
+Monads
+================================================================================
 
+📝 Preamble: Pipe
+--------------------------------------------------------------------------------
 
 Let's convert the number 255 into its hexadecimal representation.
 With Lean, that can be achieved with the following code:
@@ -39,30 +43,29 @@ def hex₁ (n : Nat) : String :=
   n |> fun n => Nat.toDigits 16 n |> String.mk |> fun s => "0x" ++ s
 ```
 
-Note that the |> operator has low precedence, so that we don't need to use 
+The `|>` operator has low precedence, so that we don't need to use 
 parentheses to separate its arguments.
 
 And afterwards we can also 
 
   - remember how currying works and what `Nat.toDigits 16` represents,
 
-  - learn that we can use ·[^centerdot] as a placeholder for arguments in 
+  - learn that we can use ·as a placeholder for arguments in 
     function definitions
-    (see [Sugar for simple functions]in the [Lean documentation overview])
+    (see [Sugar for simple functions] in the [Lean documentation overview];
+    To get the character `·`, type either `\.` or `\centerdot` in the Lean editor.)
 
 [Sugar for simple functions]: https://docs.lean-lang.org/lean4/doc/lean3changes.html#sugar-for-simple-functions
 [Lean documentation overview]: https://docs.lean-lang.org/lean4/doc/
 
-[^centerdot]: To get `·`, type either `\.` or `\centerdot` in the Lean editor.
-
-
 and simplify the function into
 
-
 ```lean
-def def hex₂ (n : Nat) : String :=
+def hex₂ (n : Nat) : String :=
   n |> Nat.toDigits 16 |> String.mk |> ("0x" ++ ·)
 ```
+
+and *voilà!*
 
 ```lean
 def hex := hex₂
@@ -80,9 +83,81 @@ def hex := hex₂
 -- "0x1000"
 ```
 
-----------
+Monads
+--------------------------------------------------------------------------------
 
+The (simplified) definition of monad in Lean 4:
 
+```lean
+class Monad (m : Type u → Type v) : Type (max (u+1) v) where
+  pure {α : Type u} : α → f α
+  bind : {α β : Type u} → m α → (α → m β) → m β
+```
+
+The `bind` function is associated to the `>>=` bind operator: 
+
+```lean
+x >>= f = bind x f
+```
+
+This operator is left assocative:
+
+```lean
+x >>= f >>= g = (x >== f) >== g
+```
+
+## Monadic Laws
+
+`pure` is a left unit:
+
+```lean
+(· |> pure >== f) = f
+```
+
+`pure` is a left unit:
+
+```lean
+(· |> f >>= pure) = f
+```
+
+`>>=` is assocative:
+
+```lean
+((· >>= f) >>= g) = (· >>= (· |> f >>= g))
+```
+
+For any monad `m` and types `α`, `β` and `γ`, 
+
+```lean
+kleisliRight (f : α → m β) (g : β → m γ) (a : α) : m γ :=
+   a |> f >>= g
+```
+
+Kleisli (right) operator `>=>`:
+
+```lean
+f >=> g = kleisliRight f g
+```
+
+Monadic laws, new version:
+
+```lean
+(pure >=> f) = f
+```
+
+```lean
+(f >>= pure) = f
+```
+
+```lean
+((f >=> g) >=> h) = (f >=> (g >=> h))
+```
+
+(Proof for the third?)
+
+### `do` sugar
+
+--------------------------------------------------------------------------------
 
 Towards 
 
@@ -115,6 +190,8 @@ with bind, unboxing impossibility, etc. Compare with the pure stuff.
     #eval IO.FS.readFile "collatz.py" >>= IO.println
 
   - do block
+
+
 
   - do block with pure functions : `Id.run`
 
