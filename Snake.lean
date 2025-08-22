@@ -22,7 +22,7 @@ def draw_fruit (fruit : Point2) : IO Unit := do
 
 def draw (state : GameState) : IO Unit := Python.batch do
     clear_background WHITE
-    draw_grid
+    -- draw_grid
     draw_fruit state.fruit
     for point in state.snake_geometry do
         let (x, y) := point
@@ -58,7 +58,7 @@ def main : IO Unit := do
     set_target_fps 1
 
     let mut state : GameState := {
-        snake_direction : Int × Int := (1, 0),
+        snake_direction : Vector2 := (1, 0),
         snake_geometry := [(15, 12), (16, 12), (17, 12)],
         fruit := (7, 7),
     }
