@@ -6,3 +6,5 @@ def sum (xs : List Nat) : Nat := Id.run do
 
 #eval sum [1, 1, 2, 3, 5, 8, 13, 21]
 -- 54
+
+·
