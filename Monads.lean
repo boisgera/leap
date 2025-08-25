@@ -24,8 +24,18 @@ theorem kleisli' : (f >=> g) = (fun a => f a >>= g) := by
   rw [kleisli] -- apply kleisli would also work
 
 -- Define f >=> g as a function, using |> and · in the rhs
-theorem kleisli'' : f >=> g = (f · >>= g) := by
-  rw [kleisli']
+theorem kleisli'' : (f >=> g) = (fun a => f a >>= g) := by
+  ext a -- `funext a` would also work
+  rw [kleisli] -- apply kleisli would also work
+
+-- Back to kleisli' or '' to the original (concrete) version
+theorem kleisli''' (m : Type u_1 -> Type u_2) [Monad m] :
+  ∀ {α β γ : Type u_1}, ∀ (f : α -> m β) (g : β -> m γ), ∀ (a : α),
+  (f >=> g) a = f a >>= g := by
+  intro α β γ f g a
+  have h := kleisli'' (f := f) (g := g) -- f >=> g = fun a => f a >>= g
+  have h' := congrFun h a
+  rw [h']
 
 def unit_left : Prop := (pure · >>= f) = f
 
