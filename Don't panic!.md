@@ -561,7 +561,9 @@ inductive NucleotideBase where
 | thymine: NucleotideBase
 
 structure DecodeError where
+  fragment : List NucleoTideBase
   position : Nat
+  char : Char
 
 abbrev Result := Except DecodeError (List NucleotideBase)
 
