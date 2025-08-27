@@ -478,6 +478,8 @@ def pred? (n : Nat) : Option Nat :=
     failure
 ```
 
+(that works because all Monad types are automatically [Alternative].)
+
 Whenever you want to try something and return it but if it fails you have a 
 fallback (that may also fail!) that you want to return instead and so on
 and so forth, until you're out of options and you fail, 
@@ -522,8 +524,26 @@ like to avoid most of the boilerplate code:
 def readBool (s : String) := readFalse s <|> readTrue s
 ```
 
+However, if you need/want to keep a bit more control on the failure handling,
+but still don't like the pattern-matching flavor of the original `readBool`
+code, you can use the `try/catch` construct instead.
 
+```lean
+def readBool (s : String) : Option Bool :=
+  try
+    readFalse s
+  catch _ =>
+    try
+      readTrue s
+    catch _ =>
+      failure
+```
+
+(courtesy of `Option` instantiating [MonadExcept])
+
+[Alternative]: https://leanprover-community.github.io/mathlib4_docs/Init/Control/Basic.html#Alternative
 [orElse]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#OrElse
+[MonadExcept]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#MonadExcept
 
 Except
 --------------------------------------------------------------------------------

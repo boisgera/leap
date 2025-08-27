@@ -37,8 +37,22 @@ def readTrue (s : String) : Option Bool :=
   else
     none
 
-def readBool (s : String) := readFalse s <|> readTrue s
+def __readBool (s : String) : Option Bool := do
+  match readFalse s with
+  | some b => some b
+  | none   =>
+    match readTrue s with
+    | some b => some b
+    | none => failure
 
+def readBool (s : String) : Option Bool :=
+  try
+    readFalse s
+  catch _ =>
+    try
+      readTrue s
+    catch _ =>
+      failure
 
 #eval readBool "true"
 -- some true
