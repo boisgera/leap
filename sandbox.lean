@@ -52,7 +52,7 @@ def readBool (s : String) : Option Bool :=
     try
       readTrue s
     catch _ =>
-      failure
+      throw ()
 
 #eval readBool "true"
 -- some true
@@ -62,3 +62,26 @@ def readBool (s : String) : Option Bool :=
 
 #eval readBool "maybe?"
 -- none
+
+
+inductive NucleotideBase where
+| adenine : NucleotideBase
+| cytosine : NucleotideBase
+| guanine: NucleotideBase
+| thymine: NucleotideBase
+
+structure DecodeError where
+  position : Nat
+
+abbrev Result := Except DecodeError (List NucleotideBase)
+
+def decodeDNA (s : String) : Result := do
+  let mut bases : List NucleotideBase := []
+  for (c, i) in s.toList.zipIdx do
+    match c with
+    | 'A' => bases := bases ++ [.adenine]
+    | 'C' => bases := bases ++ [.cytosine]
+    | 'G' => bases := bases ++ [.guanine]
+    | 'T' => bases := bases ++ [.thymine]
+    | _   => throw { position := i }
+  return bases
