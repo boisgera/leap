@@ -554,6 +554,7 @@ Except
 --------------------------------------------------------------------------------
 
 ```lean
+
 inductive NucleotideBase where
 | adenine : NucleotideBase
 | cytosine : NucleotideBase
@@ -561,28 +562,55 @@ inductive NucleotideBase where
 | thymine: NucleotideBase
 
 structure DecodeError where
-  fragment : List NucleoTideBase
-  position : Nat
+  pos : Nat
   char : Char
 
 abbrev Result := Except DecodeError (List NucleotideBase)
 
-def decodeDNA (s : String) : Result := do
+def decodeDNA (dna : String) : Result := do
   let mut bases : List NucleotideBase := []
-  for (c, i) in s.toList.zipIdx do
+  for (c, i) in dna.toList.zipIdx do
     match c with
     | 'A' => bases := bases ++ [.adenine]
     | 'C' => bases := bases ++ [.cytosine]
     | 'G' => bases := bases ++ [.guanine]
     | 'T' => bases := bases ++ [.thymine]
-    | _   => throw { position := i }
+    | _   => throw { pos := i , char := c}
   return bases
+
+def report (dna : String) : String :=
+  match decodeDNA dna with
+  | .ok l => s!"✅ decoded sequence of length {l.length}"
+  | .error e => s!"❌ invalid character '{e.char}' at position {e.pos}"
+
+#eval report "GATTACA"
+-- "✅ decoded sequence of length 7"
+
+#eval report "TARATATA"
+-- "❌ invalid character 'R' at position 2"
 ```
 
 **TODO:** #eval the function, then catch it to print partial results?
 or better include the partial results in the failure type? as well
 as what remains?
 
+The try/catch pattern is not BAD for a pattern that would not be orElse,
+but how is it better than direct pattern matching when its type signature
+cannot encode that our alternative clause is safe? Either we use that all
+along (which is fine) and we may end up with a code where we panic in
+an unreachable clause, or we have a specific structure to follow and
+a proof to provide, OR we keep the potential of the error in the type
+signature, like we are doing in IO? But then we probably have to use
+monad transformers to keep this dandy?
+
+Honnestly the proof root is intellectually interesting but otherwise I'd
+much use try/catch if need in all intermediate steps (in error-land) and
+end up with a REAL match on a function that really may have an error ...
+
+Anyway: do NOT emphasize try/catch at this stage (or in the IO monad only?
+Yeah that would make sense ; say that they are fine as long as you are
+ok with staying in error-land). See if Exceptions also support <|> 
+(I think they do), that may be handy.
 
 --------------------------------------------------------------------------------
 

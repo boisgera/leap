@@ -104,14 +104,13 @@ inductive E where
 | alt : E
 
 def f (e : E) (h : ∃ (n : Nat), e = .main n) : Nat :=
-  -- I can't extract n from h since I am not in a proof. Joy
+  -- I can't extract n from h since I am not in a proof. Joy...
   match e with
   | .main m => m
   | .alt =>
-      have absurd : False := by
-        have ⟨_, eq⟩ := h;
-        exfalso -- or nomatch eq
+      have absurd : False := by { have ⟨_, eq⟩ := h; nomatch eq }
       nomatch absurd
+
 
 -- Leans knows in the second clause that h : ∃ n, E.alt = E.main n
 -- let's assume for a moment that I can turn this into an absurd stuff.
@@ -121,7 +120,9 @@ def f (e : E) (h : ∃ (n : Nat), e = .main n) : Nat :=
 
 -- A general result would be: if an exception-throwing value is a top-level
 -- try catch and I can prove that the alternate clause is ok, then the whole
--- stuff is also ok.
+-- stuff is also ok, AND therefore, I can safely extract the value (make
+-- a generic extractor), so that the final user never has to consider a
+-- pattern matching that cannot happen.
 
 def reportAux (dna : String) : Except DecodeError String := do
     try
