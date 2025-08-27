@@ -514,9 +514,9 @@ def readBool (s : String) : Option Bool := do
 -- none
 ```
 
-But there is a better option (pun intended 😉): `Option` implements [orElse]
-typeclass, which means that you can use the operator `<|>` like to avoid
-most of the boilerplate code:
+But there is a better option (pun intended 😉): `Option` instantiates 
+the [orElse] type class, which means that you can use the operator `<|>` 
+like to avoid most of the boilerplate code:
 
 ```lean
 def readBool (s : String) := readFalse s <|> readTrue s
