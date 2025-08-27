@@ -1,3 +1,5 @@
+-- TODO: simplify the universe not to have to deal with PUnit?
+
 #print Bind.kleisliRight
 -- def Bind.kleisliRight.{u, u_1, u_2} :
 --   {α : Type u} →

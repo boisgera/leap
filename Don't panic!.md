@@ -327,6 +327,78 @@ def fail! : Nat' :=
 Option
 --------------------------------------------------------------------------------
 
+### Sentinel values
+
+Sentinel value: ex `-1`
+
+`None` in Python
+
+**TODO**
+
+`.get` instead of `[]` in dicts (warning: if the dict has None in values), 
+regexp match.
+
+
+`match` in Python
+
+[sentinel value]: https://en.wikipedia.org/wiki/Sentinel_value
+
+Optional types in Python TYPING. from typing import Optional but not
+a real optional, right? Just a sentinel.
+
+### Optional values
+
+Optional values are an alternative to `panic!` to deal with errors.
+The standard Lean library provides an [Option] type:
+
+[Option]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#Option
+
+```lean
+inductive Option (α : Type u) where
+  /-- No value. -/
+  | none : Option α
+  /-- Some value of type `α`. -/
+  | some (val : α) : Option α
+```
+
+An option either "wraps" a value `a` of type `α` into `some a` or is `none`
+if their is no value. 
+Here is how you could use `Option` to implement a variant of the predecessor
+function:
+
+```lean
+def pred? (n : Nat) : Option Nat :=
+  if n > 0 then
+    some (n - 1)
+  else
+    none
+```
+
+To deal with such functions, you match their result to deal with the two 
+cases (value or no value)
+
+```lean
+def showPred (n : Nat) : IO Unit :=
+  match pred? n with
+  | some m => IO.println s!"pred {n} = {m}"
+  | none => IO.println s!"error: {n} has no predecessor"
+
+#eval showPred 7
+-- pred 7 = 6
+
+#eval showPred 0
+-- error: 0 has no predecessor
+```
+
+Many functions in the standard library return options; their name ends with a
+question mark `?`. 
+
+
+### `Option` as a monad 
+
+Functios that output options can be combined in a straightforward manner. 
+For example to extract two integers separated with a space in a string:
+
 ```lean
 def getCoords (string : String) : Option (Nat × Nat) :=
   let parts := string.splitOn " "
@@ -346,11 +418,17 @@ def getCoords (string : String) : Option (Nat × Nat) :=
 #eval getCoords "3 4"
 -- some (3, 4)
 
-#eval getCoords "douze quarante-deux"
+#eval getCoords "three four"
 -- none
 ```
 
-Imperative style with the `do` block:
+This is conceptually OK but it gets hard to read. However there is a common
+pattern in this code: as soon as some option-returning function call fails,
+we want our `getCoords` function to also fail (output `none`) and otherwise,
+we extract the value and keep on computing.
+
+This pattern is directly supported by options described in `do` blocks;
+the following code is equivalent:
 
 ```lean
 def getCoords' (string : String) : Option (Nat × Nat) := do
@@ -364,11 +442,12 @@ def getCoords' (string : String) : Option (Nat × Nat) := do
 #eval getCoords' "3 4"
 -- some (3, 4)
 
-#eval getCoords' "douze quarante-deux"
+#eval getCoords' "three four"
 -- none
 ```
 
-As a monad, `Option`:
+The trick is, as usual with `do` blocks, that `Option` is a monad. 
+As such, it:
 
   - lifts an element `a : `α` to `some a : Option α`,
 
@@ -383,8 +462,68 @@ def bind : Option α → (α → Option β) → Option β
   | some a, f => f a
 ```
 
+### 🍬 More Sugar
+
+**TODO:** `failure` and `orElse` and `try/catch`
 
 
+You can use `failure` instead of `none` if that conveys better the intent of
+your code:
+
+```lean
+def pred? (n : Nat) : Option Nat :=
+  if n > 0 then
+    some (n - 1)
+  else
+    failure
+```
+
+Whenever you want to try something and return it but if it fails you have a 
+fallback (that may also fail!) that you want to return instead and so one
+and so forth, until you're out of options and you fail, 
+you can match the results manually and deal with them:
+
+```lean
+def readFalse (s : String) : Option Bool :=
+  if s == "false" || s == "0" || s == "⊥" then
+    return false
+  else
+    none
+
+def readTrue (s : String) : Option Bool :=
+  if s == "true" || s == "1" || s == "⊤" then
+    return true
+  else
+    none
+
+def readBool (s : String) : Option Bool := do
+  match readFalse s with
+  | some b => some b
+  | none   =>
+    match readTrue s with
+    | some b => some b
+    | none => failure
+
+#eval readBool "true"
+-- some true
+
+#eval readBool "0"
+-- some false
+
+#eval readBool "maybe?"
+-- none
+```
+
+But there is a better option (pun intended 😉): `Option` implements [orElse]
+typeclass, which means that you can use the operator `<|>` like to avoid
+most of the boilerplate code:
+
+```lean
+def readBool (s : String) := readFalse s <|> readTrue s
+```
+
+
+[orElse]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#OrElse
 
 Except
 --------------------------------------------------------------------------------
