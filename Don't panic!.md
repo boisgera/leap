@@ -479,9 +479,9 @@ def pred? (n : Nat) : Option Nat :=
 ```
 
 Whenever you want to try something and return it but if it fails you have a 
-fallback (that may also fail!) that you want to return instead and so one
+fallback (that may also fail!) that you want to return instead and so on
 and so forth, until you're out of options and you fail, 
-you can match the results manually and deal with them:
+you can of course match the results manually and deal with them:
 
 ```lean
 def readFalse (s : String) : Option Bool :=
@@ -667,6 +667,9 @@ def getOrZero?'' (i : Nat) : Option Nat :=
 
 # Misc/ / Sandbox / Appendix
 
+
+**TODO** Except as Option with extra info. Example: ADN Parsing, location of
+the error.
 
     For example
 
