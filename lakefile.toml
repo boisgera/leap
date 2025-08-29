@@ -19,3 +19,7 @@ root = "Snake"
 [[lean_exe]]
 name = "fs"
 root = "FileSize"
+
+[[lean_exe]]
+name = "main"
+root = "Main"

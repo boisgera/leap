@@ -329,24 +329,106 @@ Option
 
 ### Sentinel values
 
-Sentinel value: ex `-1`
+[Sentinel values] enable a primitive kind of error handling. 
+The idea is to reserve some specific value(s) among the possible
+returned values of a function and return them when an error 
+(or "exceptional condition") occurs.
 
-`None` in Python
+**In the C programming language.** To read the content of files on
+Linux, there is a `read` function that returns a signed integer.
 
-**TODO**
+```C
+n = read(file, buffer, count) 
+```
 
-`.get` instead of `[]` in dicts (warning: if the dict has None in values), 
-regexp match.
+If `n` is non-negative, that's the number of bytes that you have effectively read in your buffer. But it's `-1`, that means that an error occurred.
+In this case, `-1` was the sentinel value.
+
+**In Python.** The `read` function in Python doesn't work this way: 
+it returns the buffer directly and raises an exception if an error occurred.
+However, if you want to locate substrings using `str.find`, this is how it goes:
+
+```pycon
+>>> "abcdefg".find("abc")
+0
+>>> "abcdefg".find("efg")
+4
+>>> "abcdefg".find("zzz")
+-1
+```
+
+Here a non-negative value should be interpreted as an index (where the 
+substring privided as an argument starts in `"abcdefg"`), while `-1`
+means that the substring was not found.
+
+The way the `find` method works is pretty rare in Python. Usually when a 
+sentinel value is used, that's `None`. For example, to scan a dictionary
+for values and avoid raising an exception when your key is not present,
+you can do:
+
+```pycon
+>>> {"a": 1, "b": 2}.get("a")
+1
+>>> {"a": 1, "b": 2}.get("b")
+2
+>>> {"a": 1, "b": 2}.get("c")
+>>> {"a": 1, "b": 2}.get("c") is None
+True
+```
+
+but it's a bit tricky since if you are not sure that `None` is not used as
+a value, you may have a false error detection:
+
+```pycon
+>>> {"a": 1, "b": 2, "z": None}.get("z")
+>>> {"a": 1, "b": 2, "z": None}.get("z") is None
+True
+```
+
+The situation is better in the following "PIN validity checker" example:
 
 
-`match` in Python
+```pycon
+>>> import re # regular expressions
+>>> PIN = re.compile(r"[0-9]{4}$") # 4 digit pattern
+>>> PIN.match("0000")
+<re.Match object; span=(0, 4), match='0000'>
+>>> PIN.match("1234")
+<re.Match object; span=(0, 4), match='1234'>
+>>> PIN.match("12")
+>>> PIN.match("123456")
+>>> PIN.match("ABCD")
+```
 
-[sentinel value]: https://en.wikipedia.org/wiki/Sentinel_value
+Just to be sure what's happening here:
 
-Optional types in Python TYPING. from typing import Optional but not
-a real optional, right? Just a sentinel.
+```pycon
+>>> match = PIN.match("0000") 
+>>> match is None
+False
+>>> type(match)
+<class 're.Match'>
+>>> no_match = PIN.match("ABCD") 
+>>> no_match is None
+True
+>>> type(no_match)
+<class 'NoneType'>
+```
+
+When the string is not a valid PIN, the `match` method returns `None` 
+instead of a match object. 
+
+Why it's better. Type signature, Optional types in Python TYPING. from typing import Optional but not a real optional, right? Just a sentinel.
+
+[Sentinel values]: https://en.wikipedia.org/wiki/Sentinel_value
+
+
 
 ### Optional values
+
+
+
+----
 
 Optional values are an alternative to `panic!` to deal with errors.
 The standard Lean library provides an [Option] type:
@@ -355,9 +437,7 @@ The standard Lean library provides an [Option] type:
 
 ```lean
 inductive Option (α : Type u) where
-  /-- No value. -/
   | none : Option α
-  /-- Some value of type `α`. -/
   | some (val : α) : Option α
 ```
 

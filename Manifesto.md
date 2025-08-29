@@ -1,24 +1,112 @@
+Lean & Python
+================================================================================
 
-  - Imperative programming vs Functional programming
+[Lean] is a pure functional programming language with a very powerful static 
+type system, designed primarily for software verification 
+(ensuring programs are correct by construction), 
+formalization of Mathematics (for example [Fermat's theorem])
+and education ([teaching type theory and formal methods][courses]).
 
-  - Python and Lean (deeper understanding of Python through the study of the differences!)
+[Fermat's theorem]: https://lean-lang.org/use-cases/flt/
+[courses]: https://leanprover-community.github.io/teaching/courses.html
 
-  - Lean for programming vs Lean for theorem proving (see Idris vs Agda/Rocq),
+And yet Lean is also a very interesting choice as a general-purpose programming
+language. A considerable effort has been made to improve its learning curve.
+For example, I think that you have a decent chance of guessing what this Lean program does:
 
-  - (HUGE in math imho)
+```lean
+-- 📄 Main.lean
+def main (args : List String) := do
+  let mut name := ""
+  let mut icon := ""
+  if args.length == 0 then
+    name := "world"
+    let worldIcons := ["🌍", "🌎", "🌏"] 
+    let i <- IO.rand 0 2
+    icon := worldIcons[i]!
+  else
+    name := args[0]!
+    icon := "👋"
+  IO.println s!"Hello {name}! {icon}"
+```
 
-  - (preparation for Lean as theorem prover)
+This program in action:
 
-  - Lean, imperative programming and the real world, / Lean functional programming.
+```
+💻  lean --run Main.lean 
+Hello world! 🌏
 
-  - Lean ADT -> GADT -> Dependent types
+💻  lean --run Main.lean 
+Hello world! 🌍
 
-  - Become a better programmer in any language
+💻  lean --run Main.lean Leonardo de Moura
+Hello Leonardo! 👋
+```
 
-Limitations:
+Not that hard right? 
 
-  - not a lot of API use
+However, Lean's dependent type system is also powerful enough 
+to describe common mathematical statements and their proofs. 
+Its logo is written L∃∀N for a reason! For example:
 
-  - Lean is a "niche" language
+```lean
+def collatz_step (x : ℕ) : ℕ := Id.run do
+  if x % 2 == 0 then
+    return x / 2
+  else
+    return 3 * x + 1
 
-  - New course (expect sharp edges)
+def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
+  let mut x <- x₀
+  for _ in [0:n] do
+    x <- collatz_step x
+  return x
+```
+
+```lean
+-- Source: https://en.wikipedia.org/wiki/Collatz_conjecture
+theorem collatz_conjecture :
+  ∀ (x₀ : ℕ), x₀ > 0 -> ∃ (n : ℕ), collatz x₀ n = 1 := by
+  admit -- 🚧 TODO, not proof yet! (💀💀💀)
+```
+
+### 🎯 Objectives 
+
+In this course, you will
+
+  - Learn enough of Lean to make some practical tools: command-line programs
+    (e.g. file-system explorer), Lean librairies (e.g. JSON parser) and
+    graphical applications (the snake game!). When it's needed, we'll 
+    call Python from Lean to get access to its huge set of libraries!
+
+  - Explore some general programming languages concepts and study 
+    how Python and Lean implement them in their own way. 
+    For example: variables, 
+    (im)mutability, values vs objects, loops and recursion, 
+    partial function application, traits/interfaces, etc.  
+  
+### 🏆 Benefits
+
+Let's get real! You are unlikely to use Lean as your main programming language 
+in the future. But
+
+  - You will spend some time learning some foundations of Python 
+    that you are likely to reuse. 
+    Moreover, since more and more programming languages borrow
+    from the playbook of functional programming
+    (Rust, Elixir, Scala, etc.), we expect that a lot of your newly
+    earned knowledge will be reusable!
+
+  - If you think that you *may* be interested in computer science theory
+    or formalization of mathematics, Lean is a great platform for this! 
+    We probably won't do much beyond working with Lean as a general-purpose
+    programming language, but you will still be better off with this
+    course than without if you want to test these waters.
+
+### ⚠️ Warning
+
+This course will be my first attempt at teaching Lean, a language which I know
+very little about 😁 (don't try this at home!). Expect some rough edges if you choose to enroll!
+
+[Lean]: https://lean-lang.org/
+[Python]: https://www.python.org/

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Manifesto</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="lean-python">Lean &amp; Python</h1>
+<p><a href="https://lean-lang.org/">Lean</a> is a pure functional
+programming language with a very powerful static type system, designed
+primarily for software verification (ensuring programs are correct by
+construction), formalization of Mathematics (for example <a
+href="https://lean-lang.org/use-cases/flt/">Fermat’s theorem</a>) and
+education (<a
+href="https://leanprover-community.github.io/teaching/courses.html">teaching
+type theory and formal methods</a>).</p>
+<p>And yet Lean is also a very interesting choice as a general-purpose
+programming language. A considerable effort has been made to improve its
+learning curve. For example, I think that you have a decent chance of
+guessing what this Lean program does:</p>
+<pre class="lean"><code>-- 📄 Main.lean
+def main (args : List String) := do
+  let mut name := &quot;&quot;
+  let mut icon := &quot;&quot;
+  if args.length == 0 then
+    name := &quot;world&quot;
+    let worldIcons := [&quot;🌍&quot;, &quot;🌎&quot;, &quot;🌏&quot;] 
+    let i &lt;- IO.rand 0 2
+    icon := worldIcons[i]!
+  else
+    name := args[0]!
+    icon := &quot;👋&quot;
+  IO.println s!&quot;Hello {name}! {icon}&quot;</code></pre>
+<p>This program in action:</p>
+<pre><code>💻  lean --run Main.lean 
+Hello world! 🌏
+
+💻  lean --run Main.lean 
+Hello world! 🌍
+
+💻  lean --run Main.lean Leonardo de Moura
+Hello Leonardo! 👋</code></pre>
+<p>Not that hard right?</p>
+<p>However, Lean’s dependent type system is also powerful enough to
+describe common mathematical statements and their proofs. Its logo is
+written L∃∀N for a reason! For example:</p>
+<pre class="lean"><code>def collatz_step (x : ℕ) : ℕ := Id.run do
+  if x % 2 == 0 then
+    return x / 2
+  else
+    return 3 * x + 1
+
+def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
+  let mut x &lt;- x₀
+  for _ in [0:n] do
+    x &lt;- collatz_step x
+  return x</code></pre>
+<pre class="lean"><code>-- Source: https://en.wikipedia.org/wiki/Collatz_conjecture
+theorem collatz_conjecture :
+  ∀ (x₀ : ℕ), x₀ &gt; 0 -&gt; ∃ (n : ℕ), collatz x₀ n = 1 := by
+  admit -- 🚧 TODO, not proof yet! (💀💀💀)</code></pre>
+<h3 id="objectives">🎯 Objectives</h3>
+<p>In this course, you will</p>
+<ul>
+<li><p>Learn enough of Lean to make some practical tools: command-line
+programs (e.g. file-system explorer), Lean librairies (e.g. JSON parser)
+and graphical applications (the snake game!). When it’s needed, we’ll
+call Python from Lean to get access to its huge set of
+libraries!</p></li>
+<li><p>Explore some general programming languages concepts and study how
+Python and Lean implement them in their own way. For example: variables,
+(im)mutability, values vs objects, loops and recursion, partial function
+application, traits/interfaces, etc.</p></li>
+</ul>
+<h3 id="benefits">🏆 Benefits</h3>
+<p>Let’s get real! You are unlikely to use Lean as your main programming
+language in the future. But</p>
+<ul>
+<li><p>You will spend some time learning some foundations of Python that
+you are likely to reuse. Moreover, since more and more programming
+languages borrow from the playbook of functional programming (Rust,
+Elixir, Scala, etc.), we expect that a lot of your newly earned
+knowledge will be reusable!</p></li>
+<li><p>If you think that you <em>may</em> be interested in computer
+science theory or formalization of mathematics, Lean is a great platform
+for this! We probably won’t do much beyond working with Lean as a
+general-purpose programming language, but you will still be better off
+with this course than without if you want to test these waters.</p></li>
+</ul>
+<h3 id="warning">⚠️ Warning</h3>
+<p>This course will be my first attempt at teaching Lean, a language
+which I know very little about 😁 (don’t try this at home!). Expect some
+rough edges if you choose to enroll!</p>
+</body>
+</html>
