@@ -172,9 +172,39 @@ This is only a convention, not a strict rule, but it's useful!
 
 Some guidelines:
 
-  - In a script, it's often acceptable to use `panic!` for error handling.
+ 1. In a script (a simple command line tool, designed to automate a repetitive
+    sequence of actions), it's acceptable to use `panic!` for error handling.
 
-  - When you are prototyping, `panic!` can provide temporarily a partial 
+    ```lean
+    def main (args : List String) := do
+      if args.length == 0 then
+        panic! "Please provide your name"
+      let name := args[0]!
+      IO.println s!"Hello {name}!"
+
+    #eval main []
+    -- PANIC at main ...: Please provide your name
+    -- backtrace:
+    ```
+    
+    If you want to avoid the display of a panic message to the final user, 
+    you can also separately print your custom error message to the standard 
+    error and selecting a faulty error code yourself.
+
+    ```lean
+    def main (args : List String) : IO UInt32 := do
+    if args.length == 0 then
+      IO.eprintln "input error: Please provide your name"
+      return 1 -- failure
+    let name := args[0]!
+    IO.println s!"Hello {name}!"
+    return 0 -- success
+
+    #eval main []
+    -- input error: Please provide your name
+    ```
+
+ 2. When you are prototyping, `panic!` can provide temporarily a partial 
     implementation. For example, the code
 
     ```lean
@@ -183,17 +213,52 @@ Some guidelines:
         n / 2
     ```
 
-    does not compile but
+    does not compile but the following one does:
 
     ```lean
     def divideByTwo (n : Nat) : Nat :=
       if n % 2 == 0 then
         n / 2
       else
-        panic! "🚧 odd numbers not handled"
+        panic! "🚧 odd numbers not handled (yet)"
+
+    #eval divideByTwo 8
+    -- 4
+
+    #eval divideByTwo 9 
+    -- PANIC at ...: 🚧 odd numbers not handled (yet)
+    -- backtrace:
     ```
 
-  - You can use `panic!` (directly or indirectly) as long as the error 
+    Note that Lean has a keyword that means exactly "I am not
+    done yet here" or "TODO": this is `sorry`:
+
+    ```lean
+    def divideByTwo (n : Nat) : Nat :=
+      if n % 2 == 0 then
+        n / 2
+      else
+        sorry
+    ```
+
+    What's nice with `sorry` is that it has a nice support at the IDE level,
+    which tracks the functions that are not ready yet. However, you can't
+    evaluate these partially implemented functions as easily:
+
+    ```lean
+    #eval divideByTwo 8
+    -- aborting evaluation since the expression depends on the 'sorry' axiom, which can lead to runtime instability and crashes.
+    --
+    -- To attempt to evaluate anyway despite the risks, use the '#eval!' command.
+
+
+    #eval divideByTwo 9 
+    -- aborting evaluation since the expression depends on the 'sorry' axiom, which can lead to runtime instability and crashes.
+    --
+    -- To attempt to evaluate anyway despite the risks, use the '#eval!' command.
+    ```
+
+3.  You can use `panic!` (directly or indirectly) as long as the error 
     never happens.
 
     ```lean
@@ -207,10 +272,55 @@ Some guidelines:
       pred! (n * n + 1) -- This is always fine since n * n + 1 >= 1.
     ```
 
-While this is handy, the `panic!` function should be used with care:
+  Here, it's actually even better to replace your comment with an `assert!` that
+  states the property that you expect to be true:
+
+  ```lean  
+  def f (n : Nat) : Nat :=
+      assert! n * n + 1 >= 1
+      pred! (n * n + 1)
+  ```
+
+  Because if you happen to be wrong and the property is not satisfied, 
+  during the execution, Lean will check and tell you:
+
+  ```lean
+  def greet : IO Unit :=
+    assert! (0 == 1)
+    IO.println "Hello world!"
+
+  #eval greet
+  -- PANIC at greet ...: assertion violation: (0 == 1)
+  ```
+
+  In the case of code branches that cannot possibly be executed (but that the
+  compiler requires you to define anyway), you can use `unreachable!`.
+
+  ```lean
+  def f (n : Nat) : Nat :=
+    let m := n * n + 1 
+    if m >= 1 then
+      pred! m
+    else
+      unreachable!
+  ```
+
+  If you happen to be wrong about this analysis and the impossible happens,
+  you will get notified with the appropriate panic:
+
+  ```lean
+  def greet : IO Unit :=
+    unreachable!
+
+  #eval greet
+  -- PANIC at greet ...: unreachable code has been reached
+   ```
+
+
+While all this is handy, the `panic!` function should be used with care:
 
   - Since one cannot recover from a panic the user of a code that 
-    may panic has no way to deal with it.
+    may panic has no way to deal with its errors.
 
   - Panics rely on convention (the "!" in the name) but are invisible
     to the type checker. To get help from the type checker in your 
