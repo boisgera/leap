@@ -9,3 +9,5 @@ def divideByTwo (n : Nat) : Nat :=
 def main :=
   let _ := divideByTwo 8
   IO.println "Yep."
+
+#eval! main

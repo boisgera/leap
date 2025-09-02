@@ -1,80 +1,17 @@
-def pred? (n : Nat) : Option Nat :=
-  if n > 0 then
-    some (n - 1)
-  else
-    none
-
-def showPred (n : Nat) : IO Unit :=
-  match pred? n with
-  | some m => IO.println s!"pred {n} = {m}"
-  | none => IO.println s!"error: {n} has no predecessor"
-
-#eval showPred 7
--- pred 7 = 6
-
-#eval showPred 0
--- error: 0 has no predecessor
-
-def pred?' (n : Nat) : Option Nat :=
-  if n > 0 then
-    some (n - 1)
-  else
-    failure
-
-#eval pred?' 7
-
-#eval pred?' 0
-
-def readFalse (s : String) : Option Bool :=
-  if s == "false" || s == "0" || s == "⊥" then
-    return false
-  else
-    none
-
-def readTrue (s : String) : Option Bool :=
-  if s == "true" || s == "1" || s == "⊤" then
-    return true
-  else
-    none
-
-def __readBool (s : String) : Option Bool := do
-  match readFalse s with
-  | some b => some b
-  | none   =>
-    match readTrue s with
-    | some b => some b
-    | none => failure
-
-def readBool (s : String) : Option Bool :=
-  try
-    readFalse s
-  catch _ =>
-    try
-      readTrue s
-    catch _ =>
-      throw ()
-
-#eval readBool "true"
--- some true
-
-#eval readBool "0"
--- some false
-
-#eval readBool "maybe?"
--- none
-
-
 inductive NucleotideBase where
 | adenine : NucleotideBase
 | cytosine : NucleotideBase
 | guanine: NucleotideBase
 | thymine: NucleotideBase
+deriving Repr
 
 structure DecodeError where
+  decoded : List NucleotideBase
   pos : Nat
   char : Char
+deriving Repr
 
-abbrev Result := Except DecodeError (List NucleotideBase)
+def Result := Except DecodeError (List NucleotideBase) deriving Repr
 
 def decodeDNA (dna : String) : Result := do
   let mut bases : List NucleotideBase := []
@@ -84,47 +21,103 @@ def decodeDNA (dna : String) : Result := do
     | 'C' => bases := bases ++ [.cytosine]
     | 'G' => bases := bases ++ [.guanine]
     | 'T' => bases := bases ++ [.thymine]
-    | _   => throw { pos := i , char := c}
+    | _   => throw { decoded := bases, pos := i, char := c }
   return bases
 
-def report (dna : String) : String :=
-  match decodeDNA dna with
-  | .ok l => s!"✅ decoded sequence of length {l.length}"
-  | .error e => s!"❌ invalid character '{e.char}' at position {e.pos}"
+#eval decodeDNA "GATTACA"
+-- Except.ok [
+--   NucleotideBase.guanine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.cytosine,
+--   NucleotideBase.adenine
+-- ]
 
-#eval report "GATTACA"
--- "✅ decoded sequence of length 7"
+#eval decodeDNA "TARATATA"
+-- Except.error {
+--   decoded := [NucleotideBase.thymine, NucleotideBase.adenine],
+--   pos := 2,
+--   char := 'R'
+-- }
 
-#eval report "TARATATA"
--- "❌ invalid character 'R' at position 2"
+def decodeDNA' (dna : String) : Result := do
+  let mut bases : List NucleotideBase := []
+  let mut dna := dna
+  while dna != "" do
+    try
+      bases := bases ++ (<- decodeDNA dna)
+      dna := ""
+    catch decodeError =>
+      bases := bases ++ decodeError.decoded
+      dna := dna.drop (decodeError.pos + 1)
+  return bases
 
--- Simpler test of the try/catch issue
-inductive E where
-| main (n : Nat) : E
-| alt : E
+#eval decodeDNA' "GATTACA"
+-- Except.ok [
+--   NucleotideBase.guanine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.cytosine,
+--   NucleotideBase.adenine
+-- ]
 
-def f (e : E) (h : ∃ (n : Nat), e = .main n) : Nat :=
-  -- I can't extract n from h since I am not in a proof. Joy...
-  match e with
-  | .main m => m
-  | .alt =>
-      have absurd : False := by { have ⟨_, eq⟩ := h; nomatch eq }
-      nomatch absurd
+#eval decodeDNA' "TARATATA"
+-- Except.ok [
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine
+--  ]
+
+-- TODO: report sucks but adapt decodeDNA' in this role, with the easy way to
+-- get the info out (define a get! ?) and the "proper version" (with a get
+-- to define that uses a proof)
+
+-- def report (dna : String) : String :=
+--   match decodeDNA dna with
+--   | .ok l => s!"✅ decoded sequence of length {l.length}"
+--   | .error e => s!"❌ invalid character '{e.char}' at position {e.pos}"
+
+-- #eval report "GATTACA"
+-- -- "✅ decoded sequence of length 7"
+
+-- #eval report "TARATATA"
+-- -- "❌ invalid character 'R' at position 2"
+
+-- -- Simpler test of the try/catch issue
+-- inductive E where
+-- | main (n : Nat) : E
+-- | alt : E
+
+-- def f (e : E) (h : ∃ (n : Nat), e = .main n) : Nat :=
+--   -- I can't extract n from h since I am not in a proof. Joy...
+--   match e with
+--   | .main m => m
+--   | .alt =>
+--       have absurd : False := by { have ⟨_, eq⟩ := h; nomatch eq }
+--       nomatch absurd
 
 
--- Leans knows in the second clause that h : ∃ n, E.alt = E.main n
--- let's assume for a moment that I can turn this into an absurd stuff.
--- How can I say "I don't need to pattern match that clause?".
--- Ah, ok, I think I know: nomatch k where k : False does work for
--- example.
+-- -- Leans knows in the second clause that h : ∃ n, E.alt = E.main n
+-- -- let's assume for a moment that I can turn this into an absurd stuff.
+-- -- How can I say "I don't need to pattern match that clause?".
+-- -- Ah, ok, I think I know: nomatch k where k : False does work for
+-- -- example.
 
--- A general result would be: if an exception-throwing value is a top-level
--- try catch and I can prove that the alternate clause is ok, then the whole
--- stuff is also ok, AND therefore, I can safely extract the value (make
--- a generic extractor), so that the final user never has to consider a
--- pattern matching that cannot happen.
+-- -- A general result would be: if an exception-throwing value is a top-level
+-- -- try catch and I can prove that the alternate clause is ok, then the whole
+-- -- stuff is also ok, AND therefore, I can safely extract the value (make
+-- -- a generic extractor), so that the final user never has to consider a
+-- -- pattern matching that cannot happen.
 
--- -----------------------------------------------------------------------------
+-- -- -----------------------------------------------------------------------------
 
 def reportAux (dna : String) : Except DecodeError String := do
     try
