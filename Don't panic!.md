@@ -193,12 +193,13 @@ Some guidelines:
 
     ```lean
     def main (args : List String) : IO UInt32 := do
-    if args.length == 0 then
-      IO.eprintln "input error: Please provide your name"
-      return 1 -- failure
-    let name := args[0]!
-    IO.println s!"Hello {name}!"
-    return 0 -- success
+      if args.length == 0 then
+        IO.eprintln "input error: Please provide your name"
+        return 1 -- failure
+      else
+        let name := args[0]!
+        IO.println s!"Hello {name}!"
+        return 0 -- success
 
     #eval main []
     -- input error: Please provide your name
@@ -528,19 +529,63 @@ True
 When the string is not a valid PIN, the `match` method returns `None` 
 instead of a match object. 
 
-Why it's better. Type signature, Optional types in Python TYPING. from typing import Optional but not a real optional, right? Just a sentinel.
+It's often possible to catch more potential errors before the code is 
+executed in Python with type annotations and static type checkers such as 
+[mypy]. 
+
+[mypy]: https://github.com/python/mypy
+
+For example, if you declare explictly that the dictionary `d` is meant to
+store string keys and integers values, 
+
+```python
+d : dict[str, int] = {"a": 1, "b": 2, "c": 3}
+```
+
+when invoked, mypy will object to a code snippet
+such as 
+
+```python
+d["z"] = None
+```
+
+with
+
+```
+...:error: Incompatible types in assignment (expression has type "None", target has type "int")  [assignment]
+```
+
+Now if you do
+
+```python
+import random
+import string
+
+d : dict[str, int] = {"a": 1, "b": 2, "c": 3}
+
+random_key = random.choice(string.ascii_letters)
+
+d.get(random_key)
+```
+
+Your Python IDE may also be smart enough to infer that
+in this context, the signature of the `get` method is:
+
+```python
+def get(
+    key: str,
+    default: None = None,
+    /
+) -> (int | None)
+```
+
 
 [Sentinel values]: https://en.wikipedia.org/wiki/Sentinel_value
 
 
 
-### Optional values
+### Option
 
-
-
-----
-
-Optional values are an alternative to `panic!` to deal with errors.
 The standard Lean library provides an [Option] type:
 
 [Option]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#Option
