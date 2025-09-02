@@ -273,49 +273,49 @@ Some guidelines:
       pred! (n * n + 1) -- This is always fine since n * n + 1 >= 1.
     ```
 
-  Here, it's actually even better to replace your comment with an `assert!` that
-  states the property that you expect to be true:
+    Here, it's actually even better to replace your comment with an `assert!` that
+    states the property that you expect to be true:
 
-  ```lean  
-  def f (n : Nat) : Nat :=
-      assert! n * n + 1 >= 1
-      pred! (n * n + 1)
-  ```
+    ```lean  
+    def f (n : Nat) : Nat :=
+        assert! n * n + 1 >= 1
+        pred! (n * n + 1)
+    ```
 
-  Because if you happen to be wrong and the property is not satisfied, 
-  during the execution, Lean will check and tell you:
+    Because if you happen to be wrong and the property is not satisfied, 
+    during the execution, Lean will check and tell you:
 
-  ```lean
-  def greet : IO Unit :=
-    assert! (0 == 1)
-    IO.println "Hello world!"
+    ```lean
+    def greet : IO Unit :=
+      assert! (0 == 1)
+      IO.println "Hello world!"
 
-  #eval greet
-  -- PANIC at greet ...: assertion violation: (0 == 1)
-  ```
+    #eval greet
+    -- PANIC at greet ...: assertion violation: (0 == 1)
+    ```
 
-  In the case of code branches that cannot possibly be executed (but that the
-  compiler requires you to define anyway), you can use `unreachable!`.
+    In the case of code branches that cannot possibly be executed (but that the
+    compiler requires you to define anyway), you can use `unreachable!`.
 
-  ```lean
-  def f (n : Nat) : Nat :=
-    let m := n * n + 1 
-    if m >= 1 then
-      pred! m
-    else
+    ```lean
+    def f (n : Nat) : Nat :=
+      let m := n * n + 1 
+      if m >= 1 then
+        pred! m
+      else
+        unreachable!
+    ```
+
+    If you happen to be wrong about this analysis and the impossible happens,
+    you will get notified with the appropriate panic:
+
+    ```lean
+    def greet : IO Unit :=
       unreachable!
-  ```
 
-  If you happen to be wrong about this analysis and the impossible happens,
-  you will get notified with the appropriate panic:
-
-  ```lean
-  def greet : IO Unit :=
-    unreachable!
-
-  #eval greet
-  -- PANIC at greet ...: unreachable code has been reached
-   ```
+    #eval greet
+    -- PANIC at greet ...: unreachable code has been reached
+    ```
 
 
 While all this is handy, the `panic!` function should be used with care:
@@ -445,6 +445,7 @@ The idea is to reserve some specific value(s) among the possible
 returned values of a function and return them when an error 
 (or "exceptional condition") occurs.
 
+<!--
 **In the C programming language.** To read the content of files on
 Linux, there is a `read` function that returns a signed integer.
 
@@ -455,9 +456,12 @@ n = read(file, buffer, count)
 If `n` is non-negative, that's the number of bytes that you have effectively read in your buffer. But it's `-1`, that means that an error occurred.
 In this case, `-1` was the sentinel value.
 
-**In Python.** The `read` function in Python doesn't work this way: 
+The `read` function in Python doesn't work this way: 
 it returns the buffer directly and raises an exception if an error occurred.
-However, if you want to locate substrings using `str.find`, this is how it goes:
+-->
+
+For example in Python, if you want to locate substrings using `str.find`, 
+this is how it goes:
 
 ```pycon
 >>> "abcdefg".find("abc")
@@ -470,7 +474,7 @@ However, if you want to locate substrings using `str.find`, this is how it goes:
 
 Here a non-negative value should be interpreted as an index (where the 
 substring privided as an argument starts in `"abcdefg"`), while `-1`
-means that the substring was not found.
+means that the substring was not found: `-1` is the sentinel value.
 
 The way the `find` method works is pretty rare in Python. Usually when a 
 sentinel value is used, that's `None`. For example, to scan a dictionary
@@ -552,7 +556,7 @@ d["z"] = None
 with
 
 ```
-...:error: Incompatible types in assignment (expression has type "None", target has type "int")  [assignment]
+... error: Incompatible types in assignment (expression has type "None", target has type "int")  [assignment]
 ```
 
 Now if you do
@@ -561,22 +565,18 @@ Now if you do
 import random
 import string
 
-d : dict[str, int] = {"a": 1, "b": 2, "c": 3}
+d: dict[str, int] = {"a": 1, "b": 2, "c": 3}
 
 random_key = random.choice(string.ascii_letters)
 
 d.get(random_key)
 ```
 
-Your Python IDE may also be smart enough to infer that
+Your Python environment may also be smart enough to infer that
 in this context, the signature of the `get` method is:
 
 ```python
-def get(
-    key: str,
-    default: None = None,
-    /
-) -> (int | None)
+def get(key: str, default: None = None) -> (int | None)
 ```
 
 
@@ -609,8 +609,7 @@ def pred? (n : Nat) : Option Nat :=
     none
 ```
 
-To deal with such functions, you match their result to deal with the two 
-cases (value or no value)
+To deal with optional values, you match their result:
 
 ```lean
 def showPred (n : Nat) : IO Unit :=
@@ -629,9 +628,9 @@ Many functions in the standard library return options; their name ends with a
 question mark `?`. 
 
 
-### `Option` as a monad 
+### `Option` and `do` blocks
 
-Functios that output options can be combined in a straightforward manner. 
+Functions that output options can be combined in a straightforward manner. 
 For example to extract two integers separated with a space in a string:
 
 ```lean
@@ -658,7 +657,7 @@ def getCoords (string : String) : Option (Nat × Nat) :=
 ```
 
 This is conceptually OK but it gets hard to read. However there is a common
-pattern in this code: as soon as some option-returning function call fails,
+pattern in this code: as soon as some option-valued function call fails,
 we want our `getCoords` function to also fail (output `none`) and otherwise,
 we extract the value and keep on computing.
 
@@ -684,24 +683,24 @@ def getCoords' (string : String) : Option (Nat × Nat) := do
 The trick is, as usual with `do` blocks, that `Option` is a monad. 
 As such, it:
 
-  - lifts an element `a : `α` to `some a : Option α`,
+  - lifts an element `a : α` to `some a : Option α`,
 
   - chains operations by returning the first `Option.none` which
     occurs, or `some` of the final result if all operations succeed.
 
 ```lean
-def pure : α → Option α := Option.some
+def pure (a : α) : Option α := 
+  Option.some a
 
-def bind : Option α → (α → Option β) → Option β
-  | none,   _ => none
-  | some a, f => f a
+def bind (option : Option α) (f : α -> Option β) : Option β :=
+  match option with
+  | none   => none
+  | some a => f a
 ```
 
 ### 🍬 More Sugar
 
-**TODO:** `failure` and `orElse` and `try/catch`
-
-
+<!--
 You can use `failure` instead of `none` if that conveys better the intent of
 your code:
 
@@ -714,6 +713,7 @@ def pred? (n : Nat) : Option Nat :=
 ```
 
 (that works because all Monad types are automatically [Alternative].)
+-->
 
 Whenever you want to try something and return it but if it fails you have a 
 fallback (that may also fail!) that you want to return instead and so on
@@ -721,13 +721,13 @@ and so forth, until you're out of options and you fail,
 you can of course match the results manually and deal with them:
 
 ```lean
-def readFalse (s : String) : Option Bool :=
+def readFalse (s : String) : Option Bool := do
   if s == "false" || s == "0" || s == "⊥" then
     return false
   else
     none
 
-def readTrue (s : String) : Option Bool :=
+def readTrue (s : String) : Option Bool := do
   if s == "true" || s == "1" || s == "⊤" then
     return true
   else
@@ -739,7 +739,7 @@ def readBool (s : String) : Option Bool := do
   | none   =>
     match readTrue s with
     | some b => some b
-    | none => failure
+    | none => none
 
 #eval readBool "true"
 -- some true
@@ -751,7 +751,7 @@ def readBool (s : String) : Option Bool := do
 -- none
 ```
 
-But there is a better option (pun intended 😉): `Option` instantiates 
+But there is a better option (pun intended 😉): `Option` is an instance of 
 the [orElse] type class, which means that you can use the operator `<|>` 
 like to avoid most of the boilerplate code:
 
@@ -763,6 +763,7 @@ However, if you need/want to keep a bit more control on the failure handling,
 but still don't like the pattern-matching flavor of the original `readBool`
 code, you can use the `try/catch` construct instead.
 
+<!--
 ```lean
 def readBool (s : String) : Option Bool :=
   try
@@ -780,6 +781,7 @@ with options, there is no such value (here `_` matches unit). For the same
 reason, we were able to replace `failure` with `throw ()`.
 
 To really make use fully of the try/catch pattern, we will introduce the `Except` type.
+-->
 
 [Alternative]: https://leanprover-community.github.io/mathlib4_docs/Init/Control/Basic.html#Alternative
 [orElse]: https://leanprover-community.github.io/mathlib4_docs/Init/Prelude.html#OrElse
@@ -789,19 +791,23 @@ Except
 --------------------------------------------------------------------------------
 
 ```lean
-
 inductive NucleotideBase where
 | adenine : NucleotideBase
 | cytosine : NucleotideBase
 | guanine: NucleotideBase
 | thymine: NucleotideBase
+deriving Repr
 
 structure DecodeError where
+  decoded : List NucleotideBase
   pos : Nat
   char : Char
+deriving Repr
 
-abbrev Result := Except DecodeError (List NucleotideBase)
+def Result := Except DecodeError (List NucleotideBase) deriving Repr
+```
 
+```lean
 def decodeDNA (dna : String) : Result := do
   let mut bases : List NucleotideBase := []
   for (c, i) in dna.toList.zipIdx do
@@ -810,175 +816,67 @@ def decodeDNA (dna : String) : Result := do
     | 'C' => bases := bases ++ [.cytosine]
     | 'G' => bases := bases ++ [.guanine]
     | 'T' => bases := bases ++ [.thymine]
-    | _   => throw { pos := i , char := c}
+    | _   => throw { decoded := bases, pos := i, char := c }
   return bases
 
-def report (dna : String) : String :=
-  match decodeDNA dna with
-  | .ok l => s!"✅ decoded sequence of length {l.length}"
-  | .error e => s!"❌ invalid character '{e.char}' at position {e.pos}"
+#eval decodeDNA "GATTACA"
+-- Except.ok [
+--   NucleotideBase.guanine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.cytosine,
+--   NucleotideBase.adenine
+-- ]
 
-#eval report "GATTACA"
--- "✅ decoded sequence of length 7"
-
-#eval report "TARATATA"
--- "❌ invalid character 'R' at position 2"
+#eval decodeDNA "TARATATA"
+-- Except.error {
+--   decoded := [NucleotideBase.thymine, NucleotideBase.adenine],
+--   pos := 2,
+--   char := 'R'
+-- }
 ```
-
-**TODO:** #eval the function, then catch it to print partial results?
-or better include the partial results in the failure type? as well
-as what remains?
-
-The try/catch pattern is not BAD for a pattern that would not be orElse,
-but how is it better than direct pattern matching when its type signature
-cannot encode that our alternative clause is safe? Either we use that all
-along (which is fine) and we may end up with a code where we panic in
-an unreachable clause, or we have a specific structure to follow and
-a proof to provide, OR we keep the potential of the error in the type
-signature, like we are doing in IO? But then we probably have to use
-monad transformers to keep this dandy?
-
-Honnestly the proof root is intellectually interesting but otherwise I'd
-much use try/catch if need in all intermediate steps (in error-land) and
-end up with a REAL match on a function that really may have an error ...
-
-Anyway: do NOT emphasize try/catch at this stage (or in the IO monad only?
-Yeah that would make sense ; say that they are fine as long as you are
-ok with staying in error-land). See if Exceptions also support <|> 
-(I think they do), that may be handy.
-
---------------------------------------------------------------------------------
-
-
-Python: sys.exit is an exception :
-
-
-### Details
-
-Actually, `sys.exit()` raises a `SystemExit` exception, which is a subclass of `BaseException`, not `Exception`. This is why the above code does not catch it.
-But you can still catch it with:
-
-```python
-try:
-    sys.exit("👋")
-except SystemExit as e:
-    print("🛑")
-```
- or with a bare except:
-
-```python
-try:
-    sys.exit("👋")
-except:
-    print("🛑")
-```
-
-Both these code snippers will succeed and print 🛑.
-
-🚧 **TODO**
-   
-   - Except as an enhanced `Option` with error information
-     (message or something else)
-
-   - `Except.toOption`
-
-   - JSON example
-
-   - try catch syntax (instantiate `MonadExcept`)
-
----
-failure, throw, andThen, try catch
-
 
 ```lean
-def f (i : Nat) : Option Nat := do
-  let value <- list[i]?
-  return value
+def decodeDNA' (dna : String) : Result := do
+  let mut bases : List NucleotideBase := []
+  let mut dna := dna
+  while dna != "" do
+    try
+      bases := bases ++ (<- decodeDNA dna)
+      dna := ""
+    catch decodeError =>
+      bases := bases ++ decodeError.decoded
+      dna := dna.drop (decodeError.pos + 1)
+  return bases
 
-#eval f 0
+#eval decodeDNA' "GATTACA"
+-- Except.ok [
+--   NucleotideBase.guanine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.thymine,
+--   NucleotideBase.adenine,
+--   NucleotideBase.cytosine,
+--   NucleotideBase.adenine
+-- ]
 
-#eval f 3
-
-def g (i : Nat) : Option Nat := do
-  match list[i]? with 
-  | none => none
-  | some value => some value
-
-#eval g 0
-
-#eval g 3
-
-def h (i : Nat) : Option Nat := do
-  match list[i]? with 
-  | none => failure
-  | some value => return value
-
-
-#eval h 0
-
-#eval h 3
-
-def k (i : Nat) : Option Nat := do
-  match list[i]? with 
-  | none => throw ()
-  | some value => return value
-
--- Different behavior now
-
-#eval k 0
-#eval k 3
-
-def get (i : Nat) : Option Nat := do
-  match list[i]? with 
-  | none => return 0
-  | some value => return value
-
-#eval k 0
-#eval k 3
-
-def getOrZero? (i : Nat) : Option Nat := do
-  get i <|> return 0
-
--- But how do we "unpack" the some (this is a some for certain!). 
--- We have "lost" the information that it's a success "in the implementation"
--- unless we match the result (which we can do)
-
-def getOrZero?' (i : Nat) : Option Nat := do
-  let mut result := 0
-  try
-    result <- get i
-  catch _ => 
-    result := 0
-  return result
-
-
-def getOrZero?'' (i : Nat) : Option Nat :=
-  try
-    return (<- get i)
-  catch _ => 
-    return 0
-
--- Try cannot solve the "ensure there is no error" issue? Try doesn't get us
--- out of the monad ... We need some good old pattern matching for that.
--- Even worse, the info that we have handled all possible errors is lost...
-
--- So try catch is good also long as you want to have alternatives, handle
--- errors somehow but keeping the possibility of errors here.
--- That make sense since in some monads we CANNOT unbox the result...
-
--- def getOrZero?''' (i : Nat) : Nat :=
---   try
---     get i
---   catch _ => 
---     0
+#eval decodeDNA' "TARATATA"
+-- Except.ok [
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine,
+--  NucleotideBase.thymine,
+--  NucleotideBase.adenine
+--  ]
 ```
 
 
-
----
-
  IO
- ----------------------------
+------------------------
 
    - instantiate MonadExcept (try catch syntax)
 
@@ -986,95 +884,3 @@ def getOrZero?'' (i : Nat) : Option Nat :=
 
    - custom error types with IO (EIO and replace `IO.Error` with custom error type)
 
-
-# Misc/ / Sandbox / Appendix
-
-
-**TODO** Except as Option with extra info. Example: ADN Parsing, location of
-the error.
-
-    For example
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      list[n / 2] -- ❌ failed to prove index is valid [...]
-    ```
-
-    but some experimentation with the panicking version of `f`
-    convinces us that the index is always valid:
-
-    ```lean
-    def f' (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      list[n / 2]!
-
-    #eval f' 0
-    -- 0
-    #eval f' 1
-    -- 0
-    #eval f' 2
-    -- 1
-    #eval f' 3
-    -- 1
-    #eval f' 4
-    -- 2
-    ```
-
-    If we are in a hurry, we can instead state the result we need to ensure
-    that the index is valid, admit the proof and use the "dangerous" version
-    `#eval!` of `#eval` instead:
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      have h : n / 2 < list.length := by admit
-      list[n / 2]
-
-    #eval! f 0
-    -- 0
-    #eval! f 1
-    -- 0
-    #eval! f 2
-    -- 1
-    #eval! f 3
-    -- 1
-    #eval! f 4
-    -- 2
-    ```
-
-    When you have more time, you can come back and fill in the proof
-
-    ```lean
-    def f (n : Nat) : Nat :=
-      let list := List.range (n + 1)
-      have h : n / 2 < list.length := by
-        rw [List.length_range] -- n : Nat ⊢ n / 2 < n + 1
-        apply Nat.lt_succ_of_le -- n : Nat ⊢ n / 2 ≤ n
-        exact Nat.div_le_self n 2 -- ✅
-      list[n / 2]
-
-    #eval f 0
-    -- 0
-    #eval f 1
-    -- 0
-    #eval f 2
-    -- 1
-    #eval f 3
-    -- 1
-    #eval f 4
-    -- 2
-    ```
-
-    Note that we have used the following theorems provided by Lean:
-
-    ```lean
-    #check List.length_range
-    -- ⊢ ∀ {n : Nat}, (List.range n).length = n
-    #check Nat.lt_succ_of_le
-    -- ⊢ ∀ {n m : Nat}, n ≤ m → n < m.succ
-    #check Nat.div_le_self
-    -- ⊢ ∀ (n k : Nat), n / k ≤ n
-    ```
-
-    At this final stage, you have avoided all operations that may panic.
