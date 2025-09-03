@@ -704,7 +704,7 @@ You can always pattern match an option to extract the value it contains,
 but you have to deal with the case where there is no value, even if you
 know that it's impossible. Two methods can help you in this case:
 
-  - `Option.get!` which extracts the value from an option and panicks 
+  - `Option.get!` which extracts the value from an option and panics 
     if the option is none.
 
   - `Option.get` which asks for an option **and a proof that this option
@@ -712,7 +712,7 @@ know that it's impossible. Two methods can help you in this case:
 
 The first method brings us back to the strategy of errors as panics; 
 the second method may require more effort but it offers more safety.
-On example of the first strategy:
+An example of the first strategy:
 
 ```lean
 def list := [0, 1, 2, 4]
