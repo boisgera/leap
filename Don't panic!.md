@@ -752,22 +752,50 @@ theorem this_is_fine : (list[3]?).isSome = true := by
 
 Note that here the proof we were in need for was very easy to derive.
 
-### 🍬 More sugar
+### 🍬 More syntactic sugar
 
-<!--
-You can use `failure` instead of `none` if that conveys better the intent of
-your code:
+#### 🛡️ Guard
+
+Using an option option, we can implement an age-controlled answer to the 
+"Ultimate Question of Life, the Universe, and Everything":
+
+[HHGG]: https://en.wikipedia.org/wiki/The_Hitchhiker%27s_Guide_to_the_Galaxy
 
 ```lean
-def pred? (n : Nat) : Option Nat :=
-  if n > 0 then
-    some (n - 1)
+def HHGG.answer (age : Nat) : Option Nat := do
+  if age < 18 then
+    none
   else
-    failure
+    return 42
+
+#eval HHGG.answer 16
+-- none
+
+#eval HHGG.answer 50
+-- some 42
 ```
 
-(that works because all Monad types are automatically [Alternative].)
--->
+But again, if we have several checks to do, we can expect our code to display
+too much indentation for our taste. Instead, we can use `guard` in a `do`
+block for `Option`. It checks a boolean condition, fails (output `none`) 
+if it not satisfied and does nothing otherwise:
+
+```lean
+def HHGG.answer (age : Nat) : Option Nat := do
+    guard (age >= 18)
+    return 42
+
+#eval HHGG.answer 16
+-- none
+
+#eval HHGG.answer 50
+-- some 42
+```
+
+Very readable and handy!
+
+
+#### 🛟 Fallback
 
 Whenever you want to try something and return it but if it fails you have a 
 fallback (that may also fail!) that you want to return instead and so on
