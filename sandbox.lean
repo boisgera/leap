@@ -1,142 +1,125 @@
-inductive NucleotideBase where
-| adenine : NucleotideBase
-| cytosine : NucleotideBase
-| guanine: NucleotideBase
-| thymine: NucleotideBase
-deriving Repr
 
-structure DecodeError where
-  decoded : List NucleotideBase
-  pos : Nat
-  char : Char
-deriving Repr
+#check IO.rand
+-- IO.rand (lo hi : Nat) : BaseIO Nat
 
-def Result := Except DecodeError (List NucleotideBase) deriving Repr
+#eval IO.rand 1 6
+-- 4
 
-def decodeDNA (dna : String) : Result := do
-  let mut bases : List NucleotideBase := []
-  for (c, i) in dna.toList.zipIdx do
-    match c with
-    | 'A' => bases := bases ++ [.adenine]
-    | 'C' => bases := bases ++ [.cytosine]
-    | 'G' => bases := bases ++ [.guanine]
-    | 'T' => bases := bases ++ [.thymine]
-    | _   => throw { decoded := bases, pos := i, char := c }
-  return bases
+#eval IO.rand 1 6
+-- 2
 
-#eval decodeDNA "GATTACA"
--- Except.ok [
---   NucleotideBase.guanine,
---   NucleotideBase.adenine,
---   NucleotideBase.thymine,
---   NucleotideBase.thymine,
---   NucleotideBase.adenine,
---   NucleotideBase.cytosine,
---   NucleotideBase.adenine
--- ]
+-- `BaseIO` is the simplest IO monad of Lean. Actions of this type can have
+-- side-effects in the real world but cannot fail.
 
-#eval decodeDNA "TARATATA"
--- Except.error {
---   decoded := [NucleotideBase.thymine, NucleotideBase.adenine],
---   pos := 2,
---   char := 'R'
--- }
+#check BaseIO
+-- BaseIO : Type → Type
 
-def decodeDNA' (dna : String) : Result := do
-  let mut bases : List NucleotideBase := []
-  let mut dna := dna
-  while dna != "" do
-    try
-      bases := bases ++ (<- decodeDNA dna)
-      dna := ""
-    catch decodeError =>
-      bases := bases ++ decodeError.decoded
-      dna := dna.drop (decodeError.pos + 1)
-  return bases
+#print BaseIO
+-- def BaseIO : Type → Type := EIO Empty
 
-#eval decodeDNA' "GATTACA"
--- Except.ok [
---   NucleotideBase.guanine,
---   NucleotideBase.adenine,
---   NucleotideBase.thymine,
---   NucleotideBase.thymine,
---   NucleotideBase.adenine,
---   NucleotideBase.cytosine,
---   NucleotideBase.adenine
--- ]
+#check EIO
+-- EIO (ε : Type) : Type → Type
 
-#eval decodeDNA' "TARATATA"
--- Except.ok [
---  NucleotideBase.thymine,
---  NucleotideBase.adenine,
---  NucleotideBase.adenine,
---  NucleotideBase.thymine,
---  NucleotideBase.adenine,
---  NucleotideBase.thymine,
---  NucleotideBase.adenine
---  ]
+#print EIO
+-- def EIO : Type → Type → Type := fun ε => EStateM ε IO.RealWorld
 
 
-def reportAux (dna : String) : Except DecodeError String := do
-    try
-      let l <- decodeDNA dna
-      return s!"✅ decoded sequence of length {l.length}"
-    catch e =>
-      return s!"❌ invalid character '{e.char}' at position {e.pos}"
+#print IO.RealWorld
+-- def IO.RealWorld : Type := Unit
 
-theorem safe_try_except {ε α} (body : Except ε α) (handler : ε -> Except ε α) :
-  (∀ (e : ε), (handler e).isOk = true) -> (tryCatch body handler).isOk = true
-  := by
-  intro h_ok
-  rw [tryCatch]
-  rw [instMonadExceptOfMonadExceptOf]
-  simp [tryCatchThe, MonadExceptOf.tryCatch, Except.tryCatch]
-  cases body with
-  | ok a =>
-    rw [Except.isOk, Except.toBool]
-  | error e =>
-    simp
-    rw [h_ok e]
+-- EStateM is a combined state and exception monad.
+#check EStateM
+-- EStateM.{u} (ε σ α : Type u) : Type u
 
-def Except.get {ε α} (except : Except ε α) : except.isOk = true -> α :=
-  fun ex_ok =>
-    match except with
-    | ok a => a
-    | error _ => nomatch ex_ok
+-- The state is of type σ and each action produces a. Every state transition
+-- produces a new state and:
+--   - either an ok result that boxes a value of type α
+--   - or an error result that boxes an error info of type ε
+#print EStateM.Result
+-- inductive EStateM.Result.{u} : Type u → Type u → Type u → Type u
+-- number of parameters: 3
+-- constructors:
+-- EStateM.Result.ok : {ε σ α : Type u} → α → σ → EStateM.Result ε σ α
+-- EStateM.Result.error : {ε σ α : Type u} → ε → σ → EStateM.Result ε σ α
+
+-- For `BaseIO` actions,
+--   - The state σ is IO.RealWorld defined as Unit. So there is no
+--     associated state *managed by Lean* (the state is entirely external:
+--     the info that you have changed on your hard drive, in the cloud, etc.)
+--   - The error type is `Empty` which has no element: the action cannot fail.
+
+#eval IO.println "Hello world!"
+-- Hello world!
+
+#check IO.println
+-- {α : Type u_1} → [ToString α] → α → IO Unit
+
+-- The `IO` monad is probably more common. Actions of this type can have
+-- side-effects in the real world and can fail.
+
+#check IO
+-- IO : Type -> Type
+
+#print IO
+-- @[reducible] def IO : Type → Type := EIO IO.Error
+
+-- There is a (long) list of possible errors, described by the `IO.Error` type.
+
+#check IO.Error
+-- IO.Error : Type
+
+#print IO.Error
+-- inductive IO.Error : Type
+-- number of parameters: 0
+-- constructors:
+-- IO.Error.alreadyExists : Option String → UInt32 → String → IO.Error
+-- IO.Error.otherError : UInt32 → String → IO.Error
+-- IO.Error.resourceBusy : UInt32 → String → IO.Error
+-- IO.Error.resourceVanished : UInt32 → String → IO.Error
+-- IO.Error.unsupportedOperation : UInt32 → String → IO.Error
+-- IO.Error.hardwareFault : UInt32 → String → IO.Error
+-- IO.Error.unsatisfiedConstraints : UInt32 → String → IO.Error
+-- IO.Error.illegalOperation : UInt32 → String → IO.Error
+-- IO.Error.protocolError : UInt32 → String → IO.Error
+-- IO.Error.timeExpired : UInt32 → String → IO.Error
+-- IO.Error.interrupted : String → UInt32 → String → IO.Error
+-- IO.Error.noFileOrDirectory : String → UInt32 → String → IO.Error
+-- IO.Error.invalidArgument : Option String → UInt32 → String → IO.Error
+-- IO.Error.permissionDenied : Option String → UInt32 → String → IO.Error
+-- IO.Error.resourceExhausted : Option String → UInt32 → String → IO.Error
+-- IO.Error.inappropriateType : Option String → UInt32 → String → IO.Error
+-- IO.Error.noSuchThing : Option String → UInt32 → String → IO.Error
+-- IO.Error.unexpectedEof : IO.Error
+-- IO.Error.userError : String → IO.Error
+
+def printlnOrPanic! {α} [ToString α] (a : α) : IO Unit := do
+  try
+    IO.println a
+  catch error => -- catch every error
+    panic! s!"😱 {error}"
+
+def printlnOrPanicIfPermissionDenied! {α} [ToString α] (a : α) : IO Unit := do
+  try
+    IO.println a
+  catch e =>
+    match e with
+    | .permissionDenied _ _ _ => panic! s!"🔒 Permision denied"
+    | _ => return -- This is fine.
+
+def printlnOrPanicIfPermissionDenied!' {α} [ToString α] (a : α) : IO Unit := do
+  try
+    IO.println a
+  catch
+  | .permissionDenied _ _ _ => panic! s!"🔒 Permision denied"
+  | _ => return -- This is fine.
 
 
-theorem decodeDNA'CantFail : ∀ (dna : String), (decodeDNA' dna).isOk = true := by
-  intro dna
-  simp [reportAux]
-  apply safe_try_except
-  simp [Except.isOk, Except.toBool, pure, Except.pure]
+-- Actions of type `BaseIO` are automatically promoted to the `IO` type
+-- when needed.
 
--- -- -----------------------------------------------------------------------------
+def printDie : IO Unit := do
+  let die <- IO.rand 1 6
+  IO.println s!"🎲 {die}"
 
-
-
-theorem reportAuxCantFail : ∀ (dna : String), (reportAux dna).isOk = true := by
-  intro dna
-  simp [reportAux]
-  apply safe_try_except
-  simp [Except.isOk, Except.toBool, pure, Except.pure]
-
-
-def report' := fun (dna : String) =>
-  Except.get (reportAux dna) (reportAuxCantFail dna)
-
-
--- -----------------------------------------------------------------------------
-
-
-def report'' (dna : String) : String :=
-  let message? := reportAux dna
-  match message? with
-  | .ok message => message
-  | .error _ => panic! "unreachable!"
-
-#eval report'' "GATTACA"
--- "✅ decoded sequence of length 7"
-
-#eval report'' "TARATATA"
--- "❌ invalid character 'R' at position 2"
+#eval printDie
+-- 🎲 5
