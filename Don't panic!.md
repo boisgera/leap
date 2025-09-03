@@ -1035,7 +1035,7 @@ You may find strange that `decodeDNA'` returns a `Result` and not a
 `List NucleotideBase` because since all errors are handled in the catch
 clause, this function cannot possibly throw an error. OK, we know that
 but Lean doesn't! So we need to prove it. My strategy (not implemented
-completely) can be found [in the annex][🧠 Safe DNA decoding].
+completely) can be found [in the annex][Annex].
 
 
 
