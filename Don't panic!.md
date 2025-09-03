@@ -752,9 +752,7 @@ theorem this_is_fine : (list[3]?).isSome = true := by
 
 Note that here the proof we were in need for was very easy to derive.
 
-### 🍬 More syntactic sugar
-
-#### 🛡️ Guard
+### 🛡️ Guard
 
 Using an option option, we can implement an age-controlled answer to the 
 "Ultimate Question of Life, the Universe, and Everything":
@@ -795,7 +793,7 @@ def HHGG.answer (age : Nat) : Option Nat := do
 Very readable and handy!
 
 
-#### 🛟 Fallback
+### 🛟 Fallback
 
 Whenever you want to try something and return it but if it fails you have a 
 fallback (that may also fail!) that you want to return instead and so on
