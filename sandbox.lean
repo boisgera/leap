@@ -76,48 +76,6 @@ def decodeDNA' (dna : String) : Result := do
 --  NucleotideBase.adenine
 --  ]
 
--- TODO: report sucks but adapt decodeDNA' in this role, with the easy way to
--- get the info out (define a get! ?) and the "proper version" (with a get
--- to define that uses a proof)
-
--- def report (dna : String) : String :=
---   match decodeDNA dna with
---   | .ok l => s!"✅ decoded sequence of length {l.length}"
---   | .error e => s!"❌ invalid character '{e.char}' at position {e.pos}"
-
--- #eval report "GATTACA"
--- -- "✅ decoded sequence of length 7"
-
--- #eval report "TARATATA"
--- -- "❌ invalid character 'R' at position 2"
-
--- -- Simpler test of the try/catch issue
--- inductive E where
--- | main (n : Nat) : E
--- | alt : E
-
--- def f (e : E) (h : ∃ (n : Nat), e = .main n) : Nat :=
---   -- I can't extract n from h since I am not in a proof. Joy...
---   match e with
---   | .main m => m
---   | .alt =>
---       have absurd : False := by { have ⟨_, eq⟩ := h; nomatch eq }
---       nomatch absurd
-
-
--- -- Leans knows in the second clause that h : ∃ n, E.alt = E.main n
--- -- let's assume for a moment that I can turn this into an absurd stuff.
--- -- How can I say "I don't need to pattern match that clause?".
--- -- Ah, ok, I think I know: nomatch k where k : False does work for
--- -- example.
-
--- -- A general result would be: if an exception-throwing value is a top-level
--- -- try catch and I can prove that the alternate clause is ok, then the whole
--- -- stuff is also ok, AND therefore, I can safely extract the value (make
--- -- a generic extractor), so that the final user never has to consider a
--- -- pattern matching that cannot happen.
-
--- -- -----------------------------------------------------------------------------
 
 def reportAux (dna : String) : Except DecodeError String := do
     try
@@ -140,17 +98,29 @@ theorem safe_try_except {ε α} (body : Except ε α) (handler : ε -> Except ε
     simp
     rw [h_ok e]
 
+def Except.get {ε α} (except : Except ε α) : except.isOk = true -> α :=
+  fun ex_ok =>
+    match except with
+    | ok a => a
+    | error _ => nomatch ex_ok
+
+
+theorem decodeDNA'CantFail : ∀ (dna : String), (decodeDNA' dna).isOk = true := by
+  intro dna
+  simp [reportAux]
+  apply safe_try_except
+  simp [Except.isOk, Except.toBool, pure, Except.pure]
+
+-- -- -----------------------------------------------------------------------------
+
+
+
 theorem reportAuxCantFail : ∀ (dna : String), (reportAux dna).isOk = true := by
   intro dna
   simp [reportAux]
   apply safe_try_except
   simp [Except.isOk, Except.toBool, pure, Except.pure]
 
-def Except.get {ε α} (except : Except ε α) : except.isOk = true -> α :=
-  fun ex_ok =>
-    match except with
-    | ok a => a
-    | error _ => nomatch ex_ok
 
 def report' := fun (dna : String) =>
   Except.get (reportAux dna) (reportAuxCantFail dna)

@@ -872,7 +872,74 @@ To really make use fully of the try/catch pattern, we will introduce the `Except
 Except
 --------------------------------------------------------------------------------
 
-Options have an obvious limitation: ... **TODO**
+### 💬 Errors with messages
+
+The `Except` type is very similar to `Option`. It simply adds in the error
+case the ability to add some data to describe the context of the error.
+I say "some data" because you get to decide the nature of this payload.
+
+```lean
+#print Except
+-- inductive Except.{u, v} : Type u → Type v → Type (max u v)
+-- number of parameters: 2
+-- constructors:
+-- Except.error : {ε : Type u} → {α : Type v} → ε → Except ε α
+-- Except.ok : {ε : Type u} → {α : Type v} → α → Except ε α
+```
+
+For example, to box a boolean value into an `Except` type with string
+error payload, use the type `Except String Bool`
+
+```lean
+def Result := Except String Bool
+
+def openThePodBayDoors (magicWord := "") : Result := do
+  if magicWord = "please" then
+    return true
+  else
+    throw "What's the magic word?"
+
+#eval openThePodBayDoors
+-- Except.error "I'm sorry Dave, I'm afraid I can't do that"
+
+#eval openThePodBayDoors "please"
+-- Except.ok true
+```
+
+As usual, you can pattern match `Except` elements
+
+```lean
+def openThePodBayDoorsRetry : Result := 
+  match openThePodBayDoors with
+  | .ok b => Except.ok b
+  | .error "What's the magic word" => openThePodBayDoors "please"
+  | .error _ => Except.error "I don't know what tell you..."
+```
+
+but in `do` blocks you can also use the `try/catch` syntax:
+
+```lean
+def openThePodBayDoorsRetry : Result :=  do
+  try 
+    return <- openThePodBayDoors
+  catch e =>
+    if e == "What's the magic word" then
+      return <- openThePodBayDoors "please"
+    else
+      throw "I don't know what to say to you..."
+```
+
+Note that if you don't need the error payload, you can convert an `Except`
+element to the corresponding `Option` element with the [toOption] method.
+
+[toOption]: https://leanprover-community.github.io/mathlib4_docs/Init/Control/Except.html#Except.toOption
+
+
+### 🧬 Custom error payloads
+
+Note error are not limited to string payloads. Adapt the error type to the
+problem at hand! For example, if you try to decode DNA sequences, it makes
+sense to define:
 
 ```lean
 inductive NucleotideBase where
@@ -890,6 +957,8 @@ deriving Repr
 
 def Result := Except DecodeError (List NucleotideBase) deriving Repr
 ```
+
+and then your decoding function can be:
 
 ```lean
 def decodeDNA (dna : String) : Result := do
@@ -921,6 +990,10 @@ def decodeDNA (dna : String) : Result := do
 --   char := 'R'
 -- }
 ```
+
+If you feel that you should instead swallow invalid characters in the decoding,
+no problem, you can handle the errors throws be `decodeError` and thanks to
+its payload, handle them appropriately:
 
 ```lean
 def decodeDNA' (dna : String) : Result := do
@@ -958,9 +1031,16 @@ def decodeDNA' (dna : String) : Result := do
 --  ]
 ```
 
+You may find strange that `decodeDNA'` returns a `Result` and not a 
+`List NucleotideBase` because since all errors are handled in the catch
+clause, this function cannot possibly throw an error. OK, we know that
+but Lean doesn't! So we need to prove it. My strategy (not implemented
+completely) can be found [in the annex][Safe DNA decoding].
+
+
 
  IO
-------------------------
+--------------------------------------------------------------------------------
 
    - instantiate MonadExcept (try catch syntax)
 
@@ -968,3 +1048,52 @@ def decodeDNA' (dna : String) : Result := do
 
    - custom error types with IO (EIO and replace `IO.Error` with custom error type)
 
+
+Annex
+--------------------------------------------------------------------------------
+
+### 🧠 Safe DNA decoding
+
+
+ 1. First we prove a general result: 
+    a `try/catch` construct where the `catch` clause  doesn't throw 
+    doesn't throw. I know how to state and prove that:
+
+    ```lean
+    theorem safe_try_except {ε α} (body : Except ε α) (handler : ε -> Except ε α) :
+      (∀ (e : ε), (handler e).isOk = true) -> (tryCatch body handler).isOk = true
+      := by
+      intro h_ok
+      rw [tryCatch]
+      rw [instMonadExceptOfMonadExceptOf]
+      simp [tryCatchThe, MonadExceptOf.tryCatch, Except.tryCatch]
+      cases body with
+      | ok a =>
+        rw [Except.isOk, Except.toBool]
+      | error e =>
+        simp
+        rw [h_ok e]
+
+ 2. Then using this theorem, we prove that `decodeDNA'` doesn't throw:
+
+    ```lean
+    theorem decodeDNA'CantFail : ∀ (dna : String), (decodeDNA' dna).isOk = true := by
+      admit -- 🚧 **TODO**. 😟 while loops are hard
+    ```
+
+ 3. Then we implement a `get` method for `Except`, similar to the one `Option` has:
+
+    ```lean
+    def Except.get {ε α} (except : Except ε α) : except.isOk = true -> α :=
+      fun ex_ok =>
+        match except with
+        | ok a => a
+        | error _ => nomatch ex_ok
+    ```
+
+ 4. We use steps 2. and 3. to define a safe `decodeDNA'` variant:
+
+    ```lean
+    def decodeDNA'' (dna : String) : List NucleotideBase := 
+      Except.get (decodeDNA' dna) (decodeDNA'CantFail dna)
+    ```
