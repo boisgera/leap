@@ -698,7 +698,61 @@ def bind (option : Option α) (f : α -> Option β) : Option β :=
   | some a => f a
 ```
 
-### 🍬 More Sugar
+### ⛏️ Extracting the value
+
+You can always pattern match an option to extract the value it contains,
+but you have to deal with the case where there is no value, even if you
+know that it's impossible. Two methods can help you in this case:
+
+  - `Option.get!` which extracts the value from an option and panicks 
+    if the option is none.
+
+  - `Option.get` which asks for an option **and a proof that this option
+    contains a value** and extracts the value.
+
+The first method brings us back to the strategy of errors as panics; 
+the second method may require more effort but it offers more safety.
+On example of the first strategy:
+
+```lean
+def list := [0, 1, 2, 4]
+
+#check Option.get!
+-- Option.get!.{u} {α : Type u} [Inhabited α] : Option α → α
+
+#eval list[3]?.get!
+-- 4
+
+#eval list[4]?.get!
+-- PANIC at Option.get! ...: value is none
+```
+
+and below the corresponding proof-based extraction. 
+
+```lean
+#check Option.get
+-- Option.get.{u} {α : Type u} (o : Option α) : o.isSome = true → α
+
+#check Option.isSome
+-- Option.isSome.{u_1} {α : Type u_1} : Option α → Bool
+
+#print Option.isSome
+-- def Option.isSome.{u_1} : {α : Type u_1} → Option α → Bool :=
+-- fun {α} x =>
+--   match x with
+--   | some val => true
+--   | none => false
+
+theorem this_is_fine : (list[3]?).isSome = true := by
+  trivial
+
+#eval list[3]?.get this_is_fine
+-- 4
+```
+
+Note that here the proof we were in need for was very easy to derive.
+
+### 🍬 More sugar
 
 <!--
 You can use `failure` instead of `none` if that conveys better the intent of
@@ -759,9 +813,11 @@ like to avoid most of the boilerplate code:
 def readBool (s : String) := readFalse s <|> readTrue s
 ```
 
+<!--
 However, if you need/want to keep a bit more control on the failure handling,
 but still don't like the pattern-matching flavor of the original `readBool`
 code, you can use the `try/catch` construct instead.
+-->
 
 <!--
 ```lean
@@ -789,6 +845,8 @@ To really make use fully of the try/catch pattern, we will introduce the `Except
 
 Except
 --------------------------------------------------------------------------------
+
+Options have an obvious limitation: ... **TODO**
 
 ```lean
 inductive NucleotideBase where
