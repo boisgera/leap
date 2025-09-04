@@ -2,6 +2,10 @@
 Functions
 ================================================================================
 
+
+Function Definition and Application
+--------------------------------------------------------------------------------
+
 Let `timesTwo` be our first function:
 
 ```lean
@@ -81,10 +85,10 @@ For example:
 ```
 
 
-Functions with several arguments
+Currying
 --------------------------------------------------------------------------------
 
-You can consider functions with an arbitrary (but fixed) number of arguments.
+You can define functions with an arbitrary (but fixed) number of arguments.
 For example:
 
 ```lean
@@ -111,12 +115,12 @@ Printing the function is also informative:
 -- fun m n => m + n
 ```
 
-The right-hand side of `:=` is not surprising; we just discovered the
+The implementation printed out is not surprising; we just discovered the
 notation for an anonymous function expression with two arguments.
 But the `Nat -> Nat -> Nat` probably need more explanation.
 
-The only hint you probably need: you should read it as `Nat -> (Nat -> Nat)`.
-(`->` is right-associative.)
+The only hint you probably need: you should read it as `Nat -> (Nat -> Nat)`
+(in other words: `->` is right-associative.)
 That means that Lean tells you that `add` is a function with a `Nat` argument
 and result ... a function with a `Nat` argument and `Nat` result!
 Which makes sense: if you specify one (the first) argument of the function,
@@ -159,31 +163,80 @@ be left associative and you can get away with simply:
 -- 3
 ```
 
+
+**TODO.** Partial application in Python.
+
+
+Namespaces and Methods
+--------------------------------------------------------------------------------
+
+**TODO:**
+
+  - Understand the rule wrt the order of arguments. I though that it was the
+    first, but List.filter avoids that (???). Because p is defined on the
+    left of ":" ??? Dunno
+
+
+Composition & Piping
+--------------------------------------------------------------------------------
+
+**TODO:**
+
+  - perentheses are a pain
+
+  - composition somehow better, but reads right-to-left
+
+  - |>
+
+  - methods binding : "|>. "
+
+
+
+Higher-order programming
+--------------------------------------------------------------------------------
+
+Functions can also be used as arguments to functions.
+
+
+```lean
+def isOdd (n : Nat) : Bool :=
+  n % 2 == 1
+
+#eval [0, 1, 2, 3, 4, 5].filter isOdd
+-- [1, 3, 5]
+
+#eval [0, 1, 2, 3, 4, 5].filter fun n => n % 2 == 1
+-- [1, 3, 5]
+
+#eval [0, 1, 2, 3, 4, 5].filter (· % 2 == 1)
+
+def threeTimesPlusOne (n : Nat) : Nat :=
+    3 * n + 1
+
+#eval [1, 3, 5].map threeTimesPlusOne
+-- [4, 10, 16]
+
+#eval [0, 1, 2, 3, 4, 5] |>.filter isOdd |>.map (3 * · + 1)
+-- [4, 10, 16]
+```
+
+In Python, the idiomatic equivalent would use a **list comprehension**:
+
+```pycon
+>>> def is_odd(n: int) -> bool:
+...     return n % 2 == 1
+...
+>>> [3 * n + 1 for n in [0, 1, 2, 3, 4, 5] if is_odd(n)]
+[4, 10, 16]
+```
+
+
 TODO:
 
-  - define a function "as usual" + function application (TODO: Python first)
-    nota: functions are named.
+  - functions are first-class values / HOP patterns. Examples:
+    map, filter, fold (?). Yes.
 
-  - define a function using the anonymous function syntax (Python lambda and
-    its limitations : 1 expression, no statements, etc.)
-
-    See where the type info can be put (or inferred).
-
-  - functions are first-class values ...
-
-  - ... then what is there types?
-
-  - function with >=1 arguments, what is their types? Currying,
-    partial application, notation (associativity for -> and function application),
-    etc.
-
-  - functions with 0 arguments :)
-
-  - functions as arguments, example patterns
-
-  - callables: coerce your types to functions
-
-  - Shortcut centered dot
+  - functions and methods / namespaces
 
   - Bells and whistles: pattern matching
 
@@ -196,3 +249,7 @@ TODO:
   - genericity, type arguments, implicit arguments, universe arguments, etc.
 
   - notation for type classes use?
+
+  -  callables: coerce your types to functions
+
+
