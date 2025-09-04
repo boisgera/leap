@@ -1,13 +1,27 @@
-def divideByTwo (n : Nat) : Nat :=
-  if n % 2 == 0 then
-    n / 2
-  else
-    sorry
 
-#eval! divideByTwo 8
+inductive ABC where
+| a
+| b
+| c
 
-def main :=
-  let _ := divideByTwo 8
-  IO.println "Yep."
+def ABC.f (abc : ABC) : Nat :=
+  match abc with
+  | a => 1
+  | b => 2
+  | c => 3
 
-#eval! main
+#eval ABC.f ABC.c
+-- 1
+
+#eval ABC.c.f
+-- 3
+
+def ABC.g : Nat -> ABC -> Nat :=
+  fun n abc =>
+    n + abc.f
+
+#eval ABC.g 7 ABC.c
+-- 10
+
+#eval ABC.c.g 7
+-- 10

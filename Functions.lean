@@ -185,7 +185,11 @@ Namespaces and Methods
 
   - Understand the rule wrt the order of arguments. I though that it was the
     first, but List.filter avoids that (???). Because p is defined on the
-    left of ":" ??? Dunno
+    left of ":" ??? Dunno. Nah, it's because what is substituted is the
+    first argument that matches the type of the item on the left of .
+    And therefore, stuff like filter satisfy the classic FP order *and*
+    work as methods, in a more OO style
+
 
 -/
 
