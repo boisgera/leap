@@ -274,5 +274,7 @@ TODO:
 
   -  callables: coerce your types to functions
 
+  - Unit -> ... (lazy eval; example with lazyOr)
+    and ... -> Unit (...useless, but ... -> IO Unit is not)
 
 -/
