@@ -23,3 +23,7 @@ root = "FileSize"
 [[lean_exe]]
 name = "main"
 root = "Main"
+
+[[lean_exe]]
+name = "mol"
+root = "MarkdownOfLean"
