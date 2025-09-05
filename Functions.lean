@@ -261,68 +261,109 @@ def rollDie' : Unit -> IO Nat := fun _ => IO.rand 1 6
 -- 5
 
 /-
-This pattern can be used to delay computations in Lean when needed.
-For example if I wanted to define an `or'` function in Lean like that:
+Function with a `Unit` argument are often used in conjunction with the
+`Thunk` type to implement [lazy computations](https://lean-lang.org/doc/reference/latest//Basic-Types/Lazy-Computations/#Thunk).
+
+To begin with, we need to realize that Lean is *eager* by default, not *lazy*:
+it will evaluate the arguments of a function before it starts evaluating the function itself.
+That includes situation where we could have avoided such computations.
+Consider for example:
 -/
 
-def or' (x y : Bool) : Bool :=
-  if y == false && x == false then
-    false
+def dbg_two :=
+  dbg_trace "⌛"
+  2
+
+def f (n : Nat) (use : Bool) : Nat :=
+  if use then
+    n
   else
-    true
+    0
+
+#eval f dbg_two (use := true)
+-- ⌛
+-- 0
+
+#eval f dbg_two (use := false)
+-- ⌛
+-- 2
 
 /-
-it would mostly work as expected:
+In the second case, we didn't need to evaluate `dbg_two` to produce the
+result of `f` but Lean did it anyway. We have a way to deal around that
+if we replace the `Nat` argument with a `Unit -> Nat` function argument
+that we will evaluate only when we need it:
 -/
 
-#eval or' false false
--- true
-#eval or' false true
--- true
-#eval or' true false
--- true
-#eval or' true true
--- false
+def dbg_two' : Unit -> Nat :=
+  fun () =>
+    dbg_trace "⌛"
+    2
 
-/-
-"Mostly" because we tend to expect a short-circuit property of this operator:
-if the first argument evaluates to `true`, we know that the output should be
-`true` and we don't need to evaluate the second argument. And we don't want
-this second argument not to be evaluated if it's not needed, since it can
-require more computations. But in the current implementation, our `or'`
-function doesn't work like that because Lean is *eager*, not *lazy*: it
-will evaluate all the arguments to a function before starting to evaluate
-the function itself.
--/
+#check dbg_two'
+-- dbg_two' : Unit → Nat
 
-def true' :=
-  dbg_trace "true'"
-  true
+#eval dbg_two' ()
+-- ⌛
+-- 2
 
-def false' :=
-  dbg_trace "false'"
-  false
-
-#eval or' (dbg_trace "#1"; true) (dbg_trace "#2"; false)
--- #2
--- #1
--- true
-
-/-
-On the other hand, if you want to be sure that the second argument will be
-evaluated only when it's necessary, you can change the function signature
-and implementation like that:
--/
-
-def or'' (x : Bool) (y : Unit -> Bool) : Bool :=
-  if x == true then
-    true
+def f' (n : Unit -> Nat) (use : Bool) : Nat :=
+  if use then
+    n ()
   else
-    y ()
+    0
 
-#eval or'' (dbg_trace "#1"; true) (fun _ => dbg_trace "#2"; false)
--- #1
--- true
+#eval f' dbg_two' (use := false)
+-- 0
+
+#eval f' dbg_two' (use := true)
+-- ⌛
+-- 2
+
+/-
+It works!
+The downside of this is that we add to redesign the whole thing
+and the the user of `f'` now needs to remember to
+use the more complex `dbg_two'` instead of `dbg_two`.
+-/
+
+/-
+Fortunately, their is a way to change that if we use the `Thunk` type.
+It's a simple wrapper around functions with a `Unit` argument:
+-/
+
+#check Thunk.mk
+-- Thunk.mk.{u} {α : Type u} (fn : Unit → α) : Thunk α
+
+def thunk := Thunk.mk dbg_two'
+
+#eval thunk.get
+-- ⌛
+-- 2
+
+/-
+But a term `e` of type `α` will automatically be
+[converted to the thunk](https://lean-lang.org/doc/reference/latest///Basic-Types/Lazy-Computations/#Thunk-coercions)
+`Thunk.mk fun () => e : Thunk α` when needed. And that delays the evaluation of
+the original term `e`. In action, this fact allows use to get the benefit
+of lazy computation with the ease of use of our original API:
+
+-/
+
+
+def f'' (n : Thunk Nat) (use : Bool) : Nat :=
+  if use then
+    n.get
+  else
+    0
+
+#eval f'' dbg_two (use := false)
+-- 0
+
+#eval f'' dbg_two (use := true)
+-- ⌛
+-- 2
+
 
 /-
 Namespaces and Methods
