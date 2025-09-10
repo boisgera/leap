@@ -1,7 +1,7 @@
 /-
 Spin a toupie server before any call to this library:
 
-  uvx --from git+https://github.com/boisgera/toupie toupie
+  uvx toupie
 
 See https://github.com/boisgera/toupie for more information.
 -/
@@ -55,6 +55,6 @@ def exec! (code : String) : IO Unit := do
 
 def eval! (code : String) : IO String := do
   flush!
-  exec_output! s!"_ = {code}; print(_, end='', flush=True)"
+  exec_output! code
 
 end Python

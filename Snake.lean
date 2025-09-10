@@ -22,7 +22,7 @@ def draw_fruit (fruit : Point2) : IO Unit := do
 
 def draw (state : GameState) : IO Unit := Python.batch do
     clear_background WHITE
-    -- draw_grid
+    draw_grid
     draw_fruit state.fruit
     for point in state.snake_geometry do
         let (x, y) := point
