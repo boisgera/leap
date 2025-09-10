@@ -55,7 +55,7 @@ def main : IO Unit := do
     import_ "pyray"
     init_window (WIDTH * SCALE) (HEIGHT * SCALE) "🐍 Snake Game"
 
-    set_target_fps 1
+    set_target_fps 10
 
     let mut state : GameState := {
         snake_direction : Vector2 := (1, 0),
