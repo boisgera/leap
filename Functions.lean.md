@@ -380,8 +380,7 @@ Consider the function `List.replicate`:
 -- List.replicate.{u} {α : Type u} (n : Nat) (a : α) : List α
 ```
 
-It's a function in the namespace `List` which can be applied like every other 
-function:
+It's a function in the namespace `List`; it can be applied like every function:
 
 ```lean
 #eval List.replicate 3 0
@@ -392,6 +391,7 @@ The case of the function `List.append` is similar:
 
 ```lean
 #check List.append
+-- List.append.{u} {α : Type u} (xs ys : List α) : List α
 
 #eval List.append [1, 2, 3] [4, 5, 6]
 -- [1, 2, 3, 4, 5, 6]
