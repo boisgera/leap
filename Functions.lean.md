@@ -6,14 +6,14 @@ Functions
 Definition and Application
 --------------------------------------------------------------------------------
 
-Lets define a function named `x2` (for "times two"):
+Let's define a function named `x2` (for "times two"):
 
 ```lean
 def x2 (n : Nat) : Nat := 2 * n
 ```
 
-Its has one argument of type `Nat` named `n`, its result if of type `n` whose
-expression is `2 * n`.
+Its has one argument of type `Nat` named `n`, its result if of type `Nat`
+and its expression is `2 * n`.
 
 To use it we **apply** this function to the argument 2
 
@@ -50,10 +50,10 @@ We can get verify that Lean got the right type of `x2` with `#check`:
 
 Lean is statically typed: it needs to know what the type of every
 function argument and of its result are otherwise it won't **type check**
-(validate) your code.
+your code.
 That does not mean that you always have to specify everything;
 you can often be implicit about some type information and let
-Lean is smart **infer** automatically the missing information:
+Lean **infer** automatically the missing information:
 
 ```lean
 def x2' (n : Nat) := 2 * n
@@ -70,8 +70,9 @@ Printing `x2` gives us the type and the implementation of the function.
 -- fun n => 2 * n
 ```
 
-The expression `Nat -> Nat` denotes the type of (pure) functions with an
-argument of type `Nat` and result of type `Nat`. We could also have
+That's interesting!
+The expression `Nat -> Nat` denotes the type of functions with an
+argument of type `Nat` and result of type `Nat`. We may as well have
 defined our function as:
 
 ```lean
@@ -107,9 +108,8 @@ then a space to obtain this symbol), we can also do:
 def x2''' : Nat -> Nat := (2 * ·)
 ```
 
-Note to apply a function, you don't need it to a name it!
-any expression that evaluates to a function can work;
-that's the beauty of referential transparency.
+Note that to apply a function, you don't need it to a name it!
+Any expression that evaluates to a function can work.
 For example:
 
 ```lean
@@ -151,20 +151,21 @@ Printing the function is also informative:
 -- fun m n => m + n
 ```
 
-The implementation printed out is not surprising; we just discovered the
+The implementation `fun m n => m + n` is not surprising; this is the
 notation for an anonymous function expression with two arguments.
-But the `Nat -> Nat -> Nat` probably need more explanation.
+But the `Nat -> Nat -> Nat` notation probably requires more explanation.
 
-The only hint you probably need: you should read it as `Nat -> (Nat -> Nat)`
-(in other words: `->` is right-associative.)
+The only hint you really need: you should read it as `Nat -> (Nat -> Nat)`
+(in other words: the operator `->` is **right-associative**.)
 That means that Lean tells you that `add` is a function with a `Nat` argument
 and result ... a function with a `Nat` argument and `Nat` result!
 Which makes sense: if you specify one (the first) argument of the function,
 what you have left is the function of one (the second) argument!
 This process (transforming a function of multiple argument into a
 sequence of function of one argument) is called **currying**.
+The first step of the process is called **partial application**.
 
-Let's check that all that makes sense:
+Let's check that all that makes sense in practice:
 
 ```lean
 #check add 1
@@ -183,7 +184,7 @@ def add_1 := add 1
 -- 3
 ```
 
-Now remember that you need need to name functions to apply them.
+Now remember that you don't need to name functions to apply them.
 Which means that the last eval could have been written as
 
 ```lean
@@ -192,21 +193,31 @@ Which means that the last eval could have been written as
 ```
 
 The final touch: define the "space operator" in function application to
-be left associative and you can get away with simply:
+be **left associative** and you can get away with simply:
 
 ```lean
 #eval add 1 2
 -- 3
 ```
 
+Python has no syntactic support for currying, but it supports partial
+application with the standard library `functools`:
 
-**TODO.** Partial application in Python.
+```pycon
+>>> from functools import partial
+>>> def add(m, n):
+...     return m + n
+...
+>>> add_1 = partial(add, 1)
+>>> add_1(2)
+3
+```
 
 
 ### No argument
 
 Note that given the logic of currying, by consistency, you can consider
-functions without arguments even if it's a little contrived!. You won't
+functions without arguments even if it's a little contrived! You won't
 usually call them functions though:
 
 
@@ -215,9 +226,9 @@ def two := 2
 ```
 
 
-This point of view is not a totally useless.
+This point of view is not completely useless when comparing Lean with Python.
 When in Python you would define a function `roll_die` to get a random number
-between 1 and 6
+between 1 and 6 with:
 
 ```python
 import random
@@ -230,7 +241,7 @@ print(roll_die())
 ```
 
 in Lean, you would consider the constant of type `IO Nat`, which is not
-a function!
+a function, but a "value" of type `IO Nat`!
 
 
 ```lean
@@ -256,16 +267,18 @@ def rollDie' : Unit -> IO Nat := fun _ => IO.rand 1 6
 ```
 
 Function with a `Unit` argument are often used in conjunction with the
-`Thunk` type to implement [lazy computations](https://lean-lang.org/doc/reference/latest//Basic-Types/Lazy-Computations/#Thunk).
+`Thunk` type to implement [lazy computations].
+
+[lazy computations]: https://lean-lang.org/doc/reference/latest//Basic-Types/Lazy-Computations/#Thunk
 
 To begin with, we need to realize that Lean is *eager* by default, not *lazy*:
-it will evaluate the arguments of a function before it starts evaluating the function itself.
-That includes situation where we could have avoided such computations.
+it will evaluate the arguments of a function before evaluating the function
+itself. That includes situations where we could have avoided such computations.
 Consider for example:
 
 ```lean
 def dbg_two :=
-  dbg_trace "⌛"
+  dbg_trace "🚩"
   2
 
 def f (n : Nat) (use : Bool) : Nat :=
@@ -275,11 +288,11 @@ def f (n : Nat) (use : Bool) : Nat :=
     0
 
 #eval f dbg_two (use := true)
--- ⌛
+-- 🚩
 -- 0
 
 #eval f dbg_two (use := false)
--- ⌛
+-- 🚩
 -- 2
 ```
 
@@ -291,14 +304,14 @@ that we will evaluate only when we need it:
 ```lean
 def dbg_two' : Unit -> Nat :=
   fun () =>
-    dbg_trace "⌛"
+    dbg_trace "🚩"
     2
 
 #check dbg_two'
 -- dbg_two' : Unit → Nat
 
 #eval dbg_two' ()
--- ⌛
+-- 🚩
 -- 2
 
 def f' (n : Unit -> Nat) (use : Bool) : Nat :=
@@ -311,7 +324,7 @@ def f' (n : Unit -> Nat) (use : Bool) : Nat :=
 -- 0
 
 #eval f' dbg_two' (use := true)
--- ⌛
+-- 🚩
 -- 2
 ```
 
@@ -320,7 +333,7 @@ The downside of this is that we add to redesign the whole thing
 and the the user of `f'` now needs to remember to
 use the more complex `dbg_two'` instead of `dbg_two`.
 
-Fortunately, their is a way to change that if we use the `Thunk` type.
+Fortunately, their is a way to change that with the `Thunk` type.
 It's a simple wrapper around functions with a `Unit` argument:
 
 ```lean
@@ -336,9 +349,10 @@ def thunk := Thunk.mk dbg_two'
 
 But a term `e` of type `α` will automatically be
 [converted to the thunk](https://lean-lang.org/doc/reference/latest///Basic-Types/Lazy-Computations/#Thunk-coercions)
-`Thunk.mk fun () => e : Thunk α` when needed. And that delays the evaluation of
-the original term `e`. In action, this fact allows use to get the benefit
-of lazy computation with the ease of use of our original API:
+`Thunk.mk fun () => e : Thunk α` when needed,
+and that delays the evaluation of the original term `e`.
+In action, this fact allows use to get the benefit of lazy computation
+with the ease of use of our original API:
 
 
 ```lean
@@ -361,6 +375,12 @@ Namespaces and Methods
 
 **TODO:**
 
+  - 1) discover how methods work on an existing type (ex: String, List?).
+       User point of view.
+
+  - 2) how to add method to an existing type (types are "open")
+
+
   - Understand the rule wrt the order of arguments. I though that it was the
     first, but List.filter avoids that (???). Because p is defined on the
     left of ":" ??? Dunno. Nah, it's because what is substituted is the
@@ -370,25 +390,199 @@ Namespaces and Methods
 
 
 
+Consider the function `List.replicate`:
+
+```lean
+#check List.replicate
+-- List.replicate.{u} {α : Type u} (n : Nat) (a : α) : List α
+```
+
+It's a function in the namespace `List`; it can be applied like every function:
+
+```lean
+#eval List.replicate 3 0
+-- [0, 0, 0]
+```
+
+The case of the function `List.append` is similar:
+
+```lean
+#check List.append
+
+#eval List.append [1, 2, 3] [4, 5, 6]
+-- [1, 2, 3, 4, 5, 6]
+```
+
+However here we can also use the method syntax to apply it:
+
+```lean
+#eval [1, 2, 3].append [4, 5, 6]
+-- [1, 2, 3, 4, 5, 6]
+```
+
+Lean with search among the function arguments the first one whose type
+matches the namespace in which the function is declared (here `List`)
+and use the expression at the left of the point for this argument.
+
+The first match doesn't have to be the first argument.
+For example:
+
+```lean
+#check List.map
+-- List.map.{u, v} {α : Type u} {β : Type v} (f : α → β) (l : List α) : List β
+
+#eval List.map (· + 1) [0, 1, 2]
+-- [1, 2, 3]
+
+#eval [0, 1, 2].map (· + 1)
+```
+
+Note that all namespaces are open: you can add a function to a namespace even
+if it's associated to a built-in types. Therefore you can add any method
+you like to an existing type (not that it's necessarily a good idea...).
+
+```lean
+namespace String
+def lolspeak (text : String) : String :=
+  s!"I Can Has {text.capitalize.replace "se" "z"}?"
+end String
+
+#eval "cheeseburger".lolspeak
+-- "I Can Has Cheezburger?"
+```
+
+Alternatively, use the simpler:
+
+```lean
+def String.lolspeak' (text : String) : String :=
+  s!"I Can Has {text.capitalize.replace "se" "z"}?"
+
+#eval "cheeseburger".lolspeak'
+-- "I Can Has Cheezburger?"
+```
+
 Composition & Piping
 --------------------------------------------------------------------------------
 
-**TODO:**
+Consider the following indentation function:
 
-  - perentheses are a pain
+```lean
+def indent (n : Nat) (text: String) : String :=
+  "\n".intercalate (
+    (text.splitOn "\n").map (
+      fun line =>
+        (String.mk (List.replicate n ' ')) ++ line
+    )
+  )
 
-  - composition somehow better, but reads right-to-left
+#eval IO.println "aaa\nbbb\nccc"
+--- aaa
+--- bbb
+--- ccc
 
-  - |>
+#eval IO.println (indent 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
 
-  - methods binding : "|>. "
+Its code is a bit hard to read but that's the point that we're addressing
+here! We can make things easier for the reader by naming an intermediate
+result:
 
+```lean
+def indent' (n : Nat) (text: String) : String :=
+  let tab := String.mk (List.replicate n ' ')
+  "\n".intercalate ((text.splitOn "\n").map (tab ++ ·))
+
+#eval IO.println (indent' 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
+
+And since that's quite effective, we can be tempted to introduce more
+variables:
+
+```lean
+def indent'' (n : Nat) (text : String) : String :=
+    let tab := String.mk (List.replicate n ' ')
+    let splitLines := fun (text : String) => text.splitOn "\n"
+    let tabulate := fun line => tab ++ line
+    let joinLines := fun lines => "\n".intercalate lines
+    joinLines ((splitLines text).map tabulate)
+
+#eval IO.println (indent'' 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
+
+Now we can make more obvious the sequence of operations that are applied to the
+`text` argument if we use the composition operator `∘`:
+
+```lean
+def indent''' (n : Nat) (text : String) : String :=
+    let tab := String.mk (List.replicate n ' ')
+    let splitLines := fun (text : String) => text.splitOn "\n"
+    let tabulate := fun line => tab ++ line
+    let joinLines := fun lines => "\n".intercalate lines
+    (joinLines ∘ List.map tabulate ∘ splitLines) text
+
+#eval IO.println (indent''' 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
+
+But actually, it's a bit painful to read this last line from the right to
+the left to see what's going on. Good news, instead we use the pipe operator
+`|>`:
+
+```lean
+def indent_4 (n : Nat) (text : String) : String :=
+    let tab := String.mk (List.replicate n ' ')
+    let splitLines := fun (text : String) => text.splitOn "\n"
+    let tabulate := fun line => tab ++ line
+    let joinLines := fun lines => "\n".intercalate lines
+    text |> splitLines |>.map tabulate |> joinLines
+
+#eval IO.println (indent_4 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
+
+`text |> splitlines` is equivalent to `splitlines text`:
+this is simply function application in disguise!
+The `|>.` variant is the method pipe:
+`lines |>.map tabulate` is the same as `lines.map tabulate`
+or `lines |> List.map tabulate`.
+
+These pipes operators are left-associative:
+`text |> splitLines |>.map tabulate |> joinLines` should be understood
+as `(((text |> splitLines) |>.map tabulate) |> joinLines)`.
+
+Now it's time to reconsider our initial design; the pipes operators are so
+good at their job that *maybe* you don't need to name every operation which
+is applied to the data. Consider using instead:
+
+```lean
+def indent_5  (n : Nat) (text : String) :=
+  let tab := ' ' |> List.replicate n  |> String.mk
+  text |>.splitOn "\n" |>.map (tab ++ ·) |> "\n".intercalate
+
+#eval IO.println (indent_4 4 "aaa\nbbb\nccc")
+---     aaa
+---     bbb
+---     ccc
+```
 
 
 Higher-order programming
 --------------------------------------------------------------------------------
 
-Functions can also be used as arguments to functions.
+Functions be used as arguments to other functions; they are **first-class values**.
 
 
 ```lean
@@ -397,23 +591,42 @@ def isOdd (n : Nat) : Bool :=
 
 #eval [0, 1, 2, 3, 4, 5].filter isOdd
 -- [1, 3, 5]
+```
 
+As usual, naming the function `isOdd` may help, but it's not mandatory.
+You can consider using instead
+
+```lean
 #eval [0, 1, 2, 3, 4, 5].filter fun n => n % 2 == 1
 -- [1, 3, 5]
+```
 
+or even
+
+```lean
 #eval [0, 1, 2, 3, 4, 5].filter (· % 2 == 1)
+-- [1, 3, 5]
+```
 
+`filter` selects some items in a list, `map` apply a transform to each
+element in a list:
+
+```lean
 def threeTimesPlusOne (n : Nat) : Nat :=
     3 * n + 1
 
 #eval [1, 3, 5].map threeTimesPlusOne
 -- [4, 10, 16]
+```
 
+Combine both operations with:
+
+```lean
 #eval [0, 1, 2, 3, 4, 5] |>.filter isOdd |>.map (3 * · + 1)
 -- [4, 10, 16]
 ```
 
-In Python, the idiomatic equivalent would use a **list comprehension**:
+The Pythonic equivalent would be a **list comprehension**:
 
 ```pycon
 >>> def is_odd(n: int) -> bool:
@@ -432,24 +645,17 @@ TODO:
   - functions are first-class values / HOP patterns. Examples:
     map, filter, fold (?). Yes.
 
-  - functions and methods / namespaces
-
   - Bells and whistles: (collapsed) pattern matching
 
   - Bells and whistles: named arguments, default arguments, etc.
+   type signature: Optparam stuff; see List.splitOn
 
-  - Bells and whistles: function composition, infix notation, etc.
-
-  - Bells and whistles: currying, partial application, etc.
 
   - genericity, type arguments, implicit arguments, universe arguments, etc.
 
   - notation for type classes use?
 
   -  callables: coerce your types to functions
-
-  - Unit -> ... (lazy eval; example with lazyOr, use dbg_trace to prove)
-    and ... -> Unit (...useless, but ... -> IO Unit is not)
 
   - recursive functions, terminal and non-terminal recursion,
     mutual recursive definitions, total/partial functions,
