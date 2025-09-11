@@ -220,7 +220,8 @@ application with the standard library `functools`:
 -/
 
 /-
-### No argument
+No argument & `Unit
+--------------------------------------------------------------------------------
 
 Note that given the logic of currying, by consistency, you can consider
 functions without arguments even if it's a little contrived! You won't
@@ -642,19 +643,88 @@ The Pythonic equivalent would be a **list comprehension**:
 
 
 /-
+Consider this example `for` loop:
+-/
+
+def sumCubes (numbers : List Nat) : Nat := Id.run do
+  let mut result := 0
+  for number in numbers do
+    result := result + number^3
+  return result
+
+#eval sumCubes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+-- 2025
+
+/-
+There is a pattern here: we initialize a value that ultimately will be our
+result, then for each new element in the list, combine the element and the
+current value of the result to update the result, until the loop is over.
+
+We can actually capture this general pattern into a function:
+-/
+
+def forLoop (f : α → β → α) (init : α) (list : List β) : α := Id.run do
+  let mut result <- init
+  for elt in list do
+    result := f result elt
+  return result
+
+def sumCubes' := forLoop (fun result elt => result + elt^3) 0
+
+#eval sumCubes' [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+-- 2025
+
+/-
+It's actually possible to implement that same functionality without resorting to
+`do`-blocks and mutation but with a simpler recursion:
+-/
+
+def forLoop' (f : α → β → α) (init : α) (list : List β) : α :=
+  match list with
+  | [] => init
+  | elt :: rest => forLoop' f (f init elt) rest
+
+def sumCubes'' := forLoop' (fun result elt => result + elt^3) 0
+
+#eval sumCubes'' [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+-- 2025
+
+/-
+This function is already implemented in the Lean standard library;
+it's called a **left fold** and named `List.foldl`.
+-/
+
+def sumCubes''' := List.foldl (fun result elt => result + elt^3) 0
+
+#eval sumCubes''' [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+-- 2025
+
+/-
+Alternatively, as a list method:
+-/
+
+def upToTen := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+#eval upToTen.foldl (fun result elt => result + elt^3) 0
+
+
+/-
+**TODO.** `foldr`
+-/
+
+
+
+
+
+/-
 TODO:
 
   - local variables: let (for values and functions ...).
     Scope ("after" the decl and "limited to the block")
 
-  - functions are first-class values / HOP patterns. Examples:
-    map, filter, fold (?). Yes.
-
   - Bells and whistles: (collapsed) pattern matching
 
   - Bells and whistles: named arguments, default arguments, etc.
    type signature: Optparam stuff; see List.splitOn
-
 
   - genericity, type arguments, implicit arguments, universe arguments, etc.
 
