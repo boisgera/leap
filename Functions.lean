@@ -401,6 +401,7 @@ The case of the function `List.append` is similar:
 -/
 
 #check List.append
+-- List.append.{u} {α : Type u} (xs ys : List α) : List α
 
 #eval List.append [1, 2, 3] [4, 5, 6]
 -- [1, 2, 3, 4, 5, 6]

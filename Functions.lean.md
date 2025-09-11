@@ -380,7 +380,8 @@ Consider the function `List.replicate`:
 -- List.replicate.{u} {α : Type u} (n : Nat) (a : α) : List α
 ```
 
-It's a function in the namespace `List`; it can be applied like every function:
+It's a function in the namespace `List` which can be applied like every other 
+function:
 
 ```lean
 #eval List.replicate 3 0
