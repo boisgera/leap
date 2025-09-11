@@ -419,16 +419,17 @@ For example:
 -- [1, 2, 3]
 
 #eval [0, 1, 2].map (· + 1)
+-- [1, 2, 3]
 ```
 
 Note that all namespaces are open: you can add a function to a namespace even
-if it's associated to a built-in types. Therefore you can add any method
+if it's associated to a built-in type. Therefore you can add any method
 you like to an existing type (not that it's necessarily a good idea...).
 
 ```lean
 namespace String
-def lolspeak (text : String) : String :=
-  s!"I Can Has {text.capitalize.replace "se" "z"}?"
+  def lolspeak (text : String) : String :=
+    s!"I Can Has {text.capitalize.replace "se" "z"}?"
 end String
 
 #eval "cheeseburger".lolspeak
@@ -470,9 +471,10 @@ def indent (n : Nat) (text: String) : String :=
 ---     ccc
 ```
 
-Its code is a bit hard to read but that's the point that we're addressing
-here! We can make things easier for the reader by naming an intermediate
-result:
+Hopefully the functionality is clear but the implementation is quite hard hard
+to read. That's ok, this is precisely the point that we intend to address!
+To begin with, we can make things easier for the reader by naming an
+intermediate result:
 
 ```lean
 def indent' (n : Nat) (text: String) : String :=
@@ -503,7 +505,7 @@ def indent'' (n : Nat) (text : String) : String :=
 ```
 
 Now we can make more obvious the sequence of operations that are applied to the
-`text` argument if we use the composition operator `∘`:
+`text` argument if we use the **function composition** operator `∘`:
 
 ```lean
 def indent''' (n : Nat) (text : String) : String :=
@@ -519,7 +521,7 @@ def indent''' (n : Nat) (text : String) : String :=
 ---     ccc
 ```
 
-But actually, it's a bit painful to read this last line from the right to
+It's still a bit painful to read this last line from the right to
 the left to see what's going on. Good news, instead we use the pipe operator
 `|>`:
 
@@ -537,7 +539,7 @@ def indent_4 (n : Nat) (text : String) : String :=
 ---     ccc
 ```
 
-`text |> splitlines` is equivalent to `splitlines text`:
+The expression  `text |> splitlines` is equivalent to `splitlines text`:
 this is simply function application in disguise!
 The `|>.` variant is the method pipe:
 `lines |>.map tabulate` is the same as `lines.map tabulate`
@@ -566,7 +568,8 @@ def indent_5  (n : Nat) (text : String) :=
 Higher-order programming
 --------------------------------------------------------------------------------
 
-Functions be used as arguments to other functions; they are **first-class values**.
+Functions can be used as arguments to other functions like any other value;
+they are **first-class** values.
 
 
 ```lean
