@@ -382,25 +382,6 @@ def f'' (n : Thunk Nat) (use : Bool) : Nat :=
 Namespaces and Methods
 --------------------------------------------------------------------------------
 
-**TODO:**
-
-  - 1) discover how methods work on an existing type (ex: String, List?).
-       User point of view.
-
-  - 2) how to add method to an existing type (types are "open")
-
-
-  - Understand the rule wrt the order of arguments. I though that it was the
-    first, but List.filter avoids that (???). Because p is defined on the
-    left of ":" ??? Dunno. Nah, it's because what is substituted is the
-    first argument that matches the type of the item on the left of .
-    And therefore, stuff like filter satisfy the classic FP order *and*
-    work as methods, in a more OO style
-
-
--/
-
-/-
 Consider the function `List.replicate`:
 -/
 
