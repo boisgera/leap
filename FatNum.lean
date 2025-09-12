@@ -108,23 +108,35 @@ Step 6
 
 def divMod (m n : Nat) : Nat × Nat := (m / n, m % n)
 
+-- TODO: we need to "trim" the extra zeros to have a canonical repr.
 def FatNum.normalizeAux (numbers : List Nat) : List Nat := Id.run do
-  let mut numbers := numbers.reverse
-  repeat
-    numbers := match numbers with
-    | []           => []
-    | n :: []      => if n >= 10 then [n % 10, n / 10] else [n]
-    | n :: m :: ns => (n % 10) :: (n / 10 + m) :: ns
-  -- stopping condition?
-  return numbers.reverse
+  let numbers := numbers.reverse
+  let mut normalized : List Nat :=  []
+  let mut i := 0
+  let mut carry := 0
+  while carry > 0 || i < numbers.length do
+    let number := carry +
+      match numbers[i]? with
+      | none => 0
+      | some n => n
+    normalized := normalized.concat (number % 10)
+    carry := number / 10
+    i := i + 1
+  return normalized.reverse
 
--- partial def FatNum.normalizeAux' (numbers : List Nat) : List Nat :=
---   match _: numbers with
---     | [] => []
---     | [n] => if n > 10 then [n / 10, n % 10] else [n]
---     | n :: ns => match normalizeAux ns with
---       | [] => unreachable!
---       | head::tail => normalizeAux ([n + head]) ++ tail
+-- TODO: functional version?
 
 def FatNum.normalize (fn : FatNum) : FatNum :=
     fn |>.toList |> FatNum.normalizeAux |> FatNum.mk
+
+#eval (FatNum.mk [99, 10, 7]).normalize
+-- 1 * 10^4 + 0 * 10^3 + 0 * 10^2 + 0 * 10^1 + 7 * 10^0
+
+#eval (FatNum.mk [4, 2, 1]).normalize
+-- 4 * 10^2 + 2 * 10^1 + 1 * 10^0
+
+#eval (FatNum.mk [421]).normalize
+-- 4 * 10^2 + 2 * 10^1 + 1 * 10^0
+
+
+-- TODO: BEq
