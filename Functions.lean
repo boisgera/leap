@@ -288,23 +288,23 @@ def dbg_two :=
   dbg_trace "🚩"
   2
 
-def f (n : Nat) (use : Bool) : Nat :=
+def fc (n : Nat) (use : Bool) : Nat :=
   if use then
     n
   else
     0
 
-#eval f dbg_two (use := true)
+#eval fc dbg_two (use := true)
 -- 🚩
 -- 0
 
-#eval f dbg_two (use := false)
+#eval fc dbg_two (use := false)
 -- 🚩
 -- 2
 
 /-
 In the second case, we didn't need to evaluate `dbg_two` to produce the
-result of `f` but Lean did it anyway. We have a way to deal around that
+result of `fc` but Lean did it anyway. We have a way to deal around that
 if we replace the `Nat` argument with a `Unit -> Nat` function argument
 that we will evaluate only when we need it:
 -/
@@ -321,23 +321,23 @@ def dbg_two' : Unit -> Nat :=
 -- 🚩
 -- 2
 
-def f' (n : Unit -> Nat) (use : Bool) : Nat :=
+def fc' (n : Unit -> Nat) (use : Bool) : Nat :=
   if use then
     n ()
   else
     0
 
-#eval f' dbg_two' (use := false)
+#eval fc' dbg_two' (use := false)
 -- 0
 
-#eval f' dbg_two' (use := true)
+#eval fc' dbg_two' (use := true)
 -- 🚩
 -- 2
 
 /-
 It works!
 The downside of this is that we add to redesign the whole thing
-and the the user of `f'` now needs to remember to
+and the the user of `fc'` now needs to remember to
 use the more complex `dbg_two'` instead of `dbg_two`.
 -/
 
@@ -365,16 +365,16 @@ with the ease of use of our original API:
 
 -/
 
-def f'' (n : Thunk Nat) (use : Bool) : Nat :=
+def fc'' (n : Thunk Nat) (use : Bool) : Nat :=
   if use then
     n.get
   else
     0
 
-#eval f'' dbg_two (use := false)
+#eval fc'' dbg_two (use := false)
 -- 0
 
-#eval f'' dbg_two (use := true)
+#eval fc'' dbg_two (use := true)
 -- ⌛
 -- 2
 
@@ -705,15 +705,147 @@ Alternatively, as a list method:
 
 def upToTen := [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 #eval upToTen.foldl (fun result elt => result + elt^3) 0
-
+-- 2025
 
 /-
-**TODO.** `foldr`
+You may find useful to compute manually the result of a left fold by hand
+to see what's going on:
 -/
 
+#eval [1, 2, 3].foldl (fun result elt => result + elt^3) 0
+-- 36
+
+def f (acc n : Nat) : Nat := acc + n^3
+def init := 0
+
+#eval f (f (f init 1) 2) 3
+-- 36
+
+/-
+There is an equivalent **right fold**, which starts to work at the right
+of the list instead of the left:
+-/
+
+#eval [1, 2, 3].foldr (fun elt result => result + elt^3) 0
+-- 36
+
+-- ⚠️ the order of the arguments is reversed wrt f
+def g (n acc : Nat) : Nat := acc + n^3
+
+#eval  g 1 (g 2 (g 3 init))
+-- 36
+
+#check List.foldr
+
+/-
+We could implement this "reversed for loop" with our direct for loop:
+-/
+
+def reversedForLoop (f : α → β → β) (init : β) (list : List α) : β :=
+  forLoop (fun a b => f b a) init list.reverse
+
+/-
+or alternatively directly using a recursive definition:
+-/
+
+def reversedForLoop'  (f : α → β → β) (init : β) (l : List α) : β :=
+  match l with
+  | [] => init
+  | elt :: rest => f elt (reversedForLoop' f init rest)
+
+/-
+Recursion
+--------------------------------------------------------------------------------
+
+**TODO.** Migrate the recursive definitions of foldl/foldr here?
+
+**TODO.** About termination: https://web.archive.org/web/20250618125453/https://lean-lang.org/blog/2024-1-11-recursive-definitions-in-lean/
+
+-/
+
+namespace RecursionSandBox
+
+
+#print Nat
+-- inductive Nat : Type
+-- number of parameters: 0
+-- constructors:
+-- Nat.zero : Nat
+-- Nat.succ : Nat → Nat
+
+def add (m n : Nat) :=
+  match n with
+  | Nat.zero => m
+  | Nat.succ p => Nat.succ (add m p)
+
+#eval add 1 2
+-- 3
+
+/-
+
+How it works:
+
+```lean
+add 1 2 = add (Nat.succ Nat.zero) (Nat.succ (Nat.succ Nat.zero))
+        = Nat.succ (add (Nat.succ Nat.zero) (Nat.succ Nat.zero))
+        = Nat.succ (Nat.succ (add (Nat.succ Nat.zero) Nat.zero))
+        = Nat.succ (Nat.succ (Nat.succ Nat.zero))
+        = 3
+```
+-/
+
+def add' (m n : Nat) :=
+  match n with
+  | 0 => m
+  | p + 1 => (add m p) + 1
+
+#eval add' 1 2
+-- 3
+
+def add'' (m : Nat) : Nat -> Nat
+| 0 => m
+| n + 1 => (add'' m n) + 1
+
+#eval add'' 1 2
+-- 3
+
+
+mutual
+
+def isEven (n : Nat) : Bool :=
+  match n with
+  | 0 => true
+  | n + 1 => isOdd n
+
+def isOdd (n : Nat) : Bool :=
+  match n with
+  | 0 => false
+  | n + 1 => isEven n
+
+end
+
+#eval isOdd 7
+-- true
+
+#eval isOdd 8
+-- false
+
+
+partial def find (xs : Nat -> Nat) (p : Nat -> Bool) : Nat :=
+  let elt := xs 0
+  if p elt then
+    elt
+  else
+    find (fun n => xs (n + 1)) p
+
+def xs (n : Nat) := 2^n
+
+#eval find xs (· > 100)
+-- 128
 
 
 
+end RecursionSandBox
 
 /-
 TODO:
