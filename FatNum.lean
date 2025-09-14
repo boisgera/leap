@@ -1,5 +1,18 @@
 /-
 Source: https://parentheticallyspeaking.org/articles/fat-nums/
+
+3 Things explored here, almost orthogonal:
+
+  - New type (either structure or def as List Nat)
+    Can be avoid to a large extent if we take directly
+    List Nat as our type. Not very important here.
+    And List Nat is pretty sweet here actually since any
+    value of this type *is* a valid FatNum.
+
+  - Many functions to define, most of them iterative or recursive.
+
+  - Many examples of type classes.
+
 -/
 
 
@@ -12,6 +25,7 @@ structure FatNum where  -- Alternative: def FatNum := List Nat and define mk man
 
 def FatNum.toList (fn : FatNum) : List Nat := fn.numbers
 
+-- Auxiliary method to avoid the partial?
 partial def FatNum.toString (fn : FatNum) : String :=
   match fn.numbers with
   | []                => ""
@@ -38,7 +52,7 @@ instance : ToString FatNum where
   toString := FatNum.toString
 
 instance : Repr FatNum where
-  reprPrec p _ := toString p
+  reprPrec fn _ := toString fn
 
 #eval FatNum.mk [99, 10, 7]
 -- 99 * 10^2 + 10 * 10^1 + 7 * 10^0
@@ -109,7 +123,7 @@ Step 6
 def divMod (m n : Nat) : Nat × Nat := (m / n, m % n)
 
 -- TODO: we need to "trim" the extra zeros to have a canonical repr.
-def FatNum.normalizeAux (numbers : List Nat) : List Nat := Id.run do
+def FatNum.shiftCarry (numbers : List Nat) : List Nat := Id.run do
   let numbers := numbers.reverse
   let mut normalized : List Nat :=  []
   let mut i := 0
@@ -124,10 +138,15 @@ def FatNum.normalizeAux (numbers : List Nat) : List Nat := Id.run do
     i := i + 1
   return normalized.reverse
 
+def FatNum.trim (numbers : List Nat) : List Nat :=
+  match numbers with
+  | 0 :: numbers => FatNum.trim numbers
+  | numbers => numbers
+
 -- TODO: functional version?
 
 def FatNum.normalize (fn : FatNum) : FatNum :=
-    fn |>.toList |> FatNum.normalizeAux |> FatNum.mk
+    fn |>.toList |> FatNum.shiftCarry |> FatNum.trim |> FatNum.mk
 
 #eval (FatNum.mk [99, 10, 7]).normalize
 -- 1 * 10^4 + 0 * 10^3 + 0 * 10^2 + 0 * 10^1 + 7 * 10^0
@@ -138,5 +157,74 @@ def FatNum.normalize (fn : FatNum) : FatNum :=
 #eval (FatNum.mk [421]).normalize
 -- 4 * 10^2 + 2 * 10^1 + 1 * 10^0
 
+#eval (FatNum.mk [0, 0, 0, 42]).normalize
+-- 4 * 10^1 + 2 * 10^0
 
--- TODO: BEq
+#eval (FatNum.mk [0, 0, 0, 0]).normalize
+--
+
+/- Step 7 -/
+
+/- Issue with empty list of numbers?
+No, that works perfectly. One may only question its string
+representation, but even then, I think that's quite all right. -/
+
+instance : BEq FatNum where
+  beq fn fm := fn.normalize.toList == fm.normalize.toList
+
+#eval FatNum.mk [4, 2, 1] == FatNum.mk [421]
+-- true
+
+#eval FatNum.mk [] == FatNum.mk [0]
+-- true
+
+#eval FatNum.mk [1, 0, 0] == FatNum.mk [1]
+-- false
+
+-- TODO: Nat <-> FatNum conversions.
+
+def FatNum.ofNat (n : Nat) : FatNum :=
+  FatNum.mk [n]
+
+attribute [coe] FatNum.ofNat
+
+instance : Coe Nat FatNum where
+  coe := FatNum.ofNat
+
+#eval id (α := FatNum) (id (α := Nat) 42)
+-- 42 * 10^0
+
+instance {n : Nat} : OfNat FatNum n where
+  ofNat := n
+
+#eval id (α := FatNum) 42
+-- 42 * 10^0
+
+def FatNum.toNat (fn : FatNum) : Nat :=
+  fn.numbers.foldl (· * 10 + ·) 0
+
+instance : Coe FatNum Nat where
+  coe := FatNum.toNat
+
+#eval @id (α := Nat) (FatNum.mk [1, 2, 3])
+-- 123
+
+#eval @id (α := Nat) (FatNum.mk [99, 10, 7])
+-- 10007
+
+/-
+Step ???
+-/
+
+def FatNum.default : FatNum := FatNum.mk []
+
+#eval FatNum.default.toList
+-- []
+
+instance : Inhabited FatNum where
+  default := FatNum.default
+
+def defaultFatNum : FatNum := default
+
+#eval defaultFatNum.toList
+-- []

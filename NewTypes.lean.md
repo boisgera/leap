@@ -1,12 +1,11 @@
 
-/-
 Product Types
 --------------------------------------------------------------------------------
 
 ## Tuples
 
--/
 
+```lean
 def pair := (42, "hello")
 
 #check pair
@@ -66,22 +65,20 @@ def triple := (42, "hello", true)
 
 #eval (fun (a, b, c) => (b, c, a)) (42, "hello", true)
 -- ("hello", true, 42)
+```
 
-/-
 So there is not really a n-uple for n>=2, and no 1-uple or 0-uple either.
 Only pairs, and nested pairs!
--/
 
-/-
+```lean
 ## Structures
 --/
+```
 
-/-
 Sum Types
 --------------------------------------------------------------------------------
--/
 
-/-
+```lean
 ## Disjoint Unions
 --/
 
@@ -107,8 +104,8 @@ def nestedRight : Nat ⊕ String ⊕ Bool := Sum.inr (Sum.inr true)
   | Sum.inr (Sum.inl s) => IO.println s!"It's a String: {s}"
   | Sum.inr (Sum.inr b) => IO.println s!"It's a Bool: {b}"
 -- It's a Bool: true
+```
 
-/-
 # Enums
 
 ```python
@@ -125,16 +122,15 @@ POW: enums are all distincts. Abstraction over values (avoid magic numbers, we c
 
 Lean lessons: exclusive and exhaustive (display pattern matching)
 
--/
 
+```lean
 -- There are only two kinds of languages:
 
 inductive LanguageKind where
 | theOnesPeopleComplainAbout
 | theOnesNobodyUses
+```
 
-
-/-
 ## parametrized enums
 
 
@@ -146,10 +142,7 @@ enum Shape {
 }
 ```
 
--/
 
-
-/-
 
 ## Recursive (/inductive) enums aka algebraic data types
 
@@ -160,13 +153,11 @@ enum List {
 }
 ```
 
--/
 
-/-
 ### Mysterious examples : Nat, List and Tree in disguise
 
--/
 
+```lean
 inductive N where
   | z : N
   | s (n : N) : N
@@ -182,14 +173,9 @@ inductive L where
 inductive T where
   | l (n : N) : T
   | b (l: T) (r : T) : T -- or b : T -> T -> T
+```
 
-
-/-
-
-
-
-
-
+```lean
 -- There are only two kinds of languages:
 inductive LanguageKind where
   | onePeopleComplainAbout
@@ -227,3 +213,4 @@ inductive T where
 #eval T.b (T.l (N.z)) (T.l (N.s N.z))
 
 -- Now renaming types and constructors!
+```
