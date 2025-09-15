@@ -405,6 +405,30 @@ def O.and (o1 o2 : O) : O :=
 -- O.s (B.f)
 
 /-
+We have designed an option type for booleans, but we could do the same
+for any type `α`. Here is a parametrized version of `O`.
+-/
+
+inductive OP (α : Type) where
+  | n : OP α
+  | s (a : α) : OP α
+deriving Repr -- for convenience
+
+def O_B := OP B
+
+def O_Nat := OP Nat
+
+def n : O_Nat := OP.n
+
+#eval n
+-- OP.n
+
+def n' : O_Nat := OP.s 42
+
+#eval n'
+-- OP.s 42
+
+/-
 ### What is `N`?
 
 Our first example which is actually recursive!
@@ -454,79 +478,209 @@ What these definitions say is that a value of type `N` is either
 #eval N.z.s.s.s
 -- N.s (N.s (N.s (N.z)))
 
+#eval N.z |>.s |>.s |>.s
+-- N.s (N.s (N.s (N.z)))
+
+/-
+What we have here is a representation of natural numbers! With `N.z` being
+the zero and `N.s` being the successor function (i.e. `+1`).
+-/
+
+def zero := N.z
+def succ := N.s
+
+/-
+That's enough to define the usual arithmetic operations:
+-/
+
+def add (n1 n2 : N) : N :=
+  match n1 with
+  | N.z => n2
+  | N.s m => N.s (add m n2)
+
+#eval add (N.z.s.s) (N.z.s.s.s)
+-- N.s (N.s (N.s (N.s (N.s (N.z)))))
+
+def mul (n1 n2 : N) : N :=
+  match n1 with
+  | N.z => N.z
+  | N.s m => add n2 (mul m n2)
+
 /-
 ### What is `L`?
 -/
 
 inductive L where
   | n : L
-  | c (h : N) (t : L) : L
+  | c (h : Nat) (t : L) : L
 
 inductive L' where
   | n
-  | c (h : N)
+  | c (h : Nat)
 
 inductive L'' where
   | n : L''
-  | c : N -> L'' -> L''
+  | c : Nat -> L'' -> L''
+
+#eval L.n
+-- L.n
+
+#eval L.c 42 L.n
+-- L.c 42 (L.n)
+
+#eval L.c 1 (L.c 2 (L.c 3 L.n))
+-- L.c 1 (L.c 2 (L.c 3 (L.n)))
+
+/-
+Yes, that's a linked list of natural numbers!
+-/
+
+def L.length : L -> Nat
+  | L.n        => 0
+  | L.c _ tail => (L.length tail) + 1
+
+def L.get! : L -> Nat -> Nat
+  | L.n, _ => panic! "index out of bounds"
+  | L.c head _tail, 0 => head
+  | L.c _head tail, Nat.succ i => tail.get! i
+
+
+#check List.concat
+-- List.concat.{u} {α : Type u} : List α -> α -> List α
+
+
+def L.concat : L -> Nat -> L
+  | L.n          , x => L.c x L.n
+  | L.c head tail, xs => L.c head (tail.concat xs)
+
+
+#check List.append
+-- List.append.{u} {α : Type u} (xs ys : List α) : List α
+
+def L.append : L -> L -> L
+  | L.n     , ys => ys
+  | L.c x xs, ys => L.c x (xs.append ys)
+
+
+/-
+General / parametrized version of `L`:
+-/
+
+inductive LP (α : Type) where
+  | n : LP α
+  | c (h : α) (t : LP α) : LP α
 
 /-
 ### What is `T`?
 -/
 
-inductive T where
-  | l (n : N) : T
-  | b (l: T) (r : T) : T
 
-inductive T' where
+inductive T (α : Type u) where
+  | l (a : α) : T α
+  | b (a : α) (l : T α) (r : T α) : T α
+deriving Repr
+
+inductive T' (α : Type u) where
   | l (n : N)
-  | b (l: T') (r : T')
+  | b (a : α) (l: T α) (r : T α)
 
-inductive T'' where
-  | l : N -> T''
-  | b : T'' -> T'' -> T''
+inductive T'' (α : Type) where
+  | l : N -> T'' α
+  | b : α -> T'' α -> T'' α -> T'' α
+
+/-
+Note: with this description, we can't have empty trees.
+-/
+
+def exampleTree : T Nat :=
+  T.b 0 (T.b 1 (T.l 2) (T.l 3)) (T.l 4)
+
+#eval exampleTree
+-- T.b 0 (T.b 1 (T.l 2) (T.l 3)) (T.l 4)
+
+
+def T.depth.{u} {α : Type u} (tree : T α) :=
+  match tree with
+  | l _ => 1
+  | b _ b1 b2 => 1 + max b1.depth b2.depth
+
+#eval exampleTree.depth
+-- 3
+
+/-
+Alternative definition (!=, but related)
+-/
+
+inductive Tree (α : Type u) where
+  | empty : Tree α
+  | branch : α -> Tree α -> Tree α -> Tree α
+
+/-
+With this definition, we have a mapping that associates to any finite
+sequence of booleans (which encode a left-right path) an element of
+type α or nothing, such that if the element associated to a path is not
+nothing, then it's also no nothing for any prefix.
+-/
+
+def Tree.get {α} (tree : Tree α) (path : List Bool) : Option α :=
+  match tree, path with
+  | empty         , _  => none
+  | branch a  _  _, [] => a
+  | branch _ b1  _, false :: path => b1.get path
+  | branch _  _ b2, true :: path  => b2.get path
 
 
 /-
+### **Generalized** Algebraic Data Types
 
+According to their [Wikipedia page](https://en.wikipedia.org/wiki/Generalized_algebraic_data_type):
 
+> In a GADT, the [...] constructors can provide an explicit instantiation
+> of the ADT as the type instantiation of their return value.
 
+Let's illustrate this with a design of a small expression language made of
+bools, natural numbers, comparison for equality, an if-then-else construct
+and let's say not, and and add.
 
+-/
 
--- There are only two kinds of languages:
-inductive LanguageKind where
-  | onePeopleComplainAbout
-  | oneNobodyUses
+inductive Expr : Type -> Type where
+  | bool : Bool -> Expr Bool
+  | nat : Nat -> Expr Nat
+  | not : Expr Bool -> Expr Bool
+  | and : Expr Bool -> Expr Bool -> Expr Bool
+  | add : Expr Nat -> Expr Nat -> Expr Nat
+  | eq : Expr Nat -> Expr Nat -> Expr Bool
+  | ite : Expr Bool -> Expr Nat -> Expr Nat -> Expr Nat
 
+def Expr.toString {α} (expr : Expr α) : String :=
+  match expr with
+    | bool b => ToString.toString b
+    | nat n => ToString.toString n
+    | not e => s!"(not {e.toString})"
+    | and e f => s!"({e.toString} and {f.toString})"
+    | add m n => s!"({m.toString} + {n.toString})"
+    | eq m n => s!"({m.toString} == {n.toString})"
+    | ite b e f => s!"(if {b.toString} then {e.toString} else {f.toString})"
 
-inductive N where
-  | z : N
-  | s (n : N) : N -- or s : N -> N
-deriving Repr -- Ah, funny, ToString is derived by default, not Repr
--- and this is required for the recursive representation to work AFAICT.
+#eval Expr.not (Expr.and (Expr.bool false) (Expr.bool true)) |>.toString
+-- "(not (false and true))"
 
-#eval N.z
+#eval Expr.ite (Expr.eq (Expr.add (Expr.nat 1) (Expr.nat 1)) (Expr.nat 2)) (Expr.nat 1) (Expr.nat 0) |>.toString
+-- "(if ((1 + 1) == 2) then 1 else 0)"
 
-#eval N.s N.z
+def Expr.eval {α} (expr : Expr α) : α :=
+  match expr with
+    | bool b => b
+    | nat n => n
+    | not e => Bool.not e.eval
+    | and e f => Bool.and e.eval f.eval
+    | add m n => Nat.add m.eval n.eval
+    | eq m n => m.eval == n.eval
+    | ite b e f => if b.eval then e.eval else f.eval
 
-#eval N.s (N.s N.z)
+#eval Expr.not (Expr.and (Expr.bool false) (Expr.bool true)) |>.eval
+-- true
 
-inductive L where
-  | n : L
-  | c (h : N) (t : L) : L -- or c : N -> L -> L
-
-#eval L.n
-
-#eval L.c (N.z) (L.n)
-
-#eval L.c (N.s N.z) (L.c (N.z) (L.n))
-
-inductive T where
-  | l (n : N) : T
-  | b (l: T) (r : T) : T -- or b : T -> T -> T
-
-#eval T.l (N.z)
-
-#eval T.b (T.l (N.z)) (T.l (N.s N.z))
-
--- Now renaming types and constructors!
+#eval Expr.ite (Expr.eq (Expr.add (Expr.nat 1) (Expr.nat 1)) (Expr.nat 2)) (Expr.nat 1) (Expr.nat 0) |>.eval
+-- 1
