@@ -1,5 +1,22 @@
 
 /-
+
+TODO:
+
+  - abbrev
+
+  - def T1 := T2 and associated pbs & tricks (namespaces are
+    different and consequences, auto-conversion when expected
+    type is know, conversion with @id and/or show/from, etc.)
+
+  - Lift up direct sum just after Product Types?
+
+  - Show that structures are a special case of inductive types?
+
+
+-/
+
+/-
 Product Types
 --------------------------------------------------------------------------------
 
