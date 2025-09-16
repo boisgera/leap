@@ -1,4 +1,115 @@
 
+
+TODO:
+
+  - abbrev
+
+  - def T1 := T2 and associated pbs & tricks (namespaces are
+    different and consequences, auto-conversion when expected
+    type is know, conversion with @id and/or show/from, etc.)
+
+  - Lift up direct sum just after Product Types?
+
+  - Show that structures are a special case of inductive types?
+
+
+
+
+Same old, same old
+--------------------------------------------------------------------------------
+
+Its is sometimes convenient to give an alias to given data type, for example
+
+
+```lean
+abbrev Ints := List Int
+```
+
+After this step, `Ints` and `List Int` are effectively indistinguishable.
+
+```lean
+def ints : Ints := [1, 2, 3]
+
+def moreInts := ints ++ [4, 5, 6]
+
+#eval moreInts
+-- [1, 2, 3, 4, 5, 6]
+```
+
+There is another way to achieve a similar result; we define a new type as
+being equal to an existing one:
+
+```lean
+def Ints' := List Int
+
+def ints' : Ints' := ints
+
+#eval ints'
+-- [1, 2, 3]
+```
+
+However, some operations that used to work with the ancient type will not
+with the new one since the new type is not an instance of any type class.
+
+```lean
+#eval ints' ++ [4, 5, 6] -- ❌
+-- failed to synthesize
+--   HAppend Ints' (List ?m.11) ?m.14
+```
+
+However it's always possible to force the recognition of the old type
+using an assignement from the new type to the old one.
+
+```lean
+#check ints'
+-- ints' : Ints'
+
+def ints'' : Ints := ints'
+
+#check ints''
+-- ints'' : Ints
+```
+
+That works for function arguments too, so we may use this trick to perform
+some explicit conversion when needed:
+
+```lean
+def Ints'.asInts (ns : Ints') : Ints := ns
+
+#eval ints'.asInts ++ [4, 5, 6]
+-- [1, 2, 3, 4, 5, 6]
+```
+
+This conversion function is actually the identity and it has already been
+defined by Lean; so instead of the previous method, we may also do this:
+
+```lean
+#check id
+-- id.{u} {α : Sort u} (a : α) : α
+
+#eval (id (α := Ints) ints') ++ [4, 5, 6]
+-- [1, 2, 3, 4, 5, 5]
+```
+
+Note that it's sometimes handy to have a new type instead of a mere alias,
+since that comes with a new namespace where we can defined additional methods,
+without the "pollution" of the original type.
+
+```lean
+def Ints'.random! (ints : Ints') : IO Int := do
+  let i <- IO.rand 0 (ints.length - 1)
+  return (id (α := Ints) ints)[i]!
+
+#eval ints'.random!
+-- 1
+
+#eval ints.random! -- ❌
+-- Invalid field `random`: The environment does not contain `List.random`
+--   ints
+-- has type
+--   List Int
+```
+
 Product Types
 --------------------------------------------------------------------------------
 
@@ -70,14 +181,14 @@ def triple := (42, "hello", true)
 So there is not really a n-uple for n>=2, and no 1-uple or 0-uple either.
 Only pairs, and nested pairs!
 
-```lean
+
 ## Structures
 
 Similar to tuples, but with named fields.
 
 
---/
 
+```lean
 structure Person where
   name : String
   age : Nat
@@ -156,54 +267,6 @@ def nestedRight : Nat ⊕ String ⊕ Bool := Sum.inr (Sum.inr true)
   | Sum.inr (Sum.inr b) => IO.println s!"It's a Bool: {b}"
 -- It's a Bool: true
 ```
-
-# Enums
-
-```python
-from enum import Enum
-
-# class syntax
-class Color(Enum):
-    RED = 1
-    GREEN = 2
-    BLUE = 3
-```
-
-POW: enums are all distincts. Abstraction over values (avoid magic numbers, we could even "auto" the numbers).
-
-Lean lessons: exclusive and exhaustive (display pattern matching)
-
-
-```lean
--- There are only two kinds of languages:
-
-inductive LanguageKind where
-| theOnesPeopleComplainAbout
-| theOnesNobodyUses
-```
-
-## parametrized enums
-
-
-```rust
-enum Shape {
-    Point,
-    Circle { radius: f64 },
-    Rectangle { width: f64, height: f64 }
-}
-```
-
-
-
-## Recursive (/inductive) enums aka algebraic data types
-
-```rust
-enum List {
-    Nil,
-    Cons(i32, Box<List>),
-}
-```
-
 
 ## Algebraic data types
 
