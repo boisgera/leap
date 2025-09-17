@@ -91,39 +91,44 @@ Execution state is: Some program, an instruction pointer (optional) some data (o
 
 structure State where
   prg : Program
-  i: Nat := 0 -- instruction pointer
+  i : Nat := 0 -- instruction pointer
   data: Tape := []
   j : Nat := 0 -- data pointer
 
+abbrev SideEffect := Option (State -> IO State)
 
-def next (state : State) : IO State := do
+def next (state : State) : SideEffect × State :=
   match state.prg[state.i]! with
-  | .shiftRight => return { state with i := state.i + 1, j := state.j + 1 }
-  | .shiftLeft  => return { state with i := state.i + 1, j := state.j - 1 }
-  | .increment  => return { state with i := state.i + 1, data := state.data.get state.j |> (· + 1) |> state.data.set state.j }
-  | .decrement  => return { state with i := state.i + 1, data := state.data.get state.j |> (· - 1) |> state.data.set state.j }
+  | .shiftRight => (none, { state with i := state.i + 1, j := state.j + 1 })
+  | .shiftLeft  => (none, { state with i := state.i + 1, j := state.j - 1 })
+  | .increment  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· + 1) |> state.data.set state.j })
+  | .decrement  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· - 1) |> state.data.set state.j })
   | .write => -- TODO: improve when not printable? (e.g. use \x??)
-    IO.print (Char.ofNat (state.data.get state.j).toNat)
-    return { state with i := state.i + 1 }
+    let action := fun (state : State) => do
+      IO.print (Char.ofNat (state.data.get state.j).toNat)
+      return state
+    (some action, { state with i := state.i + 1})
   | .read => -- TODO: improve to deal with non-printable chars.
-    let stdin <- IO.getStdin
-    let line <- stdin.getLine
-    let char := line.front
-    let number := char.toUInt8
-    return { state with i := state.i + 1 , data := state.data |>.set state.j number }
-  | .jumpForward =>
+    let action := fun (state : State) => do
+      let stdin <- IO.getStdin
+      let line <- stdin.getLine
+      let char := line.front
+      let number := char.toUInt8
+      return { state with data := state.data |>.set state.j number}
+    (some action, { state with i := state.i + 1 })
+  | .jumpForward => /- 🪲: TODO condition!!! -/
     let i' := (state.prg.drop (state.i + 1)).findIdx (· matches .jumpBackward)
-    return { state with i := (state.i + 1) + i' + 1 }
+    (none, { state with i := (state.i + 1) + i' + 1 })
   | .jumpBackward =>
     let i' := state.prg.take state.i |>.findIdx (· matches .jumpForward)
-    return { state with i := i' + 1 }
+    (none, { state with i := i' + 1 })
 
-partial def eval (state : State) : IO Unit := do
+/- TODO: return data instead of returning nothing? -/
+partial def eval (effect_state : SideEffect × State) : IO Unit := do
+  let mut (effect, state) := effect_state
   if state.i < state.prg.length then
-    eval (<- next state)
-
-
-
-
+    if let some action := effect then
+      state <- (action state)
+    eval (next state)
 
 end BrainFuck
