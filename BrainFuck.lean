@@ -36,7 +36,7 @@ abbrev Byte := UInt8
 An infinite read-write binary data tape initialized with zeroes
 -/
 
-def Tape := List Byte deriving Repr
+def Tape := List Byte deriving ToString, Repr, Inhabited
 
 def Tape.mk (bytes : List Byte) : Tape := bytes
 
@@ -83,7 +83,30 @@ inductive Instruction where
 --  | exit
 deriving Repr, Inhabited
 
-abbrev Program := List Instruction
+def Instruction.toString (i : Instruction) : String :=
+  match i with
+  | shiftRight => ">"
+  | shiftLeft => "<"
+  | increment => "+"
+  | decrement => "-"
+  | write => "."
+  | read => ","
+  | jumpForward => "["
+  | jumpBackward => "]"
+
+instance : ToString Instruction where
+  toString := Instruction.toString
+
+def Program := List Instruction deriving Repr, Inhabited
+
+def Program.toList (prg : Program) : List Instruction :=
+  prg
+
+def Program.toString (prg : Program) : String :=
+  "".intercalate (prg.map (fun instruction => s!"{instruction}"))
+
+instance : ToString Program where
+  toString := Program.toString
 
 /-
 Execution state is: Some program, an instruction pointer (optional) some data (optional), some data pointer (optional)
@@ -94,18 +117,24 @@ structure State where
   i : Nat := 0 -- instruction pointer
   data: Tape := []
   j : Nat := 0 -- data pointer
+deriving Repr, Inhabited
+
+instance : ToString State where
+  toString := fun (state : State) =>
+    s!"prg: {state.prg}\ni: {state.i}\ndata: {state.data}\nj: {state.j}"
 
 abbrev SideEffect := Option (State -> IO State)
 
 def next (state : State) : SideEffect × State :=
-  match state.prg[state.i]! with
+  match state.prg.toList[state.i]! with
   | .shiftRight => (none, { state with i := state.i + 1, j := state.j + 1 })
   | .shiftLeft  => (none, { state with i := state.i + 1, j := state.j - 1 })
   | .increment  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· + 1) |> state.data.set state.j })
   | .decrement  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· - 1) |> state.data.set state.j })
   | .write => -- TODO: improve when not printable? (e.g. use \x??)
     let action := fun (state : State) => do
-      IO.print (Char.ofNat (state.data.get state.j).toNat)
+      IO.println s!"output: {(Char.ofNat (state.data.get state.j).toNat)}"
+      -- IO.print (Char.ofNat (state.data.get state.j).toNat)
       return state
     (some action, { state with i := state.i + 1})
   | .read => -- TODO: improve to deal with non-printable chars.
@@ -116,19 +145,41 @@ def next (state : State) : SideEffect × State :=
       let number := char.toUInt8
       return { state with data := state.data |>.set state.j number}
     (some action, { state with i := state.i + 1 })
-  | .jumpForward => /- 🪲: TODO condition!!! -/
-    let i' := (state.prg.drop (state.i + 1)).findIdx (· matches .jumpBackward)
-    (none, { state with i := (state.i + 1) + i' + 1 })
-  | .jumpBackward =>
-    let i' := state.prg.take state.i |>.findIdx (· matches .jumpForward)
-    (none, { state with i := i' + 1 })
+  | .jumpForward => -- 🪲 need to find the *matching* ]
+    if (state.data.get state.j) == 0 then
+      let i' := (state.prg.drop (state.i + 1)).findIdx (· matches .jumpBackward)
+      (none, { state with i := (state.i + 1) + i' + 1 })
+    else
+      (none, { state with i := (state.i + 1) })
+  | .jumpBackward => -- 🪲 need to find the *matching* [
+    let i := state.prg.take state.i |>.findIdx (· matches .jumpForward)
+    (none, { state with i := i})
+
+-- Warning: will panic if the instruction pointer is out-of-bounds
+def evalNext (state : State) : IO State := do
+  let (effect, state) := next state
+  -- dbg_trace s!"*** {state}"
+  if let some action := effect then
+    action state
+  else
+    return state
 
 /- TODO: return data instead of returning nothing? -/
-partial def eval (effect_state : SideEffect × State) : IO Unit := do
-  let mut (effect, state) := effect_state
-  if state.i < state.prg.length then
-    if let some action := effect then
-      state <- (action state)
-    eval (next state)
+partial def eval (state : State) : IO Unit := do
+  let mut state := state
+  -- dbg_trace s!"{state}"
+  while state.i < state.prg.length do
+    state <- evalNext state
+
+def hello : State :=
+  {
+    prg := [.jumpForward, .write, .shiftRight, .jumpBackward] -- "[.>]"
+    i := 0
+    data := "Hello world!".data.map (fun c => UInt8.ofNat c.toNat)
+    j := 0
+  }
+
+#eval eval hello
+
 
 end BrainFuck
