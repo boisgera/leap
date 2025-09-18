@@ -27,3 +27,7 @@ root = "Main"
 [[lean_exe]]
 name = "mol"
 root = "MarkdownOfLean"
+
+[[lean_exe]]
+name = "brainfuck"
+root = "BrainFuck"

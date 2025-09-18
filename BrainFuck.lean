@@ -1,6 +1,9 @@
 /-
 TODO:
 
+  - TODO: see how read works in practice. Put a prompt? Does it work in
+    the playground?
+
   - baby brainfuck, simplified as much as possible?
     Boolfuck? HQ9+? 1L (https://esolangs.org/wiki/1L_a)?
 
@@ -81,7 +84,7 @@ inductive Instruction where
   | jumpBackward
 --  | dump
 --  | exit
-deriving Repr, Inhabited
+deriving Repr, Inhabited, BEq
 
 def Instruction.toString (i : Instruction) : String :=
   match i with
@@ -97,7 +100,10 @@ def Instruction.toString (i : Instruction) : String :=
 instance : ToString Instruction where
   toString := Instruction.toString
 
-def Program := List Instruction deriving Repr, Inhabited
+def Program := List Instruction deriving Repr, Inhabited, BEq
+
+def Program.mk (instructions : List Instruction) : Program :=
+  instructions
 
 def Program.toList (prg : Program) : List Instruction :=
   prg
@@ -108,8 +114,113 @@ def Program.toString (prg : Program) : String :=
 instance : ToString Program where
   toString := Program.toString
 
+def printData : Program := [.jumpForward, .write, .shiftRight, .jumpBackward]
+
+#eval IO.println s!"{printData}"
+-- [.>]
+
+partial def Program.parse (code : String) : Program :=
+  match code.data with
+  | [] => []
+  | c :: cs => (match c with
+      | '>' => .shiftRight
+      | '<' => .shiftLeft
+      | '+' => .increment
+      | '-' => .decrement
+      | '.' => .write
+      | ',' => .read
+      | '[' => .jumpForward
+      | ']' => .jumpBackward
+      | _ => panic! "invalid instruction" -- Be more forgiving here?
+    ) :: (Program.parse (String.mk cs))
+
+#eval Program.parse "[.>]"
+-- [BrainFuck.Instruction.jumpForward,
+--  BrainFuck.Instruction.write,
+--  BrainFuck.Instruction.shiftRight,
+--  BrainFuck.Instruction.jumpBackward]
+
+def helloWorldSrc := "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+
+def helloWorld := Program.parse helloWorldSrc
+
+#eval s!"{helloWorld}" == helloWorldSrc
+-- true
+
+def Program.matchBracket! (prg : Program) (i : Nat) : Nat := Id.run do
+  if prg.toList[i]! == .jumpForward then
+    let mut c : Int := 1
+    let mut j := i + 1
+    while j < prg.length do
+      if prg.toList[j]! == .jumpForward then
+         c := c + 1
+      else if prg.toList[j]! == .jumpBackward then
+         c := c - 1
+      if c == 0 then
+        break
+      j := j + 1
+    if j < prg.length then
+      return j
+    else
+      panic! "Unbalanced brackets"
+  else if prg.toList[i]! == .jumpBackward then
+    let mut c : Int := -1
+    let mut j : Int := (Int.ofNat i) - 1
+    while 0 <= j do
+      if prg.toList[j.toNat]! == .jumpForward then
+         c := c + 1
+      else if prg.toList[j.toNat]! == .jumpBackward then
+         c := c - 1
+      if c == 0 then
+        break
+      j := j - 1
+    if 0 <= j then
+      return j.toNat
+    else
+      panic! "Unbalanced brackets"
+  else
+    panic! "indexed value is not a bracket"
+
+#eval s!"{printData}"
+-- "[.>]"
+
+#eval printData.matchBracket! 0
+-- 3
+
+#eval printData.matchBracket! 3
+-- 0
+
+#eval s!"{helloWorld}"
+-- "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+
+#eval helloWorld.matchBracket! 8
+-- 48
+
+#eval helloWorld.matchBracket! 14
+-- 33
+
+#eval helloWorld.matchBracket! 33
+-- 14
+
+#eval helloWorld.matchBracket! 43
+-- 45
+
+#eval helloWorld.matchBracket! 45
+-- 43
+
+#eval helloWorld.matchBracket! 48
+-- 8
+
 /-
-Execution state is: Some program, an instruction pointer (optional) some data (optional), some data pointer (optional)
+
+Execution state is the stuff in State:
+  - Some program,
+  - an instruction pointer (default value)
+  - some data (default value),
+  - some data pointer (default value)
+
+and some (optional) side-effect, which is a state-altering IO action.
+
 -/
 
 structure State where
@@ -131,14 +242,15 @@ def next (state : State) : SideEffect × State :=
   | .shiftLeft  => (none, { state with i := state.i + 1, j := state.j - 1 })
   | .increment  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· + 1) |> state.data.set state.j })
   | .decrement  => (none, { state with i := state.i + 1, data := state.data.get state.j |> (· - 1) |> state.data.set state.j })
-  | .write => -- TODO: improve when not printable? (e.g. use \x??)
+  | .write => -- ⚠️ only works for printable ASCII chars
     let action := fun (state : State) => do
       IO.println s!"output: {(Char.ofNat (state.data.get state.j).toNat)}"
       -- IO.print (Char.ofNat (state.data.get state.j).toNat)
       return state
     (some action, { state with i := state.i + 1})
-  | .read => -- TODO: improve to deal with non-printable chars.
+  | .read => -- ⚠️ only works for printable ASCII chars
     let action := fun (state : State) => do
+      IO.print "input: "
       let stdin <- IO.getStdin
       let line <- stdin.getLine
       let char := line.front
@@ -181,5 +293,11 @@ def hello : State :=
 
 #eval eval hello
 
+def readWriteLoop := Program.parse "+[>,.<]"
+
+-- #eval eval { prg := readWriteLoop : State }
+
 
 end BrainFuck
+
+def main := BrainFuck.eval { prg := BrainFuck.readWriteLoop }
