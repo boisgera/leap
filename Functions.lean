@@ -708,6 +708,29 @@ The Pythonic equivalent would be a **list comprehension**:
 
 -/
 
+/-
+Here is how map could be implemented, either with a foor loop or recursively
+-/
+
+#check List.map
+-- List.map.{u, v} {α : Type u} {β : Type v} (f : α → β) (l : List α) : List β
+
+def List.map'.{u, v} {α : Type u} {β : Type v} (f : α → β) (l : List α) : List β := Id.run do
+  let mut result : List β := []
+  for a in l do
+     result := result.concat (f a)
+  return result
+
+#eval [0, 1, 2, 3, 4, 5] |>.filter isOdd |>.map' (3 * · + 1)
+-- [4, 10, 16]
+
+def List.map''.{u, v} {α : Type u} {β : Type v} (f : α → β) (l : List α) : List β :=
+  match l with
+  | [] => []
+  | a :: as => (f a) :: map f as
+
+#eval [0, 1, 2, 3, 4, 5] |>.filter isOdd |>.map'' (3 * · + 1)
+-- [4, 10, 16]
 
 /-
 Consider this example `for` loop:
@@ -730,7 +753,7 @@ current value of the result to update the result, until the loop is over.
 We can actually capture this general pattern into a function:
 -/
 
-def forLoop (f : α → β → α) (init : α) (list : List β) : α := Id.run do
+def forLoop {α β} (f : α → β → α) (init : α) (list : List β) : α := Id.run do
   let mut result <- init
   for elt in list do
     result := f result elt
@@ -821,10 +844,37 @@ def reversedForLoop'  (f : α → β → β) (init : β) (l : List α) : β :=
   | elt :: rest => f elt (reversedForLoop' f init rest)
 
 /-
-Recursion
+Note that `List.filter` and `List.map` can be implemented using `List.foldr`:
+-/
+
+def List.mapFoldr.{u, v} {α : Type u} {β : Type v} (f : α → β) (l : List α) : List β :=
+  l.foldr (f · :: · ) []
+
+def List.filterFoldr.{u} {α : Type u} (p : α → Bool) (l : List α) : List α :=
+  l.foldr
+    (
+      fun elt filteredList =>
+        match p elt with
+        | false => filteredList
+        | true => elt :: filteredList
+    )
+    []
+
+#eval [0, 1, 2, 3, 4, 5] |>.filterFoldr isOdd |>.mapFoldr (3 * · + 1)
+-- [4, 10, 16]
+
+
+/-
+Extra stuff on recursion
 --------------------------------------------------------------------------------
 
+**TODO.** Where should I put the "baby steps recursion" steps below?
+
 **TODO.** Migrate the recursive definitions of foldl/foldr here?
+
+**TODO.** Stack analysis, tail recursion and properly tail recursive implementation?
+
+**TODO.** Partial and termination
 
 **TODO.** About termination: https://web.archive.org/web/20250618125453/https://lean-lang.org/blog/2024-1-11-recursive-definitions-in-lean/
 
