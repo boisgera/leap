@@ -588,8 +588,63 @@ they are **first-class** values.
 
 -/
 
+/-
+TODO: a LOT of things here are related to recursion schemes. Maybe externalize
+the whole Higher-order programming into its own document?
+
+Maybe **delay** recursivity through the use of loops, filter, maps, folds?
+Y, probably.
+-/
+
+def filterOdd (ns : List Nat) : List Nat := Id.run do
+  let mut output : List Nat := []
+  for n in ns do
+    if n % 2 == 1 then
+      output := output.concat n
+  return output
+
+#eval filterOdd [0, 1, 2, 3, 4, 5]
+-- [1, 3, 5]
+
+def filter' (p : Nat -> Bool) (ns : List Nat) := Id.run do
+  let mut output : List Nat := []
+  for n in ns do
+    if p n then
+      output := output.concat n
+  return output
+
 def isOdd (n : Nat) : Bool :=
   n % 2 == 1
+
+def filterOdd' := filter' isOdd
+
+#eval filterOdd' [0, 1, 2, 3, 4, 5]
+-- [1, 3, 5]
+
+#eval filter' isOdd [0, 1, 2, 3, 4, 5]
+-- [1, 3, 5]
+
+/-
+We could also implement our filter function functionally with recursion:
+
+-/
+
+def filter'' (p : Nat -> Bool) (ns : List Nat) :=
+  match ns with
+  | [] => []
+  | n :: ns => match p n with
+    | false => filter'' p ns
+    | true => n :: filter'' p ns
+
+#eval filter'' isOdd [0, 1, 2, 3, 4, 5]
+-- [1, 3, 5]
+
+/-
+There is actually already a `filter` function in the `List` namespace:
+-/
+
+#eval List.filter isOdd [0, 1, 2, 3, 4, 5]
+-- [1, 3, 5]
 
 #eval [0, 1, 2, 3, 4, 5].filter isOdd
 -- [1, 3, 5]
@@ -609,6 +664,18 @@ or even
 
 #eval [0, 1, 2, 3, 4, 5].filter (· % 2 == 1)
 -- [1, 3, 5]
+
+/-
+The `List.filter` function is generic: it's applicable to values of type
+`List α` for any type `α`, for example:
+-/
+
+#eval ["Ga", "Bu", "Zo", "Meu"].filter (·.length <= 2)
+-- ["Ga", "Bu", "Zo"]
+
+
+
+
 
 /-
 `filter` selects some items in a list, `map` apply a transform to each
