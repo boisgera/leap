@@ -1,3 +1,4 @@
+import Mathlib
 
 inductive IsSorted : List Int -> Prop where
 | none : IsSorted []
@@ -24,9 +25,46 @@ def sort (ns : List Int) : List Int :=
 #eval sort [5, 0, 2, 1, 3, 4]
 -- [0, 1, 2, 3, 4, 5]
 
-theorem ge_of_not_le (m n : Int) (h : ¬ m <= n) : n <= m := by
-  -- Pfff
-  admit
+/--
+info: Multiset.coe_eq_coe.{u_1} {α : Type u_1} {l₁ l₂ : List α} :
+↑l₁ = ↑l₂ ↔ l₁.Perm l₂
+-/
+#guard_msgs (whitespace := lax) in
+#check Multiset.coe_eq_coe
+
+-- TODO 🚧: state in terms of permutations directly, not multisets.
+lemma sortInsert_multiset (n : Int) (ns : List Int) :
+  Multiset.ofList (sortInsert n ns) = n ::ₘ Multiset.ofList ns := by
+  induction ns with
+  | nil =>
+    simp [sortInsert]
+  | cons m ns ih =>
+    simp [sortInsert]
+    split_ifs with h
+    · -- Case: n ≤ m
+      rfl
+    · -- Case: ¬(n ≤ m)
+      -- TODO 🚧
+      --   - derive (sortInsert n ns).Perm (n :: ns) from ih : ↑(sortInsert n ns) = n ::ₘ ↑ns
+      --   - derive (m :: sortInsert n ns).Perm (m :: n :: ns) from that
+      --   - establish that (m :: n :: ns).Perm (n :: m :: ns)
+      --   - by transitivity deduce the goal: (m :: sortInsert n ns).Perm (n :: m :: ns)
+      admit
+
+
+
+
+theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int),
+Multiset.ofList ns = Multiset.ofList (sort ns) := by
+  intro ns
+  induction ns with
+  | nil =>
+    simp [sort]
+  | cons n ns ih =>
+    rw [sort]
+    rw [sortInsert_multiset]
+    simp
+    exact Multiset.coe_eq_coe.mp ih
 
 
 
