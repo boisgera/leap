@@ -9,11 +9,15 @@ def has_limit' (x : ℕ -> ℝ) (ℓ : ℝ) :=
   abs (x n - ℓ) ≤ ε
 
 #print has_limit'
+-- def has_limit' : (ℕ → ℝ) → ℝ → Prop :=
+-- fun x ℓ => ∀ ε > 0, ∃ m, ∀ n ≥ m, |x n - ℓ| ≤ ε
 
 def has_limit (x : ℕ -> ℝ) (ℓ : ℝ) :=
   ∀ ε > 0, ∃ m, ∀ n, n ≥ m -> |x n - ℓ| ≤ ε
 
 #print has_limit
+-- def has_limit' : (ℕ → ℝ) → ℝ → Prop :=
+-- fun x ℓ => ∀ ε > 0, ∃ m, ∀ n ≥ m, |x n - ℓ| ≤ ε
 
 theorem has_limit_eq_has_limit' : has_limit = has_limit' := by
   rfl
@@ -34,4 +38,8 @@ has_limit x ℓ -> has_limit (fun n => |x n|) |ℓ| := by
   exact h''
 
 #check abs_abs_sub_abs_le_abs_sub -- reverse triangular inequality
+-- abs_abs_sub_abs_le_abs_sub.{u_1} {G : Type u_1} [AddCommGroup G] [LinearOrder G] [IsOrderedAddMonoid G] (a b : G) :
+--   ||a| - |b|| ≤ |a - b|
+
 #check le_trans
+-- le_trans.{u_1} {α : Type u_1} [Preorder α] {a b c : α} : a ≤ b → b ≤ c → a ≤ c
