@@ -2,6 +2,10 @@ name = "leap"
 version = "0.1.0"
 defaultTargets = ["Python", "Raylib", "maze", "snake", "fs"]
 
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
 [[lean_lib]]
 name = "Python"
 
