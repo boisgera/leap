@@ -96,6 +96,8 @@ theorem is_sorted_iff_IsSorted : ∀ (ns : List Int),
             apply ih
             . grind
 
+#check le_trans
+-- le_trans.{u_1} {α : Type u_1} [Preorder α] {a b c : α} : a ≤ b → b ≤ c → a ≤ c
 
 lemma sortInsert_perm (n : Int) (ns : List Int) :
   (sortInsert n ns).Perm (n :: ns) := by
@@ -111,14 +113,9 @@ lemma sortInsert_perm (n : Int) (ns : List Int) :
       have h' : (m :: sortInsert n ns).Perm (m :: n :: ns) := by
         simp [List.perm_cons]
         exact ih
-      -- establish that (m :: n :: ns).Perm (n :: m :: ns)
       have h'' : (m :: n :: ns).Perm (n :: m :: ns) := by
-          simp_all only [not_le]
-          sorry
-      -- TODO 🚧
-      --   - by transitivity deduce the goal: (m :: sortInsert n ns).Perm (n :: m :: ns)
-
-      admit
+        exact List.Perm.swap n m ns
+      exact List.Perm.trans h' h''
 
 theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int), ns.Perm (sort ns) := by
   intro ns
@@ -131,7 +128,6 @@ theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int), ns.Perm (sort ns) := 
     have h' := List.Perm.cons n ih
     exact List.Perm.trans h' h
 
--- We need some induction stuff on the list ns
 theorem is_sorted_sort_insert (n : Int) (ns : List Int) (h : IsSorted ns) :
   IsSorted (sortInsert n ns) := by
   induction ns with
