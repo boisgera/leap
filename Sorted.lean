@@ -128,29 +128,39 @@ theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int), ns.Perm (sort ns) := 
     have h' := List.Perm.cons n ih
     exact List.Perm.trans h' h
 
-theorem is_sorted_sort_insert (n : Int) (ns : List Int) (h : IsSorted ns) :
+
+theorem wt (n : Int):
+  p ∈ sortInsert n ns  -> p = n ∨ p ∈ ns := by
+  intro p_in_sortInsert_n_ns
+  admit
+
+
+theorem is_sorted_sort_insert (n : Int) (ns : List Int) (IsSorted_ns : IsSorted ns) :
   IsSorted (sortInsert n ns) := by
   induction ns with
   | nil =>
     rw [sortInsert.eq_def]
     simp
     exact IsSorted.one n
-  | cons m ms h' =>
+  | cons m ms ih =>
     rw [sortInsert.eq_def]
     simp
-    by_cases h'' : n <= m
-    . simp [h'']
-      exact (IsSorted.many n m ms h'' h)
-    . simp [h'']
-      have lemma : m <= n :=
-        h'' |> Nat.not_le.mp |> Nat.le_of_lt -- Shit, we need MathLib for this stuff...
-      have lemma' : IsSorted ms := by
-        cases h with
+    by_cases h : n <= m
+    . simp [h]
+      exact (IsSorted.many n m ms h IsSorted_ns)
+    . simp [h]
+      have m_le_n : m <= n := by grind
+      have IsSorted_ms : IsSorted ms := by
+        cases IsSorted_ns with
         | one p => exact IsSorted.none
         | many m' n' ns' h1 h2 => exact h2
-      have lemma'' : IsSorted (sortInsert n ms) :=
-        h' lemma'
+      have IsSorted_sortInsert_n_ms : IsSorted (sortInsert n ms) :=
+        ih IsSorted_ms
+      -- m <= n and m <= m' for any m' in ms
+      -- Hence whatever the first value p of sortInsert n ms is,
+      -- m <= p, thus we can use IsSorted.many to conclude
       admit
+      -- exact IsSorted.many m n ms m_le_n IsSorted_sortInsert_n_ms
 
 
 theorem is_sorted_sort : ∀ (ns : List Int), IsSorted (sort ns) := by
