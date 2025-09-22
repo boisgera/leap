@@ -1,10 +1,6 @@
-import Mathlib
+-- Source: https://arxiv.org/abs/2509.15015
 
-inductive IsSorted : List Int -> Prop where
-| none : IsSorted []
-| one : ∀ (n : Int), IsSorted [n]
-| many : ∀ (m n : Int), ∀ (ns : List Int),
-    m ≤ n -> IsSorted (n :: ns) -> IsSorted (m :: n :: ns)
+import Mathlib
 
 def sortInsert (n : Int) (ns : List Int) : List Int :=
   match ns with
@@ -25,48 +21,115 @@ def sort (ns : List Int) : List Int :=
 #eval sort [5, 0, 2, 1, 3, 4]
 -- [0, 1, 2, 3, 4, 5]
 
-/--
-info: Multiset.coe_eq_coe.{u_1} {α : Type u_1} {l₁ l₂ : List α} :
-↑l₁ = ↑l₂ ↔ l₁.Perm l₂
--/
-#guard_msgs (whitespace := lax) in
-#check Multiset.coe_eq_coe
+inductive IsSorted : List Int -> Prop where
+| none : IsSorted []
+| one : ∀ (n : Int), IsSorted [n]
+| many : ∀ (m n : Int), ∀ (ns : List Int),
+    m ≤ n -> IsSorted (n :: ns) -> IsSorted (m :: n :: ns)
 
--- TODO 🚧: state in terms of permutations directly, not multisets.
-lemma sortInsert_multiset (n : Int) (ns : List Int) :
-  Multiset.ofList (sortInsert n ns) = n ::ₘ Multiset.ofList ns := by
+def is_sorted (ns : List Int) :=
+  ∀ (i : ℕ), ∀ (j : ℕ),
+  (hi : i < ns.length) -> (hj : j < ns.length) ->
+  (i <= j) -> ns[i]'hi <= ns[j]
+
+theorem lemma_is_sorted_cons_is_sorted {n : Int} {ns : List Int}:
+is_sorted (n :: ns) -> is_sorted (ns) := by
+    intro is_sorted_n_ns
+    rw [is_sorted] at *
+    intro i j hi hj i_le_j
+    have h := is_sorted_n_ns (i + 1) (j + 1)
+    simp at h
+    exact h hi hj i_le_j
+
+theorem is_sorted_iff_IsSorted : ∀ (ns : List Int),
+  is_sorted ns <-> IsSorted ns := by
+  intro ns
+  constructor
+  . intro is_sorted_ns
+    induction ns with
+    | nil => exact IsSorted.none
+    | cons n ns h =>
+      cases ns with
+      | nil => exact IsSorted.one n
+      | cons m ms =>
+          have IsSorted_m_ms := h (lemma_is_sorted_cons_is_sorted is_sorted_ns)
+          have n_le_m : n <= m := by
+            apply is_sorted_ns 0 1 _ _ _
+            . simp
+            . simp
+            . simp
+          exact IsSorted.many n m ms n_le_m IsSorted_m_ms
+  . intro IsSorted_ns
+    induction IsSorted_ns with
+    | none =>
+        rw [is_sorted]
+        simp
+    | one n =>
+        rw [is_sorted]
+        simp
+    | many m n ns m_le_n IsSorted_n_ns ih =>
+        rw [is_sorted]
+        simp_all
+        intro i j hi hj i_le_j
+        cases i with
+        | zero =>
+          simp
+          cases j with
+          | zero => simp
+          | succ j =>
+            cases j with
+            | zero => simp; exact m_le_n
+            | succ j =>
+              simp
+              simp at hj
+              clear i_le_j
+              apply le_trans m_le_n
+              rw [is_sorted] at ih
+              apply ih 0 (j+1) (by grind) (by grind)
+              simp
+        | succ i =>
+          simp at hi hi ⊢
+          cases j with
+          | zero => grind
+          | succ j =>
+            simp
+            apply ih
+            . grind
+
+
+lemma sortInsert_perm (n : Int) (ns : List Int) :
+  (sortInsert n ns).Perm (n :: ns) := by
   induction ns with
   | nil =>
-    simp [sortInsert]
+    rw [sortInsert]
   | cons m ns ih =>
-    simp [sortInsert]
+    rw [sortInsert]
     split_ifs with h
-    · -- Case: n ≤ m
+    · -- n ≤ m
       rfl
-    · -- Case: ¬(n ≤ m)
+    · -- ¬(n ≤ m)
+      have h' : (m :: sortInsert n ns).Perm (m :: n :: ns) := by
+        simp [List.perm_cons]
+        exact ih
+      -- establish that (m :: n :: ns).Perm (n :: m :: ns)
+      have h'' : (m :: n :: ns).Perm (n :: m :: ns) := by
+          simp_all only [not_le]
+          sorry
       -- TODO 🚧
-      --   - derive (sortInsert n ns).Perm (n :: ns) from ih : ↑(sortInsert n ns) = n ::ₘ ↑ns
-      --   - derive (m :: sortInsert n ns).Perm (m :: n :: ns) from that
-      --   - establish that (m :: n :: ns).Perm (n :: m :: ns)
       --   - by transitivity deduce the goal: (m :: sortInsert n ns).Perm (n :: m :: ns)
+
       admit
 
-
-
-
-theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int),
-Multiset.ofList ns = Multiset.ofList (sort ns) := by
+theorem multiseq_eq_multiset_sorted : ∀ (ns : List Int), ns.Perm (sort ns) := by
   intro ns
   induction ns with
   | nil =>
     simp [sort]
   | cons n ns ih =>
     rw [sort]
-    rw [sortInsert_multiset]
-    simp
-    exact Multiset.coe_eq_coe.mp ih
-
-
+    have h := List.Perm.symm (sortInsert_perm n (sort ns))
+    have h' := List.Perm.cons n ih
+    exact List.Perm.trans h' h
 
 -- We need some induction stuff on the list ns
 theorem is_sorted_sort_insert (n : Int) (ns : List Int) (h : IsSorted ns) :
