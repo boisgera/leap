@@ -22,6 +22,45 @@ def has_limit (x : ℕ -> ℝ) (ℓ : ℝ) :=
 theorem has_limit_eq_has_limit' : has_limit = has_limit' := by
   rfl
 
+#synth (SemilatticeSup ℝ) -- Real.instSemilatticeSup
+
+#check Real.instSemilatticeSup.2
+-- SemilatticeSup.sup : ℝ → ℝ → ℝ
+
+#check Real.lattice.toSemilatticeSup.2
+-- SemilatticeSup.sup : ℝ → ℝ → ℝ
+
+-- #print Real.lattice.toSemilatticeSup.2
+
+
+theorem abs_eq_if_le_zero (x : ℝ) : abs x = if 0 <= x then x else -x := by
+  split_ifs with h
+  . simp
+    exact h
+  . simp
+    apply le_of_not_ge
+    exact h
+
+theorem reverse_triangular_inequality (a b : ℝ) :
+  |(|a| - |b|)| <= |a - b| := by
+  repeat rw [abs_eq_if_le_zero]
+  split_ifs with h1 h2 h3 h4 h5 h6 h7 h8 h9
+  . rfl
+  . rfl
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+  . linarith
+
+
 theorem limit_abs (x : ℕ -> ℝ) (ℓ : ℝ) :
 has_limit x ℓ -> has_limit (fun n => |x n|) |ℓ| := by
   intro has_limit_x_ℓ

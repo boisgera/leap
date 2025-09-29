@@ -56,9 +56,14 @@ However, some operations that used to work with the ancient type will not
 with the new one since the new type is not an instance of any type class.
 -/
 
-#eval ints' ++ [4, 5, 6] -- ❌
--- failed to synthesize
---   HAppend Ints' (List ?m.11) ?m.14
+/--
+error: failed to synthesize
+  HAppend Ints' (List ?m.11) ?m.14
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+-/
+#guard_msgs in
+#eval ints' ++ [4, 5, 6]
 
 /-
 However it's always possible to force the recognition of the old type
@@ -108,6 +113,13 @@ def Ints'.random! (ints : Ints') : IO Int := do
 #eval ints'.random!
 -- 1
 
+/--
+error: Invalid field `random!`: The environment does not contain `List.random!`
+  ints
+has type
+  List Int
+-/
+#guard_msgs in
 #eval ints.random! -- ❌
 -- Invalid field `random`: The environment does not contain `List.random`
 --   ints
@@ -151,7 +163,6 @@ def swap {α β} : α × β -> β × α := fun pair =>
 
 #eval (fun (a, b) => (b, a)) (42, "hello")
 -- ("hello", 42)
-
 
 def triple := (42, "hello", true)
 
