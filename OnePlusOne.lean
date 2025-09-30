@@ -28,6 +28,9 @@ def add (m n : Nat) : Nat :=
 Let's check that it works as expected:
 -/
 
+#eval add Nat.zero Nat.zero
+-- Sandbox.Nat.zero
+
 #reduce add Nat.zero Nat.zero
 -- Nat.zero
 
@@ -180,6 +183,63 @@ theorem v5.one_plus_one_eq_two : add Nat.zero.succ Nat.zero.succ = Nat.zero.succ
 
   -- `1 + 1 = 1 +1 (= 2)` is actually a special case of this local lemma
   add_one_eq_succ Nat.zero.succ
+
+/-
+The version without the intermediate steps
+-/
+
+theorem v6.one_plus_one_eq_two : add Nat.zero.succ Nat.zero.succ = Nat.zero.succ.succ :=
+  Eq.trans
+    (add.eq_2 Nat.zero.succ Nat.zero)
+    (congrArg (·.succ) (add.eq_1 Nat.zero.succ))
+
+/-
+Syntactic sugar
+-/
+
+def Nat.add : Nat -> Nat -> Nat := Sandbox.add
+
+instance : Add Nat where
+  add := Nat.add
+
+def Nat.toNat : Nat -> _root_.Nat
+| Nat.zero => _root_.Nat.zero
+| Nat.succ n => n.toNat.succ
+
+instance : ToString Nat where
+  toString := (· |>.toNat |> toString)
+
+def Nat.ofNat : _root_.Nat → Nat
+  | 0 => Nat.zero
+  | n + 1 => Nat.succ (Nat.ofNat n)
+
+instance {n} : OfNat Nat n where
+  ofNat := Nat.ofNat n
+
+#eval add Nat.zero Nat.zero
+-- 0
+
+#eval add Nat.zero Nat.zero.succ
+-- 1
+
+#eval add Nat.zero.succ Nat.zero
+-- 1
+
+#eval add Nat.zero.succ Nat.zero.succ
+-- 2
+
+theorem v7.one_plus_one_eq_two : (1 : Nat) + (1 : Nat) = (2 : Nat) := by
+  -- rw [HAdd.hAdd]
+  -- rw [instHAdd]
+  -- simp
+  -- rw [Add.add]
+  -- rw [instAddNat]
+  -- simp
+  -- rw [Nat.add]
+  exact v6.one_plus_one_eq_two
+
+
+
 
 /-
 Extra stuff
