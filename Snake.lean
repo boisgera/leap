@@ -3,9 +3,9 @@ import Raylib
 abbrev Vector2 := Int × Int
 
 structure GameState where
-    snake_direction : Vector2
-    snake_geometry : List Vector2
-    fruit : Vector2
+  snake_direction : Vector2
+  snake_geometry : List Vector2
+  fruit : Vector2
 
 def WIDTH := 32
 def HEIGHT := 18
@@ -38,7 +38,7 @@ def snake_forward (state : GameState) : GameState :=
     (head.2 + dy) % HEIGHT,
   )
   let new_snake_geometry := new_head :: snake_geometry
-{ state with snake_geometry := new_snake_geometry }
+  { state with snake_geometry := new_snake_geometry }
 
 def snake_trim (state : GameState) : GameState :=
   let snake_geometry := state.snake_geometry
