@@ -580,7 +580,7 @@ Spin a toupie server with extra Python libraries when you need them;
 the `requests` library is required for the next example:
 
 ```bash
-uvx --with requests --from git+https://github.com/boisgera/toupie toupie
+uvx --with requests toupie
 ```
 
 Note that Lean 4 [raw string literals]
