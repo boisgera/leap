@@ -21,6 +21,10 @@ name = "snake"
 root = "Snake"
 
 [[lean_exe]]
+name = "slider"
+root = "Slider"
+
+[[lean_exe]]
 name = "fs"
 root = "FileSize"
 

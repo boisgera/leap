@@ -2,10 +2,11 @@
 import Python
 
 -- Python Bindings for raylib
-def import_ (module : String) : IO Unit := do
-    Python.exec! s!"from {module} import *"
+def import_pyray : IO Unit := do
+    Python.exec! "from pyray import *"
 
 def init_window (width: Nat) (height: Nat) (title : String) : IO Unit := do
+    Python.exec! "from pyray import *"
     Python.exec! s!"init_window({width}, {height}, \"{title}\")"
 
 def window_should_close : IO Bool := do
@@ -34,12 +35,11 @@ def clear_background (color : Color) : IO Unit := do
     Python.exec! s!"clear_background({color.to_string})"
 
 
-def draw_text (text : String) (x y : Nat) (fontSize : Nat) (color : Color) : IO Unit := do
+def draw_text (text : String) (x y : Int) (fontSize : Int) (color : Color) : IO Unit := do
     Python.exec! s!"draw_text(\"{text}\", {x}, {y}, {fontSize}, {color.to_string})"
 
-def draw_rectangle (x y : Nat) (width height : Nat) (color : Color) : IO Unit := do
+def draw_rectangle (x y : Int) (width height : Int) (color : Color) : IO Unit := do
     Python.exec! s!"draw_rectangle({x}, {y}, {width}, {height}, {color.to_string})"
-
 
 def KEY_UP := 265
 def KEY_DOWN := 264
@@ -70,10 +70,7 @@ def LIGHT_GREY := (211, 211, 211, 255)
 def STRAWBERRY := (215, 44, 22, 255)
 def ORANGE := (255, 165, 0, 255)
 
-abbrev Point2 := Nat × Nat
-abbrev Vector2 := Int × Int
-
-def UP : Vector2 := (0, -1)
-def DOWN : Vector2 := (0, 1)
-def LEFT : Vector2 := (-1, 0)
-def RIGHT : Vector2 := (1, 0)
+def UP : Int × Int := (0, -1)
+def DOWN : Int × Int := (0, 1)
+def LEFT : Int × Int := (-1, 0)
+def RIGHT : Int × Int := (1, 0)

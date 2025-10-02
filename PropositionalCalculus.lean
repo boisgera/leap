@@ -4,19 +4,220 @@ Sources:
   - https://leanprover-community.github.io/logic_and_proof/propositional_logic_in_lean.html
 -/
 
-variable {p q r s: Prop}
+#print True
+-- inductive True : Prop
+-- number of parameters: 0
+-- constructors:
+-- True.intro : True
 
-theorem modus_ponens (hp : p) (hpq : p -> q) : q :=
-  hpq hp
+#check True.intro
+-- True.intro : True
 
-#print Not
--- def Not : Prop → Prop :=
--- fun a => a → False
+#print trivial
+-- theorem trivial : True :=
+-- True.intro
+
+#check trivial
+-- trivial : True
+
+#print Eq
+-- inductive Eq.{u_1} : {α : Sort u_1} → α → α → Prop
+-- number of parameters: 2
+-- constructors:
+-- Eq.refl : ∀ {α : Sort u_1} (a : α), a = a
+
+example : 0 = 0 := Eq.refl 0
+
+#print And
+-- structure And (a b : Prop) : Prop
+-- number of parameters: 2
+-- fields:
+--   And.left : a
+--   And.right : b
+-- constructor:
+--   And.intro {a b : Prop} (left : a) (right : b) : a ∧ b
+
+example : True ∧ True :=
+  And.intro trivial trivial
+
+example : True ∧ True :=
+  ⟨trivial, trivial⟩
+
+example : True ∧ True ∧ True :=
+  (And.intro trivial (And.intro trivial trivial))
+
+example : True ∧ True ∧ True :=
+  ⟨trivial, trivial, trivial⟩
+
+example : 0 = 0 ∧ 1 = 1 := ⟨Eq.refl 0, Eq.refl 1 ⟩
+
+#print Or
+-- inductive Or : Prop → Prop → Prop
+-- number of parameters: 2
+-- constructors:
+-- Or.inl : ∀ {a b : Prop}, a → a ∨ b
+-- Or.inr : ∀ {a b : Prop}, b → a ∨ b
+
+example : 0 = 0 ∨ 0 = 1 := Or.inl (Eq.refl 0)
+
+example {p q : Prop} : p ∨ q -> q ∨ p :=
+  fun p_or_q =>
+    match p_or_q with
+    | Or.inl hp => Or.inr hp
+    | Or.inr hq => Or.inl hq
+
+-- Note: no "Imply", this is built-in with "->". We could define it with
+def Imply (p q : Prop) : Prop :=
+  p -> q
+
+example {m n : Nat} : m = n -> m * m = n * n :=
+  fun m_eq_n =>
+    congrArg (fun p => p * p) m_eq_n
+
+example {p q : Prop} : p ∧ q -> p ∨ q :=
+  fun p_and_q =>
+    Or.inl p_and_q.left -- or Or.inr p_and_q.right
+
+example {p q : Prop} : p ∧ q -> (p -> q) :=
+  fun p_and_q =>
+    fun _ =>
+      p_and_q.right
+
+#print Iff
+-- structure Iff (a b : Prop) : Prop
+-- number of parameters: 2
+-- fields:
+--   Iff.mp : a → b
+--   Iff.mpr : b → a
+-- constructor:
+--   Iff.intro {a b : Prop} (mp : a → b) (mpr : b → a) : a ↔ b
+
+example {p q : Prop} : (p <-> q) -> (p -> q) :=
+  fun p_iff_q =>
+    fun (hp : p) =>
+      p_iff_q.mp hp
+
+example {p q r : Prop} : p ∨ (q ∧ r) <-> (p ∨ q) ∧ (p ∨ r) :=
+  Iff.intro
+    fun p_or_q_and_r =>
+      match p_or_q_and_r with
+      | Or.inl hp => And.intro (Or.inl hp) (Or.inl hp)
+      | Or.inr hq_and_r => And.intro (Or.inr hq_and_r.left) (Or.inr hq_and_r.right)
+    fun p_or_q_and_p_or_r =>
+      have ⟨p_or_q, p_or_r⟩ := p_or_q_and_p_or_r
+      match p_or_q with
+      | Or.inl hp => Or.inl hp
+      | Or.inr hq =>
+        match p_or_r with
+        | Or.inl hp' => Or.inl hp'
+        | Or.inr hr => Or.inr (And.intro hq hr)
+
+example {p q r : Prop} : p ∨ (q ∧ r) <-> (p ∨ q) ∧ (p ∨ r) := by
+  constructor
+  . intro hp_or_q_and_r
+    cases hp_or_q_and_r with
+    | inl hp =>
+      apply And.intro
+      . exact Or.inl hp
+      . exact Or.inl hp
+    | inr hq_and_r =>
+      have ⟨hq, hr⟩ := hq_and_r
+      apply And.intro
+      . exact Or.inr hq
+      . exact Or.inr hr
+  . sorry -- TODO
+
 
 #print False
 -- inductive False : Prop
 -- number of parameters: 0
 -- constructors:
+
+example : False -> 0 = 1 :=
+  fun f =>
+    False.elim (C := 0 = 1) f
+
+example : False -> 0 = 1 :=
+  fun f =>
+    nomatch f
+
+#print Not
+-- def Not : Prop → Prop :=
+-- fun a => a → False
+
+example {p : Prop} : p -> ¬¬p :=
+  fun hp =>
+    fun not_hp =>
+      not_hp hp
+
+#check Classical.em
+-- Classical.em (p : Prop) : p ∨ ¬p
+
+example {p : Prop} : ¬¬p -> p :=
+  match (Classical.em p) with
+  | Or.inl hp => fun _ => hp
+  | Or.inr hnot_p =>
+      fun hnot_not_p =>
+        have false := hnot_not_p hnot_p
+        false.elim
+
+example : 0 ≠ 1 := -- same as ¬ (0 = 1), same as 0 = 1 -> False
+  fun zero_eq_one =>
+    nomatch zero_eq_one
+
+theorem de_morgan_2 {p q : Prop} : ¬ (p ∨ q) -> ¬ p ∧ ¬ q :=
+  fun not_p_or_q =>
+    And.intro
+      (fun hp => not_p_or_q (Or.inl hp))
+      (fun hq => not_p_or_q (Or.inr hq))
+
+/-
+Same theorem, proven with tactics
+-/
+theorem de_morgan_2' {p q : Prop} : ¬ (p ∨ q) -> ¬ p ∧ ¬ q := by
+  intro not_p_or_q
+  apply And.intro
+  . rw [Not] at *
+    intro hp
+    apply not_p_or_q
+    apply Or.inl
+    exact hp
+  . rw [Not] at *
+    intro hq
+    apply not_p_or_q
+    apply Or.inr
+    exact hq
+
+
+
+theorem de_morgan_1 {p q : Prop} : ¬ p ∧ ¬ q -> ¬ (p ∨ q)  := by
+  intro not_p_and_not_q
+  have not_p := not_p_and_not_q.1
+  have not_q := not_p_and_not_q.2
+  have p_or_not_p := Classical.em p
+  cases p_or_not_p with
+  | inl hp =>
+    have false := not_p hp
+    apply false.elim
+  | inr hnot_p =>
+    repeat rw [Not] at *
+    intro hp_or_q
+    cases hp_or_q with
+    | inl hp => exact not_p hp
+    | inr hq => exact not_q hq
+
+#print de_morgan_1
+
+
+
+/------------------------------------------------------------------------------/
+
+variable {p q r s: Prop}
+
+theorem modus_ponens (hp : p) (hpq : p -> q) : q :=
+  hpq hp
+
+
 
 theorem modus_tollens (hpq : p -> q) (hq : ¬q) : ¬p :=
   fun hp => hq (hpq hp)
