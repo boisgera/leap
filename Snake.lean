@@ -1,5 +1,4 @@
 import Raylib
-import Python
 
 abbrev Vector2 := Int × Int
 

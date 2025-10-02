@@ -1,5 +1,4 @@
 import Raylib
-import Python
 
 def WIDTH := 32
 def HEIGHT := 18
@@ -8,7 +7,7 @@ def SCALE := 25 -- 800 x 450 size (16:9 aspect ratio)
 def main : IO Unit := do
   let mut x : Int := WIDTH / 2
   import_pyray
-  init_window (WIDTH * SCALE) (HEIGHT * SCALE) "🐍 Snake Game"
+  init_window (WIDTH * SCALE) (HEIGHT * SCALE) "Slider"
   set_target_fps 10
   while not (<- window_should_close) do
     if (<- is_key_pressed KEY_LEFT) then
