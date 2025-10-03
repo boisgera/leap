@@ -97,6 +97,34 @@ example {p q : Prop} : (p <-> q) -> (p -> q) :=
     fun (hp : p) =>
       p_iff_q.mp hp
 
+example {p q r : Prop} : ((p ∧ q)) -> r <-> (p -> q -> r) :=
+  Iff.intro
+    (fun hp_and_q_to_r =>
+      fun hp hq =>
+        hp_and_q_to_r (And.intro hp hq)
+    )
+    (fun hp_to_q_to_r =>
+      fun hp_and_q =>
+        have hp := hp_and_q.1
+        have hq := hp_and_q.2
+        hp_to_q_to_r hp hq
+    )
+
+example {p q r : Prop} : ((p ∧ q)) -> r <-> (p -> q -> r) := by
+  apply Iff.intro
+  . intro h
+    intro hp
+    intro hq
+    have hp_and_q := And.intro hp hq
+    exact h hp_and_q
+  . intro h
+    intro hp_and_q
+    apply h
+    . exact hp_and_q.1
+    . exact hp_and_q.2
+
+
+
 example {p q r : Prop} : p ∨ (q ∧ r) <-> (p ∨ q) ∧ (p ∨ r) :=
   Iff.intro
     fun p_or_q_and_r =>
