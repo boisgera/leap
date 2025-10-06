@@ -57,7 +57,7 @@ to describe common mathematical statements and their proofs.
 Its logo is written L∃∀N for a reason! For example:
 
 ```lean
-def collatz_step (x : ℕ) : ℕ := Id.run do
+def collatzStep (x : ℕ) : ℕ := Id.run do
   if x % 2 == 0 then
     return x / 2
   else
@@ -66,7 +66,7 @@ def collatz_step (x : ℕ) : ℕ := Id.run do
 def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
   let mut x <- x₀
   for _ in [0:n] do
-    x <- collatz_step x
+    x <- collatzStep x
   return x
 ```
 
