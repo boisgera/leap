@@ -110,7 +110,7 @@ example {p q r : Prop} : ((p ∧ q)) -> r <-> (p -> q -> r) :=
         hp_to_q_to_r hp hq
     )
 
-example {p q r : Prop} : ((p ∧ q)) -> r <-> (p -> q -> r) := by
+example {p q r : Prop} : (p ∧ q) -> r <-> (p -> q -> r) := by
   apply Iff.intro
   . intro h
     intro hp

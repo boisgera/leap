@@ -1,24 +1,162 @@
 
 import Std
+import Batteries
 
 /-
 Booleans
 --------------------------------------------------------------------------------
 -/
 
+#check false
+-- Bool.false : Bool
+
+#check true
+-- Bool.true: Bool
+
+#eval !false
+-- true
+
+#eval !true
+-- false
+
+#check not
+-- Bool.not: Bool -> Bool
+
+#eval not false
+-- true
+
+#eval not true
+-- false
+
+#check and
+-- Bool.and (x y : Bool) : Bool
+
+#eval Bool.and true true
+-- true
+
+#eval true.and true
+-- true
+
+#eval true && true
+-- true
+
+#check or
+-- Bool.or (x y : Bool) : Bool
+
+#eval Bool.or false true
+-- true
+
+#eval false.or true
+-- true
+
+#eval false || true
+-- true
+
 /-
-Integers
+Numerical Types
 --------------------------------------------------------------------------------
 -/
+
+def n := -1
+
+#check n
+-- n : Int
+
+def p : Int := 42 -- force to be signed
+-- p : Int
+
+#eval (n * n + 1 % 3) ^ 2 / 2
+-- 2
+
+def m := 1
+
+#check m
+-- m : Nat
+
+#eval m + 1
+-- 2
+
+#eval m - 42
+-- 0
+
+def x := 2.71
+
+#check x
+-- Float
+
+#eval Float.log x
+-- 0.996949
+
+#eval x.log
+-- 0.996949
+
+#eval Float.log 0
+-- -inf
+
+#eval Float.log (-1)
+-- NaN
+
+#eval Float.inf
+-- inf
+
+#eval Float.nan
+-- NaN
+
+
 
 /-
 Characters
 --------------------------------------------------------------------------------
 -/
 
+def char := 'A'
+
+#check char
+-- char : Char
+
+#eval IO.println char
+-- A
+
+#eval char.toNat
+-- 65
+
+def wave := '👋'
+
+#check wave
+-- wave : Char
+
+#eval wave.toNat
+-- 128075
+
+#eval IO.println wave
+-- 👋
+
 /-
 Strings
 --------------------------------------------------------------------------------
+-/
+
+def hello := "Hello world!"
+
+#check hello
+-- hello : String
+
+#eval "Hello" ++ " " ++ "world!"
+-- "Hello world!"
+
+def name := "stranger"
+
+#eval s!"Hello {name}!"
+-- "Hello stranger!"
+
+/-
+TODO:
+  - to/from list of chars
+  - iteration (directly?)
+  - length, slicing
+  - startsWith, contains
+  - trim
+  - splitlines
 -/
 
 /-

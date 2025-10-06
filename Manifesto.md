@@ -1,5 +1,12 @@
-Lean & Python
+
+
+Lean
 ================================================================================
+
+... with a bit of Python
+--------------------------------------------------------------------------------
+
+✉️ [Sébastien Boisgérault](mailto://Sebastien.Boisgerault@minesparis.psl.eu)
 
 [Lean] is a pure functional programming language with a very powerful static 
 type system, designed primarily for software verification 
@@ -79,8 +86,8 @@ In this course, you will
     graphical applications (the snake game!). When it's needed, we'll 
     call Python from Lean to get access to its huge set of libraries!
 
-  - Explore some general programming languages concepts and study 
-    how Python and Lean implement them in their own way. 
+  - Explore some general/fundamental programming languages concepts 
+    and study how Python and Lean implement them in their own way. 
     For example: variables, 
     (im)mutability, values vs objects, loops and recursion, 
     partial function application, traits/interfaces, etc.  
@@ -110,3 +117,9 @@ very little about 😁 (don't try this at home!). Expect some rough edges if you
 
 [Lean]: https://lean-lang.org/
 [Python]: https://www.python.org/
+
+--------------------------------------------------------------------------------
+
+This document: 🔗 <https://github.com/boisgera/leap/blob/main/Manifesto.md>
+
+![Leap manifesto](images/leap-manifesto.svg)
