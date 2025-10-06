@@ -88,9 +88,9 @@ In this course, you will
 
   - Explore some general/fundamental programming languages concepts 
     and study how Python and Lean implement them in their own way. 
-    For example: variables, 
-    (im)mutability, values vs objects, loops and recursion, 
-    partial function application, traits/interfaces, etc.  
+    For example: variables,(im)mutability, values vs objects, loops vs recursion, 
+    currying/partial function application, uniform function call syntax,
+    type classes vs object-oriented classes/interfaces, etc.  
   
 ### 🏆 Benefits
 
