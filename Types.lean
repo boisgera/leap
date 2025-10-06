@@ -1,4 +1,4 @@
-
+-- import Mathlib
 import Std
 import Batteries
 
@@ -136,33 +136,272 @@ Strings
 --------------------------------------------------------------------------------
 -/
 
-def hello := "Hello world!"
+def helloWorld := "Hello world!"
 
-#check hello
+#check helloWorld
 -- hello : String
+
+def theOldPond :=
+  "An old silent pond\nA frog jumps into the pond—\nSplash! Silence again.\n"
+
+#eval IO.println theOldPond
+-- An old silent pond
+-- A frog jumps into the pond—
+-- Splash! Silence again.
+
+
+def theOldPond' :=
+"An old silent pond
+A frog jumps into the pond—
+Splash! Silence again.
+"
+
+#eval theOldPond'
+-- "An old silent pond\nA frog jumps into the pond—\nSplash! Silence again.\n"
+
+#eval "\n"
+-- "\n"
+
+#eval r"\n"
+-- "\\n"
+
+/-
+With raw strings, backslashes are **not** interpreted as the beginning of a
+special character.
+-/
+
+def theOldPond'' :=
+  r"An old silent pond\nA frog jumps into the pond—\nSplash! Silence again.\n"
+
+#eval IO.println theOldPond''
+-- An old silent pond\nA frog jumps into the pond—\nSplash! Silence again.\n
+
+/-
+Quotes in quotes with raw strings, when augmented with hash marks:
+-/
+
+def pythonHelloWorld :=
+r#"def main():
+  print("Hello world!")
+"#
+
+#eval pythonHelloWorld
+-- "def main():\n  print(\"Hello world!\")\n"
+
+/-
+### Concatenation
+-/
 
 #eval "Hello" ++ " " ++ "world!"
 -- "Hello world!"
+
+/-
+### Conversion to String
+-/
+
+#check toString
+-- ToString.toString.{u} {α : Type u} [self : ToString α] : α → String
+
+#eval toString 42
+-- "42"
+
+#eval toString [1, 2, 3]
+-- "[1, 2, 3]"
+
+#eval toString 'A'
+-- "A"
+
+#eval toString "ABC"
+-- "ABC"
+
+/-
+### String interpolation
+-/
 
 def name := "stranger"
 
 #eval s!"Hello {name}!"
 -- "Hello stranger!"
 
+def answer := 42
+
+#eval s!"The answer is {answer}"
+-- The answer is 43
+
 /-
-TODO:
-  - to/from list of chars
-  - iteration (directly?)
-  - length, slicing
-  - startsWith, contains
-  - trim
-  - splitlines
+### To/from list of characters
 -/
+
+#check helloWorld.data
+-- helloWorld.data : List Char
+
+#check helloWorld.toList
+-- helloWorld.toList : List Char
+
+#eval helloWorld.toList
+-- ['H', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!']
+
+#eval String.mk ['A', 'B', 'C']
+-- "ABC"
+
+/-
+### Length, random access, iteration
+-/
+
+#eval "ABC".length
+
+#eval "ABC".toList[0]!
+-- 'A'
+
+def printChars (string : String) : IO Unit := do
+  for char in string.toList do
+     IO.print s!"{char} "
+
+#eval printChars "Hello"
+-- H e l l o
+
+/-
+### Slicing
+-/
+
+#eval helloWorld.drop 6
+-- "world!"
+
+#eval (helloWorld.drop 6).take 5
+-- "world"
+
+#eval helloWorld |>.drop 6 |>.take 5
+-- "world"
+
+/-
+### Split, intercalate and trim
+-/
+
+
+
+#check String.splitOn
+-- String.splitOn (s : String) (sep : String := " ") : List String
+
+#eval helloWorld.splitOn " "
+-- ["Hello", "world!"]
+
+#eval " ".intercalate ["Hello", "world!"]
+-- "Hello world!"
+
+#eval theOldPond.splitOn "\n"
+-- ["An old silent pond", "A frog jumps into the pond—", "Splash! Silence again.", ""]
+
+
+#eval "         A B C  \n  ".trim
+-- "A B C"
+
+#eval theOldPond |>.trim |>.splitOn "\n"
+-- ["An old silent pond\nA frog jumps into the pond—\nSplash! Silence again."]
+
+/-
+### Startswith and contains
+-/
+
+#eval helloWorld.startsWith "Hello"
+-- true
+
+#eval helloWorld.contains 'w'
+-- true
+
+#eval helloWorld.containsSubstr "world"
+-- true
+
+/-
+### Kawai
+-/
+
+def String.isWhitespace (string : String) :=
+  string |>.toList |>.all Char.isWhitespace
+
+#eval "    \n    \t     ".isWhitespace
+-- true
+
+#eval "       A     ".isWhitespace
+-- false
+
+partial def String.leading (string : String) : Nat :=
+  if !string.startsWith " " then
+    0
+  else
+    (string |>.drop 1 |>.leading) + 1
+
+def leadingAux (chars : List Char) : Nat :=
+  match chars with
+  | ' ' :: chars => (leadingAux chars) + 1
+  | _ => 0
+
+def String.leading' (string : String) : Nat :=
+  leadingAux string.toList
+
+#exact String.len
+
+#eval "   A".leading
+-- 3
+
+def kawai (string : String) : String := Id.run do
+  let lines := string.splitOn "\n"
+  let lines := lines.filter (not ·.isWhitespace)
+  if lines.isEmpty then
+    return ""
+  else
+    let leading := lines[0]!.leading
+    let lines := lines.map (·.drop leading)
+    return "\n".intercalate lines
+
+def theOldPond_3 := kawai "
+  An old silent pond
+  A frog jumps into the pond—
+  Splash! Silence again.
+"
+
+#eval IO.println theOldPond_3
+-- An old silent pond
+-- A frog jumps into the pond—
+-- Splash! Silence again.
+
+def indents := kawai "
+  A
+    B
+      C
+"
+
+#eval IO.println indents
+-- A
+--   B
+--     C
 
 /-
 Tuples
 --------------------------------------------------------------------------------
 -/
+
+def pair := ("answer", 42)
+
+#check pair
+-- String × Nat
+
+def swap (pair : String × Nat) : Nat × String :=
+  let (s, n) := pair
+  (n, s)
+
+#eval swap pair
+-- (42, "answer")
+
+def triple := ("answer", 42, true)
+
+#check triple
+-- String × Nat × Bool
+
+#eval ("answer", (42, true))
+-- String × Nat × Bool
+
+#check String × (Nat × Bool)
+-- String × Nat × Bool : Type
 
 /-
 Lists & Arrays
@@ -170,11 +409,40 @@ Lists & Arrays
 -/
 
 /-
-Associative Arrays & Hash Maps
---------------------------------------------------------------------------------
+### Lists
+
+**TODO**
 -/
 
+
 /-
+### Arrays
+
+**TODO**
+
+-/
+
+def array := #[1, 2, 3]
+
+#check array
+-- array : Array Nat
+
+#check Array.toList
+-- Array.toList.{u} {α : Type u} (self : Array α) : List α
+
+#eval array.toList
+-- [1, 2, 3]
+
+#check List.toArray
+-- List.toArray.{u_1} {α : Type u_1} (xs : List α) : Array α
+
+#eval [1, 2, 3].toArray
+-- #[1, 2, 3]
+
+/-
+Associative Arrays & Hash Maps
+--------------------------------------------------------------------------------
+
 Similar to dictionaries in Python.
 
 ⚠️  Dictionaries are used **everywhere** in Python, but associative arrays and
