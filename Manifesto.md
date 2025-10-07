@@ -53,7 +53,9 @@ Not that hard right?
 
 However, Lean's dependent type system is also powerful enough 
 to describe common mathematical statements and their proofs. 
-Its logo is written L∃∀N for a reason! For example:
+Its logo is written L∃∀N for a reason! For example 
+([see it in the playground](https://live.lean-lang.org/#codez=JYWwDg9gTgLgBAWQIYwBYBtgCMBQOAmApgGZwDGE66KAXgMoyFhwAUAHnAFxyCohAJRdeXALxwAkvgB0UAK4A7OPgg44cYKQ4BSOACY4w0QAY4aQnJWq4UQjBlQFHAPS6LhdAGdCF1ddv24AMxwAFRwHADUcACMeADEhABuSOjklNQw9IzMUYY4ALR5cACscYnJqVS0DEzF+YVRAGylSSkUlRnV2U0FcAAceESkbek0rGyAAQSC/KwK3NNzIuJSsgpKFug2cCAy8BwAPIUTFsTQcAD6agoA2oaccgC6isqWYXAHFSOdYRa+dg7N5WGtGixgCdT6eB6dAgdjIhG4qBgMDA7k4jkcZkkAHdgABrYBgQj4YBISTQADmjhx+McAGE0rQzhQ5AArQhkPxeUzQQggD6M5lsjl2QhcCyAACIxpM5nwADRhSYAPjgxjyysAwEQzKZy/kZBVwBSiKKLLAATwsSHwIGA8B6gF4NwDle3AACoAeQAIq75XIIPAwFAIBBSKabABCVh2wABO1Go3wgA)),
+define the Collatz sequence:
 
 ```lean
 import Mathlib
@@ -71,12 +73,18 @@ def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
   return x
 ```
 
+then state the Collatz conjecture. 
+
 ```lean
 -- Source: https://en.wikipedia.org/wiki/Collatz_conjecture
 theorem collatz_conjecture :
   ∀ (x₀ : ℕ), x₀ > 0 -> ∃ (n : ℕ), collatz x₀ n = 1 := by
   admit -- 🚧 TODO, not proof yet! (💀💀💀)
 ```
+
+The proof is left as an exercise for the reader 😉 
+(we are not sure that the statement is true; actually we are not sure that it's even decidable!)
+
 
 ### 🎯 Objectives 
 
