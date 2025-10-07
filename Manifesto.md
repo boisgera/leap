@@ -10,9 +10,8 @@ Lean
 
 [Lean] is a pure functional programming language with a very powerful static 
 type system, designed primarily for software verification 
-(ensuring programs are correct), 
-formalization of Mathematics (for example [Fermat's theorem])
-and education ([teaching type theory and formal methods][courses]).
+(ensuring programs are correct) and
+formalization of Mathematics (for example [Fermat's theorem]).
 
 [Fermat's theorem]: https://lean-lang.org/use-cases/flt/
 [courses]: https://leanprover-community.github.io/teaching/courses.html
