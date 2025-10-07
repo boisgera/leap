@@ -56,6 +56,8 @@ to describe common mathematical statements and their proofs.
 Its logo is written L∃∀N for a reason! For example:
 
 ```lean
+import Mathlib
+
 def collatzStep (x : ℕ) : ℕ := Id.run do
   if x % 2 == 0 then
     return x / 2
