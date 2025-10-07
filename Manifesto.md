@@ -73,7 +73,7 @@ def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
   return x
 ```
 
-then state the Collatz conjecture. 
+then state the Collatz conjecture:
 
 ```lean
 -- Source: https://en.wikipedia.org/wiki/Collatz_conjecture
