@@ -6,7 +6,7 @@ Lean
 ... with a bit of Python
 --------------------------------------------------------------------------------
 
-✉️ [Sébastien Boisgérault](mailto://Sebastien.Boisgerault@minesparis.psl.eu)
+✉️ [Sébastien Boisgérault](mailto:Sebastien.Boisgerault@minesparis.psl.eu)
 
 [Lean] is a pure functional programming language with a very powerful static 
 type system, designed primarily for software verification 
