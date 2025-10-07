@@ -23,7 +23,7 @@ For example, I think that you have a decent chance of guessing what this Lean pr
 
 ```lean
 -- 📄 Main.lean
-def main (args : List String) := do
+def main (args : List String) : IO Unit := do
   let mut name := ""
   let mut icon := ""
   if args.length == 0 then
