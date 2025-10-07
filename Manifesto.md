@@ -36,7 +36,7 @@ def main (args : List String) : IO Unit := do
   IO.println s!"Hello {name}! {icon}"
 ```
 
-This program in action:
+This program in action in your terminal (you can also [try it in the Lean playground](https://live.lean-lang.org/#codez=CYUwZgBAtghglgOwgChgJwOYGcIC4IAycWALhAMolqIYCUeEAkgPIQCqCcZuAvBMAHsAUBAgAbEGSgBXMghhQQePgCIVI8ZOiyIcAMYCkvCGo1xI6bADoJCDCQAWEHnwAMERyAQbR8xcpMAdwE0MWB1UVEJMmDQ4EYDBBxjAG0VQB4NwFh9lQAaE3TAOH3c/MB4fZUAXR9NMjgIAB4AWiZmKzQYBGAIdwAmKv1DANiwhMMsFLhygEINEDEsECq/JWNLMdcpvsSAlUBeDcBpHYjmqwAHagQSMSQsSZUACVmxAQgAbyWAX0mX/oQ3w6EhADEIAAbjAxNB4EgUpVASCwRDEBBof8gaDwbBEWkCCBDOhBMUVKACQBZATSNoVIA):
 
 ```
 💻  lean --run Main.lean 
