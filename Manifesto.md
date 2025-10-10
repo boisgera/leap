@@ -6,13 +6,12 @@ Lean
 ... with a bit of Python
 --------------------------------------------------------------------------------
 
-✉️ [Sébastien Boisgérault](mailto://Sebastien.Boisgerault@minesparis.psl.eu)
+✉️ [Sébastien Boisgérault](mailto:Sebastien.Boisgerault@minesparis.psl.eu)
 
 [Lean] is a pure functional programming language with a very powerful static 
 type system, designed primarily for software verification 
-(ensuring programs are correct by construction), 
-formalization of Mathematics (for example [Fermat's theorem])
-and education ([teaching type theory and formal methods][courses]).
+(ensuring programs are correct) and
+formalization of Mathematics (for example [Fermat's theorem]).
 
 [Fermat's theorem]: https://lean-lang.org/use-cases/flt/
 [courses]: https://leanprover-community.github.io/teaching/courses.html
@@ -23,7 +22,7 @@ For example, I think that you have a decent chance of guessing what this Lean pr
 
 ```lean
 -- 📄 Main.lean
-def main (args : List String) := do
+def main (args : List String) : IO Unit := do
   let mut name := ""
   let mut icon := ""
   if args.length == 0 then
@@ -37,7 +36,7 @@ def main (args : List String) := do
   IO.println s!"Hello {name}! {icon}"
 ```
 
-This program in action:
+This program in action in your terminal (you can also [try it in the Lean playground](https://live.lean-lang.org/#codez=CYUwZgBAtghglgOwgChgJwOYGcIC4IAycWALhAMolqIYCUeEAkgPIQCqCcZuAvBMAHsAUBAgAbEGSgBXMghhQQePgCIVI8ZOiyIcAMYCkvCGo1xI6bADoJCDCQAWEHnwAMERyAQbR8xcpMAdwE0MWB1UVEJMmDQ4EYDBBxjAG0VQB4NwFh9lQAaE3TAOH3c/MB4fZUAXR9NMjgIAB4AWiZmKzQYBGAIdwAmKv1DANiwhMMsFLhygEINEDEsECq/JWNLMdcpvsSAlUBeDcBpHYjmqwAHagQSMSQsSZUACVmxAQgAbyWAX0mX/oQ3w6EhADEIAAbjAxNB4EgUpVASCwRDEBBof8gaDwbBEWkCCBDOhBMUVKACQBZATSNoVIA)):
 
 ```
 💻  lean --run Main.lean 
@@ -54,10 +53,14 @@ Not that hard right?
 
 However, Lean's dependent type system is also powerful enough 
 to describe common mathematical statements and their proofs. 
-Its logo is written L∃∀N for a reason! For example:
+Its logo is written L∃∀N for a reason! For example 
+([see it in the playground](https://live.lean-lang.org/#codez=JYWwDg9gTgLgBAWQIYwBYBtgCMBQOAmApgGZwDGE66KAXgMoyFhwAUAHnAFxyCohAJRdeXALxwAkvgB0UAK4A7OPgg44cYKQ4BSOACY4w0QAY4aQnJWq4UQjBlQFHAPS6LhdAGdCF1ddv24AMxwAFRwHADUcACMeADEhABuSOjklNQw9IzMUYY4ALR5cACscYnJqVS0DEzF+YVRAGylSSkUlRnV2U0FcAAceESkbek0rGyAAQSC/KwK3NNzIuJSsgpKFug2cCAy8BwAPIUTFsTQcAD6agoA2oaccgC6isqWYXAHFSOdYRa+dg7N5WGtGixgCdT6eB6dAgdjIhG4qBgMDA7k4jkcZkkAHdgABrYBgQj4YBISTQADmjhx+McAGE0rQzhQ5AArQhkPxeUzQQggD6M5lsjl2QhcCyAACIxpM5nwADRhSYAPjgxjyysAwEQzKZy/kZBVwBSiKKLLAATwsSHwIGA8B6gF4NwDle3AACoAeQAIq75XIIPAwFAIBBSKabABCVh2wABO1Go3wgA)),
+define the Collatz sequence:
 
 ```lean
-def collatz_step (x : ℕ) : ℕ := Id.run do
+import Mathlib
+
+def collatzStep (x : ℕ) : ℕ := Id.run do
   if x % 2 == 0 then
     return x / 2
   else
@@ -66,9 +69,11 @@ def collatz_step (x : ℕ) : ℕ := Id.run do
 def collatz (x₀ : ℕ) (n : ℕ) : ℕ := Id.run do
   let mut x <- x₀
   for _ in [0:n] do
-    x <- collatz_step x
+    x <- collatzStep x
   return x
 ```
+
+then state the Collatz conjecture:
 
 ```lean
 -- Source: https://en.wikipedia.org/wiki/Collatz_conjecture
@@ -76,6 +81,10 @@ theorem collatz_conjecture :
   ∀ (x₀ : ℕ), x₀ > 0 -> ∃ (n : ℕ), collatz x₀ n = 1 := by
   admit -- 🚧 TODO, not proof yet! (💀💀💀)
 ```
+
+The proof is left as an exercise for the reader 😉 
+(we are not sure that the statement is true; actually we are not sure that it's even decidable!)
+
 
 ### 🎯 Objectives 
 
@@ -88,9 +97,9 @@ In this course, you will
 
   - Explore some general/fundamental programming languages concepts 
     and study how Python and Lean implement them in their own way. 
-    For example: variables, 
-    (im)mutability, values vs objects, loops and recursion, 
-    partial function application, traits/interfaces, etc.  
+    For example: variables,(im)mutability, values vs objects, loops vs recursion, 
+    currying/partial function application, uniform function call syntax,
+    type classes vs object-oriented classes/interfaces, etc.  
   
 ### 🏆 Benefits
 
