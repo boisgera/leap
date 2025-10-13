@@ -9,9 +9,14 @@ See https://github.com/boisgera/toupie for more information.
 namespace Python
 
 def exec_output! (code : String) : IO String := do
+  let curl :=
+    if System.Platform.isWindows then
+      "curl.exe"
+    else
+      "curl"
   let out <- (IO.Process.output
     {
-      cmd := "curl",
+      cmd := curl,
       args := #[
         "-X", "POST", "http://127.0.0.1:8000",
         "-H", "Content-Type: plain/text",
