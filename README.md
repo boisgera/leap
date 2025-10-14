@@ -67,6 +67,7 @@ Getting Started
 [Visual Studio Code]: https://code.visualstudio.com/
 [Lean 4 extension]: https://marketplace.visualstudio.com/items?itemName=leanprover.lean4
 [uv]: https://docs.astral.sh/uv/
+[curl]: https://curl.se/
 [Fira Code]: https://fonts.google.com/specimen/Fira+Code
 [JetBrains Mono]: https://www.jetbrains.com/lp/mono/
 [coding ligatures]: https://betterwebtype.com/5-free-monospaced-fonts-with-coding-ligatures/
