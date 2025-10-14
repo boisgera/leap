@@ -6,14 +6,14 @@ Getting Started
   - Install [Visual Studio Code] and its [Lean 4 extension].
 
     You should now have a new `lake` command-line tool;
-    to test it, create a `hello-world` project:
+    to test it, create a `hello-world` project
 
     ```console
     $ lake new hello-world
     ```
 
     then into the newly created `hello-world` directory, 
-    compile your `hello-world` application:
+    compile your `hello-world` application
 
     ```console
     $ lake build
@@ -22,7 +22,7 @@ Getting Started
     Build completed successfully (8 jobs).
     ```
 
-    and run it:
+    and run it
 
     ```console
     $ lake exe hello-world
@@ -50,7 +50,7 @@ Getting Started
     ...
     ```
 
-    or on Windows do instead:
+    or on Windows do instead
 
     ```console
     $ curl.exe --help
