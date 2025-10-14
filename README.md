@@ -3,7 +3,7 @@
 Getting Started
 --------------------------------------------------------------------------------
 
-  - [Visual Studio Code] and its [Lean 4 extension].
+  - Install [Visual Studio Code] and its [Lean 4 extension].
 
     You should now have a new `lake` executable in your terminal.
     To test you installation so far, create a `hello-world` project:
