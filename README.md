@@ -65,7 +65,7 @@ Getting Started
 
 
 [Visual Studio Code]: https://code.visualstudio.com/
-[Lean 4 extension]
+[Lean 4 extension]: https://marketplace.visualstudio.com/items?itemName=leanprover.lean4
 [uv]: https://docs.astral.sh/uv/
 [Fira Code]: https://fonts.google.com/specimen/Fira+Code
 [JetBrains Mono]: https://www.jetbrains.com/lp/mono/
