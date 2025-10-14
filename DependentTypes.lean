@@ -4,12 +4,19 @@
 /-
 Dependent Types
 ================================================================================
+
+Types whose definition depends on values (not merely type).
+
+See also: <https://lean-lang.org/functional_programming_in_lean/Programming-with-Dependent-Types/#Functional-Programming-in-Lean--Programming-with-Dependent-Types>
 -/
+
+
 
 namespace Sandbox
 
+
 /-
-Generic stuff
+Generic stuff (not strictly dependent types)
 --------------------------------------------------------------------------------
 -/
 
@@ -26,9 +33,8 @@ def v1.singleton {α} (a : α) : List α := [a]
 Same generic version, expanded
 -/
 
-universe u v
 
-def v2.singleton {α : Type u} (a : α) : List α := [a]
+def v2.singleton.{u} {α : Type u} (a : α) : List α := [a]
 
 /-
 Generic version without the implicit argument (syntaxic sugar):
@@ -43,12 +49,68 @@ def v3.singleton (α : Type u) (a : α) : List α := [a]
 Generic functions are not a special case! They work because Lean supports:
   - implicit arguments (optional actually but nice to have)
   - types are first-class values (can be passed as parameters)
-  - dependent types: the type of the 2nd argument depends on the value of the first!
+  - dependent types: the type of the 2nd argument depends
+    on the value of the first (but this value is still a type)
 -/
 
 
+
 /-
-Types that depend on values (known at runtime)
+Small but enlightening dependent type example
+--------------------------------------------------------------------------------
+-/
+
+def answer (english : Bool := False) : if english then String else Nat :=
+  match english with
+  | false => (42 : Nat)
+  | true => "forty-two"
+
+#eval answer
+-- 42
+
+#eval answer (english := True)
+-- "forty-two"
+
+/-
+This slight variant is actually interesting.
+-/
+def answer' (english : Bool := False) : if english then String else Nat :=
+  if h : english then
+    -- english : Bool
+    -- h : english = true
+    -- ⊢ if english = true then String else Nat
+    have : String = (if (english = true) then String else Nat) := by
+      -- elementary proof
+      rw [h]
+      -- at this stage, a rfl would work
+      rw [ite]
+      rw [instDecidableEqBool]
+      rw [Bool.decEq]
+    cast this "forty-two"
+  else
+    -- english : Bool
+    -- h : ¬english = true
+    -- ⊢ if english = true then String else Nat
+    have : Nat = (if english = true then String else Nat) := by
+      -- simp only [h] would work instead of this lemma
+      have l : english = false :=
+        match english with
+        | false => Eq.refl false
+        | true => let absurd := h (Eq.refl true); absurd.elim
+      clear h
+      rw [l]
+      rw [ite, instDecidableEqBool, Bool.decEq.eq_def]
+    cast this (42 : Nat)
+
+/-
+Lists and Vectors
+--------------------------------------------------------------------------------
+-/
+
+
+
+/-
+Types that depend on values
 --------------------------------------------------------------------------------
 -/
 
@@ -96,6 +158,18 @@ def Vec.zip {α β} {n : Nat} (xs : Vec α n) (ys : Vec β n) : Vec (α × β) n
 
 /-
 TODO: matrix & matrix product (see Mathlib)
+-/
+
+/-
+Type-safe Formatter
+--------------------------------------------------------------------------------
+-/
+
+/-
+Typed Queries
+--------------------------------------------------------------------------------
+
+See <https://lean-lang.org/functional_programming_in_lean/Programming-with-Dependent-Types/Worked-Example___-Typed-Queries/#Functional-Programming-in-Lean--Programming-with-Dependent-Types--Worked-Example___-Typed-Queries>
 -/
 
 /-
