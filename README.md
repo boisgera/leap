@@ -50,7 +50,7 @@ Getting Started
     ...
     ```
 
-    On Windows do instead:
+    or on Windows do instead:
 
     ```console
     $ curl.exe --help
