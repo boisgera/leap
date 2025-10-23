@@ -1,30 +1,13 @@
 
 /-
-Do a function that (type-)*safely* associate to a format string a concatenation
-function?
+`format` associates to a string with "holes" a concatenation function:
 
-E.g.
-  - "Hello!" -> "Hello!"
-  - "Hello ·!" -> ("Hello " ++ ·)
-  - "(·, ·)" -> ("(" ++ · ++ ", " ++ · ")")
+  - format "Hello!" = "Hello!"
+  - format "Hello ·!" = ("Hello " ++ ·)
+  - format "(·, ·)" = ("(" ++ · ++ ", " ++ · ")")
 
-TODO: escape
-
--/
-
-
-/-
-TODO:
-  - parse string into format
-  - fun that maps format into appropriate function type
-  - implementation
--/
-
-/- Random idea : do everything in one step ? Mmm hard wrt to the
-type-dependent return type afaict -/
-
-/-
-Note: the parser is super easy right, it's a splitOn !!!
+It is type-safe, thanks to dependent types: the arity of `format s` is the
+number of holes in the format strings.
 -/
 
 namespace v0
@@ -199,7 +182,13 @@ def _root_.String.splitOnDot (string : String) : List String :=
 def format (formatString : String) :=
   formatter (formatString.splitOnDot)
 
-#eval format "Hello ·! ·" "world" "👋"
+#eval format "Hello!"
+-- "Hello!"
+
+#eval format "Hello ·!" "world"
 -- "Hello world! 👋"
+
+#eval (format "(·, ·)") "1" "2"
+-- "(1, 2)"
 
 end v3
