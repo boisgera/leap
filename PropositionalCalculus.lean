@@ -216,8 +216,6 @@ theorem de_morgan_2' {p q : Prop} : ¬ (p ∨ q) -> ¬ p ∧ ¬ q := by
     apply Or.inr
     exact hq
 
-
-
 theorem de_morgan_1 {p q : Prop} : ¬ p ∧ ¬ q -> ¬ (p ∨ q)  := by
   intro not_p_and_not_q
   have not_p := not_p_and_not_q.1
@@ -244,8 +242,6 @@ variable {p q r s: Prop}
 
 theorem modus_ponens (hp : p) (hpq : p -> q) : q :=
   hpq hp
-
-
 
 theorem modus_tollens (hpq : p -> q) (hq : ¬q) : ¬p :=
   fun hp => hq (hpq hp)
