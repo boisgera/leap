@@ -1,3 +1,4 @@
+import Mathlib
 
 #print Int
 -- inductive Int : Type
@@ -25,8 +26,45 @@ info: Integer.ofNat 1
 #guard_msgs in
 #eval (1 : Integer)
 
--- instance {m n : Integer} : Decidable (m = n) :=
---   sorry -- make some pattern matching and use noConfusion somehow?
+
+-- Reinvestigate, code golf, etc. Then have a look at DecidableEq?
+-- and have a look at the actual implementation of this stuff for Int
+instance {m n : Integer} : Decidable (m = n) :=
+  open Integer in
+  match m, n with
+  | ofNat m, ofNat n =>
+      match decEq m n with
+      | isFalse h =>
+          have h' : ¬Integer.ofNat m = Integer.ofNat n := by
+            intro h''
+            have nc := Integer.noConfusion h'' id
+            exact h nc
+          isFalse h'
+      | isTrue h => isTrue (congrArg Integer.ofNat h)
+  | ofNat m, negSucc n => isFalse Integer.noConfusion
+  | negSucc m, ofNat n => isFalse Integer.noConfusion
+  | negSucc m, negSucc n =>
+      match decEq m n with
+      | isFalse h =>
+          have h' : ¬Integer.negSucc m = Integer.negSucc n := by
+            intro h''
+            have nc := Integer.noConfusion h'' id
+            exact h nc
+          isFalse h'
+      | isTrue h => isTrue (congrArg Integer.negSucc h)
+
+-- @[extern "lean_int_dec_eq"]
+-- protected def decEq (a b : @& Int) : Decidable (a = b) :=
+--   match a, b with
+--   | ofNat a, ofNat b => match decEq a b with
+--     | isTrue h  => isTrue  <| h ▸ rfl
+--     | isFalse h => isFalse <| fun h' => Int.noConfusion h' (fun h' => absurd h' h)
+--   | ofNat _, -[_ +1] => isFalse <| fun h => Int.noConfusion h
+--   | -[_ +1], ofNat _ => isFalse <| fun h => Int.noConfusion h
+--   | -[a +1], -[b +1] => match decEq a b with
+--     | isTrue h  => isTrue  <| h ▸ rfl
+--     | isFalse h => isFalse <| fun h' => Int.noConfusion h' (fun h' => absurd h' h)
+
 
 
 def Integer.toString : Integer -> String

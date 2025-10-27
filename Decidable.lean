@@ -82,3 +82,25 @@ instance (n : Nat) : Decidable (TheAnswerIs n) :=
   decidable_of_decidable_of_iff theAnswerIs_iff_eq_42.symm
 
 end Golf
+
+--
+
+
+#eval if 0 = 1 then IO.println "equal" else IO.println "different"
+
+#eval decide (0 = 1) -- false
+
+def d : Decidable (0 = 1) := inferInstance
+
+-- How to get the proof out of d?
+
+theorem zero_neq_one : ¬(0 = 1) := by decide -- wtf!?! Magic!
+-- Ah, I see. One should distinguish the decide tactic and the decide function.
+
+#eval decide (0 = 1)
+-- false
+
+def fermat : Prop :=
+  ∀ (x y z n : Nat), 0 < x -> 0 < y -> 0 < z -> 2 < n -> x^n + y^n != z^n
+
+#eval if fermat then IO.println "true" else IO.println "false"

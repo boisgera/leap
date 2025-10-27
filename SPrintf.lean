@@ -191,4 +191,4 @@ def format (formatString : String) :=
 #eval (format "(·, ·)") "1" "2"
 -- "(1, 2)"
 
-end v3
+#check format "(·, ·)" -- Formatter "(·, ·)".splitOnDot.length
