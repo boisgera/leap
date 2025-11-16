@@ -34,3 +34,48 @@ SeqLim a ℓ₁ -> SeqLim b ℓ₂ -> SeqLim (a + b) (ℓ₁ + ℓ₂) := by
     simp only [add_halves] at h₄
     exact h₄
   exact lt_of_le_of_lt h₃ h₅
+
+#check abs_le
+
+example: ∀ {a : ℕ -> ℝ}, ∀ {ℓ : ℝ},
+SeqLim a ℓ -> ∃ N, ∀ n ≥ N, a n ≥ ℓ - 1:= by
+  intro a ℓ seqlim_a_ℓ
+  rw [SeqLim] at seqlim_a_ℓ
+  specialize seqlim_a_ℓ 1 (show 1 > 0 from by linarith)
+  have ⟨N, hN⟩ := seqlim_a_ℓ
+  clear seqlim_a_ℓ
+  use N
+  intro n n_ge_N
+  specialize hN n n_ge_N
+  have hN' := le_of_lt hN; clear hN
+  have := (abs_le.mp hN').left
+  linarith
+
+
+theorem squeeze (a b c : ℕ -> ℝ) (ℓ : ℝ) :
+a <= b -> b <= c -> SeqLim a ℓ -> SeqLim c ℓ -> SeqLim b ℓ := by
+  intro hab hbc seqlim_a_ℓ seqlim_b_ℓ
+  rw [SeqLim] at *
+  intro ε ε_pos
+  specialize seqlim_a_ℓ ε ε_pos
+  specialize seqlim_b_ℓ ε ε_pos
+  have ⟨Na, ha⟩ := seqlim_a_ℓ
+  have ⟨Nb, hb⟩ := seqlim_b_ℓ
+  clear seqlim_a_ℓ seqlim_b_ℓ
+  let N := max Na Nb
+  have ma :  Na <= N := by grind
+  have mb : Nb <= N := by grind
+  use N
+  intro n n_ge_N
+  specialize ha n (show n >= Na from le_trans ma n_ge_N)
+  specialize hb n (show n >= Nb from le_trans mb n_ge_N)
+  rw [abs_lt] at *
+  have ha' := ha.left; clear ha
+  have hb' := hb.right; clear hb
+  have ha'' : ℓ - ε < a n := by linarith
+  have hb'' : c n < ℓ + ε := by linarith
+  specialize hab n
+  specialize hbc n
+  constructor
+  . linarith
+  . linarith
