@@ -47,6 +47,7 @@ SeqLim a ℓ₁ -> SeqLim a ℓ₂ -> ℓ₁ = ℓ₂ := by
 #check abs_sub_abs_le_abs_sub
 #check abs_neg
 
+
 theorem eventually_greater_than_half_the_limit (a : ℕ -> ℝ) (ℓ : ℝ):
   SeqLim a ℓ -> ℓ ≠ 0 ->
   ∃ N : ℕ, ∀ n : ℕ, n >= N -> |a n| >= |ℓ| / 2 := by
@@ -71,3 +72,18 @@ theorem eventually_greater_than_half_the_limit (a : ℕ -> ℝ) (ℓ : ℝ):
     lt_of_le_of_lt this hN'
   have : |ℓ| - |a n| <= |ℓ| / 2 := le_of_lt this
   linarith
+
+theorem lim_abs (a b : ℕ -> ℝ) (ℓ : ℝ) :
+  SeqLim a ℓ -> (∀ n, b n = |a n|) ->
+  SeqLim b |ℓ| := by
+  repeat rw [SeqLim] at *
+  intro seq_lim_a_ℓ b_eq_abs_a ε ε_pos
+  specialize seq_lim_a_ℓ ε ε_pos
+  have ⟨N, hN⟩ := seq_lim_a_ℓ; clear seq_lim_a_ℓ
+  use N
+  intro n n_ge_N
+  specialize hN n n_ge_N
+  specialize b_eq_abs_a n
+  rw [b_eq_abs_a]
+  apply lt_of_le_of_lt _ hN
+  exact abs_abs_sub_abs_le_abs_sub (a n) ℓ
