@@ -1,4 +1,6 @@
 import Mathlib
+import Mathlib.Algebra.Field.Basic
+import Mathlib.Algebra.Order.Field.Basic
 
 def SeqLim (a : ℕ -> ℝ) (ℓ : ℝ) : Prop := ∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - ℓ| < ε
 
@@ -87,3 +89,54 @@ theorem lim_abs (a b : ℕ -> ℝ) (ℓ : ℝ) :
   rw [b_eq_abs_a]
   apply lt_of_le_of_lt _ hN
   exact abs_abs_sub_abs_le_abs_sub (a n) ℓ
+
+#check sq_pos_iff
+
+
+-- Note: this result depends on `eventually_greater_than_half_the_limit`.
+-- Note: given how / is defined, implictly we have defined
+--       b n to be zero when a n = 0.
+theorem lim_inv (a b : ℕ -> ℝ) (ℓ : ℝ) :
+  SeqLim a ℓ -> ℓ ≠ 0 -> (∀ n, b n = 1 / (a n)) ->
+  SeqLim b (1 / ℓ) := by
+  repeat rw [SeqLim]
+  intro seq_lim_a_ℓ ℓ_nonzero b_eq_inv_a ε ε_pos
+  -- we need to make sure that ε' is small enough to ensure that a n != 0
+  let ε' := min (ε * ℓ ^ 2 / 2) (|ℓ| / 2)
+  have ineq₁ : ε' ≤ ε * ℓ ^ 2 / 2 := by grind
+  have ineq₂ : ε' ≤ |ℓ| / 2 := by grind
+  have sq_ℓ_pos: ℓ ^ 2 > 0 := sq_pos_iff.mpr ℓ_nonzero
+  have ε'_pos : ε' > 0 := by
+    simp only [ε']
+    have : ε * ℓ ^ 2 > 0 := mul_pos ε_pos sq_ℓ_pos
+    have : |ℓ| > 0 := abs_pos.mpr ℓ_nonzero
+    apply lt_min
+    . linarith
+    . linarith
+  specialize seq_lim_a_ℓ ε' ε'_pos
+  have ⟨N, hN⟩ := seq_lim_a_ℓ; clear seq_lim_a_ℓ
+  use N
+  intro n n_ge_N
+  rw [b_eq_inv_a]
+  specialize hN n n_ge_N
+  have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 := by admit
+  have a_n_ne_zero : a n != 0 := by admit
+  have lemma₁ : (1 / a n - 1 / ℓ) = (ℓ - a n) / ((a n) * ℓ) := by
+    admit
+  rw [lemma₁]
+  have lemma₂ : |(ℓ - a n) / ((a n) * ℓ)| <= |ℓ - a n| / (ℓ ^ 2 / 2) := by
+    admit
+  have lemma₃ : |ℓ - a n| / (ℓ ^ 2 / 2) < ε := by
+    apply (div_lt_iff₀ (
+      show ℓ ^ 2 / 2 > 0 by
+        have : ℓ ^ 2 > 0 := by
+          exact sq_pos_iff.mpr ℓ_nonzero
+        linarith
+    )).mpr
+    rw [<- abs_neg]
+    ring_nf
+    rw [add_comm, <- sub_eq_add_neg]
+    have : ε' <= ε * ℓ ^ 2 / 2 := by admit
+    apply lt_of_lt_of_le hN
+    linarith
+  exact lt_of_le_of_lt lemma₂ lemma₃
