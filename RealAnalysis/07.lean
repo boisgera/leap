@@ -102,24 +102,26 @@ theorem lim_inv (a b : ℕ -> ℝ) (ℓ : ℝ) :
   repeat rw [SeqLim]
   intro seq_lim_a_ℓ ℓ_nonzero b_eq_inv_a ε ε_pos
   -- we need to make sure that ε' is small enough to ensure that a n != 0
-  let ε' := min (ε * ℓ ^ 2 / 2) (|ℓ| / 2)
-  have ineq₁ : ε' ≤ ε * ℓ ^ 2 / 2 := by grind
-  have ineq₂ : ε' ≤ |ℓ| / 2 := by grind
+  -- nooooo ! If we want to use eventually_greater_than_half_the_limit,
+  -- we'll drop the min and play with max on n instead.
+  let ε' := ε * ℓ ^ 2 / 2
   have sq_ℓ_pos: ℓ ^ 2 > 0 := sq_pos_iff.mpr ℓ_nonzero
   have ε'_pos : ε' > 0 := by
     simp only [ε']
     have : ε * ℓ ^ 2 > 0 := mul_pos ε_pos sq_ℓ_pos
-    have : |ℓ| > 0 := abs_pos.mpr ℓ_nonzero
-    apply lt_min
-    . linarith
-    . linarith
+    linarith
+
+  have ⟨N₁, hN₁⟩ := eventually_greater_than_half_the_limit a ℓ seq_lim_a_ℓ ℓ_nonzero
   specialize seq_lim_a_ℓ ε' ε'_pos
-  have ⟨N, hN⟩ := seq_lim_a_ℓ; clear seq_lim_a_ℓ
+  have ⟨N₂, hN₂⟩ := seq_lim_a_ℓ; clear seq_lim_a_ℓ
+  let N := max N₁ N₂
   use N
   intro n n_ge_N
   rw [b_eq_inv_a]
-  specialize hN n n_ge_N
-  have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 := by admit
+  specialize hN n n_ge_N -- index 2
+  have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 := by
+
+    admit
   have a_n_ne_zero : a n != 0 := by admit
   have lemma₁ : (1 / a n - 1 / ℓ) = (ℓ - a n) / ((a n) * ℓ) := by
     admit
