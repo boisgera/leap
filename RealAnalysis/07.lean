@@ -118,13 +118,16 @@ theorem lim_inv (a b : ℕ -> ℝ) (ℓ : ℝ) :
   use N
   intro n n_ge_N
   rw [b_eq_inv_a]
-  specialize hN n n_ge_N -- index 2
-  have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 := by
-
-    admit
-  have a_n_ne_zero : a n != 0 := by admit
+  specialize hN₂ n (show n ≥ N₂ from by grind)
+  have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 :=
+    hN₁ n (show n ≥ N₁ from by grind)
+  have a_n_ne_zero : a n ≠ 0 := by
+    have : |ℓ| > 0 := by simp_all
+    have : |ℓ| / 2 > 0 := by linarith
+    have abs_a_n_ne_zero : |a n| > 0 := by linarith
+    simp_all
   have lemma₁ : (1 / a n - 1 / ℓ) = (ℓ - a n) / ((a n) * ℓ) := by
-    admit
+    field_simp
   rw [lemma₁]
   have lemma₂ : |(ℓ - a n) / ((a n) * ℓ)| <= |ℓ - a n| / (ℓ ^ 2 / 2) := by
     admit
