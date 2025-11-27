@@ -121,16 +121,27 @@ theorem lim_inv (a b : ℕ -> ℝ) (ℓ : ℝ) :
   specialize hN₂ n (show n ≥ N₂ from by grind)
   have a_n_ge_half_abs_ell : |a n| >= |ℓ| / 2 :=
     hN₁ n (show n ≥ N₁ from by grind)
+  have abs_ell_pos : |ℓ| > 0 := by simp_all
   have a_n_ne_zero : a n ≠ 0 := by
-    have : |ℓ| > 0 := by simp_all
     have : |ℓ| / 2 > 0 := by linarith
     have abs_a_n_ne_zero : |a n| > 0 := by linarith
     simp_all
   have lemma₁ : (1 / a n - 1 / ℓ) = (ℓ - a n) / ((a n) * ℓ) := by
     field_simp
   rw [lemma₁]
-  have lemma₂ : |(ℓ - a n) / ((a n) * ℓ)| <= |ℓ - a n| / (ℓ ^ 2 / 2) := by
-    admit
+  have lemma₂ : |(ℓ - a n) / (a n * ℓ)| <= |ℓ - a n| / (ℓ ^ 2 / 2) := by
+    calc |(ℓ - a n) / (a n * ℓ)|
+      _ = |ℓ - a n| / |a n * ℓ| := by simp only [abs_div]
+      _ = |ℓ - a n| / (|a n| * |ℓ|) := by simp only [abs_mul]
+      _ = |ℓ - a n| / |ℓ| / |a n| := by field_simp
+      _ ≤ |ℓ - a n| / |ℓ| / (|ℓ| / 2) := by
+        apply div_le_div_of_nonneg_left
+          (show 0 <= |ℓ - a n| / |ℓ| from by
+            apply div_nonneg; apply abs_nonneg; apply abs_nonneg)
+          (show 0 < |ℓ| / 2 from by linarith)
+          (show |ℓ| / 2 <= |a n| from a_n_ge_half_abs_ell)
+      _ = |ℓ - a n| / (|ℓ| ^ 2 / 2) := by field_simp
+      _ = |ℓ - a n| / (ℓ ^ 2 / 2) := by simp only [sq_abs]
   have lemma₃ : |ℓ - a n| / (ℓ ^ 2 / 2) < ε := by
     apply (div_lt_iff₀ (
       show ℓ ^ 2 / 2 > 0 by
@@ -141,7 +152,7 @@ theorem lim_inv (a b : ℕ -> ℝ) (ℓ : ℝ) :
     rw [<- abs_neg]
     ring_nf
     rw [add_comm, <- sub_eq_add_neg]
-    have : ε' <= ε * ℓ ^ 2 / 2 := by admit
-    apply lt_of_lt_of_le hN
-    linarith
+    simp [ε'] at hN₂
+    field_simp at hN₂ ⊢
+    exact hN₂
   exact lt_of_le_of_lt lemma₂ lemma₃
