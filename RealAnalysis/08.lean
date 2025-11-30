@@ -13,8 +13,8 @@ example : ∀ n : ℕ, n < 2 ^ n := by
   induction n with
   | zero => norm_num
   | succ n ih =>
-      rw [pow_add, pow_one]
-      linarith
+    rw [pow_add, pow_one]
+    linarith
 
 example : ∀ n : ℕ, n < 2 ^ n := by
   intro n
