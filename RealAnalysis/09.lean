@@ -71,7 +71,7 @@ lemma Finset.disjoint_range_singleton (n : ℕ) : Disjoint (range n) {n} := by
     linarith
 
 example : ∀ (z : ℂ), z ≠ 1 -> ∀ (n : ℕ),
-  ∑ i ∈ range n, z ^ i = (1 - z ^ n) / (1 - z) := by
+∑ i ∈ range n, z ^ i = (1 - z ^ n) / (1 - z) := by
   intro z z_ne_1 n
   induction n with
   | zero =>
@@ -85,11 +85,38 @@ example : ∀ (z : ℂ), z ≠ 1 -> ∀ (n : ℕ),
     field_simp [show 1 - z ≠ 0 from by grind]
     ring
 
+lemma sum_range_succ (a : ℕ → ℝ) (n : ℕ) :
+∑ k ∈ range (n + 1), a k = (∑ k ∈ range n, a k) + a n := by
+  rw [range_add_one]
+  rw [<- union_singleton]
+  rw [sum_union (h := disjoint_range_singleton n)]
+  rw [sum_singleton]
+
 
 example (a : ℕ → ℝ) (N : ℕ) : ∀ n < N, |a n| ≤ ∑ k ∈ range N, |a k| := by
-  admit -- TODO!
+  intro n n_le_N
+  induction N with
+  | zero =>
+    simp at n_le_N
+  | succ N ih =>
+    rw [sum_range_succ]
+    by_cases h : n < N
+    . specialize ih h
+      have ineg : ∑ k ∈ range N, |a k| ≤ ∑ k ∈ range N, |a k| + |a N| := by
+        apply (le_add_iff_nonneg_right _).mpr
+        apply abs_nonneg
+      exact le_trans ih ineg
+    . have aux₁ : N ≤ n := by grind
+      have aux₂ : n ≤ N := by grind
+      have n_eq_N : n = N := by grind
+      rw [n_eq_N]
+      apply (le_add_iff_nonneg_left _).mpr
+      apply sum_nonneg
+      intro i i_in_range_N
+      simp only [mem_range] at i_in_range_N
+      apply abs_nonneg
 
--- An inequality used to show that analytic function is differentiable?
+-- An inequality used to show that analytic function is differentiable:
 
 lemma ineq (z h : ℂ) (h_neq_zero : h ≠ 0) (n : ℕ) (n_ge_two : n ≥ 2) :
 ‖((z + h) ^ n - z ^n) / h - n * z ^ (n - 1)‖ ≤
