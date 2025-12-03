@@ -116,6 +116,53 @@ example (a : ℕ → ℝ) (N : ℕ) : ∀ n < N, |a n| ≤ ∑ k ∈ range N, |a
       simp only [mem_range] at i_in_range_N
       apply abs_nonneg
 
+def SeqLim (a : ℕ -> ℝ) (ℓ : ℝ) : Prop := ∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - ℓ| < ε
+
+def converges (a : ℕ → ℝ) := ∃ ℓ, SeqLim a ℓ
+
+theorem every_converging_sequence_is_bounded
+(a : ℕ → ℝ) (converges_a : converges a) :
+∃ M, ∀ n, |a n| ≤ M := by
+  have ⟨ℓ, h⟩ := converges_a
+  clear converges_a
+  specialize h 1 (show 1 > 0 from by norm_num)
+  have ⟨N, h'⟩ := h
+  clear h
+  have aux (N : ℕ) : ∃ b, ∀ n ∈ range N, |a n| ≤ b := by
+    by_cases N_zero? : N = 0
+    . simp
+      use 1
+      intro n n_lt_N
+      simp [N_zero?] at n_lt_N
+    . let abs_vals : Finset ℝ := range N |>.image fun n => |a n|
+      have nonempty : abs_vals.Nonempty := by
+        sorry -- 🚧 TODO
+      let b := abs_vals.max' nonempty
+      use b
+      simp [b, abs_vals]
+      sorry -- 🚧 TODO
+  have h'' : ∀ n ≥ N, |a n| <= |ℓ| + 1 := by
+    intro n n_ge_N
+    specialize h' n n_ge_N
+    calc |a n|
+      _ = |ℓ + (a n - ℓ)| := by ring_nf
+      _ ≤ |ℓ| + |a n - ℓ| := by apply abs_add_le
+      _ ≤ |ℓ| + 1 := by linarith
+  have ⟨b, hb⟩ := aux N; clear aux
+  let M := max b (|ℓ| + 1)
+  use M
+  intro n
+  by_cases n_lt_N? : n < N
+  . simp at n_lt_N?
+    simp [mem_range] at hb
+    specialize hb n n_lt_N?
+    have aux : b ≤ M := by grind
+    linarith
+  . simp at n_lt_N?
+    specialize h'' n n_lt_N?
+    have aux : |ℓ| + 1 <= M := by grind
+    linarith
+
 -- An inequality used to show that analytic function is differentiable:
 
 lemma ineq (z h : ℂ) (h_neq_zero : h ≠ 0) (n : ℕ) (n_ge_two : n ≥ 2) :
