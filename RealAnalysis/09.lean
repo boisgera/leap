@@ -136,7 +136,8 @@ theorem every_converging_sequence_is_bounded
       simp [N_zero?] at n_lt_N
     . let abs_vals : Finset ℝ := range N |>.image fun n => |a n|
       have nonempty : abs_vals.Nonempty := by
-        sorry -- 🚧 TODO
+        apply Finset.image_nonempty.mpr
+        grind
       let b := abs_vals.max' nonempty
       use b
       simp [b, abs_vals]
