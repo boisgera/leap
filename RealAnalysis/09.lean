@@ -171,4 +171,21 @@ theorem every_converging_sequence_is_bounded
 theorem prod_of_convergent_sequences
 (a b : ℕ → ℝ) (ℓ ℓ' : ℝ)
 (seq_lim_a_ℓ : SeqLim a ℓ) (seq_lim_b_ℓ' : SeqLim b ℓ') :
-SeqLim (fun n => a n * b n) (ℓ * ℓ') := by admit
+SeqLim (fun n => a n * b n) (ℓ * ℓ') := by
+  rw [SeqLim] at *
+  have aux :
+  ∃ (K L : ℝ), ∀ (n : ℕ),
+  |a n * b n - ℓ * ℓ'| ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by
+    let K := |ℓ'|
+    let ⟨L, hL⟩ := every_converging_sequence_is_bounded a ⟨ℓ, seq_lim_a_ℓ⟩
+    use K, L
+    intro n
+    specialize hL n
+    calc |a n * b n - ℓ * ℓ'|
+      _ = |(a n - ℓ) * ℓ' + a n * (b n - ℓ')| := by ring_nf
+      _ ≤ |(a n - ℓ) * ℓ'| + |a n * (b n - ℓ')| := by apply abs_add_le
+      _ ≤ |a n - ℓ| * |ℓ'| + |a n| * |b n - ℓ'| := by admit
+      _ ≤ |ℓ'| * |a n - ℓ| + |a n| * |b n - ℓ'| := by admit
+      _ ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by admit
+  intro ε ε_pos
+  admit
