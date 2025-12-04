@@ -130,20 +130,20 @@ theorem every_converging_sequence_is_bounded
   clear h
   have aux (N : ℕ) : ∃ b, ∀ n ∈ range N, |a n| ≤ b := by
     by_cases N_zero? : N = 0
-    . simp
+    . simp_rw [mem_range]
       use 1
       intro n n_lt_N
-      simp [N_zero?] at n_lt_N
+      simp only [N_zero?, not_lt_zero'] at n_lt_N
     . let abs_vals : Finset ℝ := range N |>.image fun n => |a n|
       have nonempty : abs_vals.Nonempty := by
         apply Finset.image_nonempty.mpr
-        grind
+        grind only [= nonempty_def, = nonempty_range_iff]
       let b := abs_vals.max' nonempty
       use b
-      simp [b, abs_vals]
+      simp only [b, abs_vals]
       intro n n_lt_N
       apply Finset.le_max'
-      grind
+      grind only [= nonempty_def, = mem_range, = mem_image]
   have h'' : ∀ n ≥ N, |a n| <= |ℓ| + 1 := by
     intro n n_ge_N
     specialize h' n n_ge_N
@@ -159,11 +159,13 @@ theorem every_converging_sequence_is_bounded
   . simp at n_lt_N?
     simp [mem_range] at hb
     specialize hb n n_lt_N?
-    have aux : b ≤ M := by grind
+    have aux : b ≤ M := by
+      grind only [= max_def, cases Or]
     linarith
   . simp at n_lt_N?
     specialize h'' n n_lt_N?
-    have aux : |ℓ| + 1 <= M := by grind
+    have aux : |ℓ| + 1 <= M := by
+      grind only [= mem_range, = max_def, cases Or]
     linarith
 
 -- An inequality used to show that analytic function is differentiable:
