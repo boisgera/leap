@@ -141,7 +141,9 @@ theorem every_converging_sequence_is_bounded
       let b := abs_vals.max' nonempty
       use b
       simp [b, abs_vals]
-      sorry -- 🚧 TODO
+      intro n n_lt_N
+      apply Finset.le_max'
+      grind
   have h'' : ∀ n ≥ N, |a n| <= |ℓ| + 1 := by
     intro n n_ge_N
     specialize h' n n_ge_N
