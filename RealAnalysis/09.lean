@@ -168,6 +168,8 @@ theorem every_converging_sequence_is_bounded
       grind only [= mem_range, = max_def, cases Or]
     linarith
 
+#check abs_mul
+
 theorem prod_of_convergent_sequences
 (a b : ℕ → ℝ) (ℓ ℓ' : ℝ)
 (seq_lim_a_ℓ : SeqLim a ℓ) (seq_lim_b_ℓ' : SeqLim b ℓ') :
@@ -184,7 +186,7 @@ SeqLim (fun n => a n * b n) (ℓ * ℓ') := by
     calc |a n * b n - ℓ * ℓ'|
       _ = |(a n - ℓ) * ℓ' + a n * (b n - ℓ')| := by ring_nf
       _ ≤ |(a n - ℓ) * ℓ'| + |a n * (b n - ℓ')| := by apply abs_add_le
-      _ ≤ |a n - ℓ| * |ℓ'| + |a n| * |b n - ℓ'| := by admit
+      _ ≤ |a n - ℓ| * |ℓ'| + |a n| * |b n - ℓ'| := by simp [abs_mul]
       _ ≤ |ℓ'| * |a n - ℓ| + |a n| * |b n - ℓ'| := by admit
       _ ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by admit
   intro ε ε_pos
