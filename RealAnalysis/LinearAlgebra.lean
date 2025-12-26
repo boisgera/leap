@@ -82,3 +82,34 @@ def f_lin_cont''' : (Fin 2 → ℝ) →L[ℝ] (Fin 3 → ℝ) :=
     map_smul' := by intro m x ; simp ; ring
     } : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ)
   ) |>.toContinuousLinearMap
+
+#check HasFDerivAt.comp
+-- HasFDerivAt.comp.{u_1, u_2, u_3, u_4} {𝕜 : Type u_1}
+-- [NontriviallyNormedField 𝕜] {E : Type u_2} [NormedAddCommGroup E]
+-- [NormedSpace 𝕜 E] {F : Type u_3} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- {G : Type u_4} [NormedAddCommGroup G] [NormedSpace 𝕜 G]
+-- {f : E → F} {f' : E →L[𝕜] F} (x : E) {g : F → G} {g' : F →L[𝕜] G}
+-- (hg : HasFDerivAt g g' (f x)) (hf : HasFDerivAt f f' x) :
+-- HasFDerivAt (g ∘ f) (g'.comp f') x
+
+#check HasFDerivWithinAt
+-- HasFDerivWithinAt.{u_1, u_2, u_3} {𝕜 : Type u_1} [NontriviallyNormedField 𝕜]
+-- {E : Type u_2} [AddCommGroup E] [Module 𝕜 E] [TopologicalSpace E]
+-- {F : Type u_3} [AddCommGroup F] [Module 𝕜 F] [TopologicalSpace F]
+-- (f : E → F) (f' : E →L[𝕜] F) (s : Set E) (x : E) : Prop
+
+#check HasFDerivWithinAt.comp
+-- HasFDerivWithinAt.comp.{u_1, u_2, u_3, u_4} {𝕜 : Type u_1}
+-- [NontriviallyNormedField 𝕜] {E : Type u_2} [NormedAddCommGroup E]
+-- [NormedSpace 𝕜 E] {F : Type u_3} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- {G : Type u_4} [NormedAddCommGroup G] [NormedSpace 𝕜 G]
+-- {f : E → F} {f' : E →L[𝕜] F} (x : E) {s : Set E}
+-- {g : F → G} {g' : F →L[𝕜] G} {t : Set F}
+-- (hg : HasFDerivWithinAt g g' t (f x)) (hf : HasFDerivWithinAt f f' s x)
+-- (hst : Set.MapsTo f s t) :
+-- HasFDerivWithinAt (g ∘ f) (g'.comp f') s x
+
+#print Set.MapsTo
+-- def Set.MapsTo.{u, v} :
+-- {α : Type u} → {β : Type v} → (α → β) → Set α → Set β → Prop :=
+-- fun {α} {β} f s t => ∀ ⦃x : α⦄, x ∈ s → f x ∈ t
