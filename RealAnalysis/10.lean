@@ -57,4 +57,26 @@ theorem subindex_growth
 theorem sub_seq_lim
     (a b : ℕ → ℝ) (ss : sub_seq a b) (ℓ : ℝ) (lim : seq_lim b ℓ) :
     (seq_lim a ℓ) := by
+  rw [seq_lim] at *
+  intro ε ε_pos
+  specialize lim ε ε_pos
+  have ⟨m, hm⟩ := lim
+  use m
+  intro n n_ge_m
+  rw [sub_seq] at ss
+  have ⟨σ, σ_inc, abσ ⟩ := ss
+  have σ_growth := subindex_growth σ σ_inc
+  rw [abσ]
+  rw [Function.comp]
+  let n' := σ n
+  have n'_ge_n : n' ≥ n := σ_growth n
+  specialize hm n' (ge_trans n'_ge_n n_ge_m)
+  simp [n'] at hm
+  exact hm
+
+example (b : ℕ → ℝ) (b_def : ∀ n, b n = (-1) ^ n) :
+  ∃ (a : ℕ → ℝ), sub_seq a b ∧ converges a
+    := by
+  let a := fun (n : ℕ) => 1
+  -- TODO
   admit
