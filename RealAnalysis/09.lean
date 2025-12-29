@@ -175,7 +175,8 @@ theorem prod_of_convergent_sequences
 (seq_lim_a_ℓ : SeqLim a ℓ) (seq_lim_b_ℓ' : SeqLim b ℓ') :
 SeqLim (fun n => a n * b n) (ℓ * ℓ') := by
   rw [SeqLim] at *
-  have aux :
+  -- TODO: externalize this auxiliary lemma
+  have aux : -- TODO: require K > 0 and L > 0 (easier later)
   ∃ K ≥ 0, ∃ L ≥ 0, ∀ (n : ℕ),
   |a n * b n - ℓ * ℓ'| ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by
     let K := |ℓ'|
