@@ -39,3 +39,22 @@ theorem order_limit (a : ℕ → ℝ) (ℓ y : ℝ)
   specialize hm₁ n (show n ≥ m₁ by grind)
   specialize h n (show n ≥ m₂ by grind)
   linarith
+
+def sub_seq (a b : ℕ → ℝ) :=
+∃ (σ : ℕ → ℕ), (∀ (i j : ℕ), i < j → σ i < σ j) ∧ a = b ∘ σ
+
+theorem subindex_growth
+    (σ : ℕ → ℕ) :
+    (∀ (i j : ℕ), i < j → σ i < σ j) -> ∀ n, σ n ≥ n := by
+  intro inc n
+  induction n with
+  | zero => simp only [zero_le]
+  | succ n ih =>
+    have lt_succ : n < n + 1 := by grind
+    specialize inc n (n + 1) lt_succ
+    linarith
+
+theorem sub_seq_lim
+    (a b : ℕ → ℝ) (ss : sub_seq a b) (ℓ : ℝ) (lim : seq_lim b ℓ) :
+    (seq_lim a ℓ) := by
+  admit
