@@ -75,8 +75,26 @@ theorem sub_seq_lim
   exact hm
 
 example (b : ℕ → ℝ) (b_def : ∀ n, b n = (-1) ^ n) :
-  ∃ (a : ℕ → ℝ), sub_seq a b ∧ converges a
+    ∃ (a : ℕ → ℝ), sub_seq a b ∧ converges a
     := by
-  let a := fun (n : ℕ) => 1
-  -- TODO
-  admit
+  let a := fun (_ : ℕ) => (1 : ℝ)
+  use a
+  apply And.intro
+  . rw [sub_seq]
+    let σ : ℕ → ℕ := (2 * ·)
+    use σ
+    apply And.intro
+    . intro i j i_lt_j
+      simp only [σ]
+      linarith
+    . ext n
+      simp [a, σ, b_def (2 * n)]
+  . rw [converges]
+    use 1
+    rw [seq_lim]
+    simp only [a]
+    intro ε ε_pos
+    use 0
+    intro n n_ge_0
+    norm_num
+    exact ε_pos
