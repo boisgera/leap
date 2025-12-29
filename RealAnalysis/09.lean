@@ -168,60 +168,57 @@ theorem every_converging_sequence_is_bounded
       grind only [= mem_range, = max_def, cases Or]
     linarith
 
-#check abs_mul
+lemma prod_of_convergent_sequences_aux
+(a b : ℕ → ℝ) (ℓ ℓ' : ℝ)
+(seq_lim_a_ℓ : SeqLim a ℓ) (_ : SeqLim b ℓ') :
+∃ K > 0, ∃ L > 0, ∀ (n : ℕ),
+|a n * b n - ℓ * ℓ'| ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by
+  rw [SeqLim] at *
+  let K := |ℓ'| + 1
+  have hK : |ℓ'| ≤ K := by linarith
+  have K_pos : K > 0 := by
+    linarith [abs_nonneg ℓ']
+  let ⟨L', hL'⟩ := every_converging_sequence_is_bounded a ⟨ℓ, seq_lim_a_ℓ⟩
+  have L'_nonneg : L' ≥ 0 := by
+    specialize hL' 0
+    have : 0 ≤ |a 0| := abs_nonneg (a 0)
+    apply le_trans this hL'
+  let L := L' + 1
+  have L_pos : L > 0 := by
+    linarith [L'_nonneg]
+  have hL : ∀ (n : ℕ), |a n| ≤ L := by
+    intro n ; linarith [hL' n]
+  use K, K_pos, L, L_pos
+  intro n
+  specialize hL n
+  have : 0 ≤ |a n - ℓ| := by apply abs_nonneg
+  have : 0 ≤ |b n - ℓ'| := by apply abs_nonneg
+  calc |a n * b n - ℓ * ℓ'|
+    _ = |(a n - ℓ) * ℓ' + a n * (b n - ℓ')| := by ring_nf
+    _ ≤ |(a n - ℓ) * ℓ'| + |a n * (b n - ℓ')| := by apply abs_add_le
+    _ ≤ |a n - ℓ| * |ℓ'| + |a n| * |b n - ℓ'| := by simp [abs_mul]
+    _ ≤ |ℓ'| * |a n - ℓ| + |a n| * |b n - ℓ'| := by linarith
+    _ ≤ K * |a n - ℓ| + |a n| * |b n - ℓ'| := by linarith
+    _ ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by nlinarith
 
 theorem prod_of_convergent_sequences
 (a b : ℕ → ℝ) (ℓ ℓ' : ℝ)
 (seq_lim_a_ℓ : SeqLim a ℓ) (seq_lim_b_ℓ' : SeqLim b ℓ') :
 SeqLim (fun n => a n * b n) (ℓ * ℓ') := by
   rw [SeqLim] at *
-  -- TODO: externalize this auxiliary lemma
-  have aux : -- TODO: require K > 0 and L > 0 (easier later)
-  ∃ K ≥ 0, ∃ L ≥ 0, ∀ (n : ℕ),
-  |a n * b n - ℓ * ℓ'| ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by
-    let K := |ℓ'|
-    have K_nonneg : 0 ≤ K := by apply abs_nonneg
-    let ⟨L, hL⟩ := every_converging_sequence_is_bounded a ⟨ℓ, seq_lim_a_ℓ⟩
-    have L_nonneg : 0 ≤ L := by
-      specialize hL 0
-      have : 0 ≤ |a 0| := abs_nonneg (a 0)
-      apply le_trans this hL
-    use K, K_nonneg, L, L_nonneg
-    intro n
-    specialize hL n
-    have ineq_1 : 0 ≤ |a n - ℓ| := by apply abs_nonneg
-    have ineq_2 : 0 ≤ |b n - ℓ'| := by apply abs_nonneg
-
-    calc |a n * b n - ℓ * ℓ'|
-      _ = |(a n - ℓ) * ℓ' + a n * (b n - ℓ')| := by ring_nf
-      _ ≤ |(a n - ℓ) * ℓ'| + |a n * (b n - ℓ')| := by apply abs_add_le
-      _ ≤ |a n - ℓ| * |ℓ'| + |a n| * |b n - ℓ'| := by simp [abs_mul]
-      _ ≤ |ℓ'| * |a n - ℓ| + |a n| * |b n - ℓ'| := by linarith
-      _ ≤ K * |a n - ℓ| + |a n| * |b n - ℓ'| := by simp [K]
-      _ ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by admit -- linarith doesn't work here???
-      -- try to replicate the issue in an isolated example and solve it.
-  let ⟨K, K_nonneg, L, L_nonneg, aux'⟩ := aux; clear aux
-
-  let ε₁ := if 0 < K then 1 / (2 * K) else 1
-  let ε₂ := if 0 < L then 1 / (2 * L) else 1
-  have ε₁_pos : 0 < ε₁ := by
-    simp [ε₁]
-    split_ifs with h
-    . simp only [inv_pos, Nat.ofNat_pos, mul_pos_iff_of_pos_right]
-      exact h
-    . norm_num
-  have ε₂_pos : 0 < ε₂ := by
-    simp [ε₂]
-    split_ifs with h
-    . simp only [inv_pos, Nat.ofNat_pos, mul_pos_iff_of_pos_right]
-      exact h
-    . norm_num
+  intro ε ε_pos
+  let ⟨K, K_nonneg, L, L_nonneg, aux⟩ :=
+    prod_of_convergent_sequences_aux a b ℓ ℓ' seq_lim_a_ℓ seq_lim_b_ℓ'
+  let ε₁ := ε / (4 * K)
+  let ε₂ := ε / (4 * L)
+  have ε₁_pos : 0 < ε₁ := by positivity
+  have ε₂_pos : 0 < ε₂ := by positivity
   specialize seq_lim_a_ℓ ε₁ ε₁_pos
   specialize seq_lim_b_ℓ' ε₂ ε₂_pos
   let ⟨N₁, hN₁⟩ := seq_lim_a_ℓ
   let ⟨N₂, hN₂⟩ := seq_lim_b_ℓ'
-  intro ε ε_pos
   let N := max N₁ N₂
+
   have lemma_1 : ∀ n ≥ N, |a n - ℓ| < ε₁ ∧ |b n - ℓ'| < ε₂ := by
     intro n n_ge_N
     have N_ge_N₁ : N ≥ N₁ := by grind
@@ -234,16 +231,12 @@ SeqLim (fun n => a n * b n) (ℓ * ℓ') := by
 
   use N
   intro n n_le_N
-  specialize aux' n
+  specialize aux n
   specialize lemma_1 n n_le_N
   let ⟨h1, h2⟩ := lemma_1; clear lemma_1
-  have aux'' : |a n * b n - ℓ * ℓ'| ≤ K * ε₁ + L * ε₂ := by
-    linarith -- fails too????
-  by_cases h : 0 < K
-  . by_cases h' : 0 < L
-    . -- do some calc stuff on aux'
-      admit
-    . admit
-  . admit
-
-  admit
+  calc |a n * b n - ℓ * ℓ'|
+    _ ≤ K * |a n - ℓ| + L * |b n - ℓ'| := by apply aux
+    _ ≤ K * ε₁ + L * ε₂ := by nlinarith
+    _ ≤ K * (ε / (4 * K)) + L * (ε / (4 * L)) := by simp [ε₁, ε₂]
+    _ ≤ ε / 2 := by field_simp; norm_num
+    _ < ε := by linarith
