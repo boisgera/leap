@@ -1,5 +1,7 @@
 import Mathlib
 
+set_option pp.showLetValues true
+
 def seq_lim (a : ℕ -> ℝ) (ℓ : ℝ) : Prop := ∀ ε > 0, ∃ m, ∀ n ≥ m, |a n - ℓ| < ε
 
 def converges (a : ℕ → ℝ) := ∃ ℓ, seq_lim a ℓ
@@ -41,30 +43,44 @@ theorem sum_of_cauchy {a b : ℕ → ℝ} :
 
 def is_bounded (a : ℕ → ℝ) := ∃ x, ∀ n, |a n| ≤ x
 
-#print Finset.sup
--- def Finset.sup.{u_2, u_3} : {α : Type u_2} → {β : Type u_3} →
---    [inst : SemilatticeSup α] → [OrderBot α] → Finset β → (β → α) → α :=
---   fun {α} {β} [SemilatticeSup α] [OrderBot α] s f => Finset.fold (fun x1 x2 => x1 ⊔ x2) ⊥ f s
 
-#check Finset.range
--- Finset.range (n : ℕ) : Finset ℕ
+#check abs_add_le
 
-#check Finset.le_max'
--- Finset.le_max'.{u_2} {α : Type u_2} [LinearOrder α]
---     (s : Finset α) (x : α) (H2 : x ∈ s) : x ≤ s.max' ⋯
 
+-- Could be split into finite -> bounded and cauchy -> eventually bounded.
 theorem bounded_of_cauchy {a : ℕ → ℝ} : is_cauchy a → is_bounded a := by
-  have aux (m : ℕ) : ∀ m, ∃ b, ∀ n ≤ m, |a n| ≤ b := by
-    intro m
-    let vals := m + 1 |> Finset.range |>.image (|a ·|)
-    let b := if h : vals.Nonempty then
-      vals.max' h
-    else
-      0
-    use b
-    intro n n_le_m
-    have abs_a_n_in_vals : |a n| ∈ vals := by admit
-    by_cases h' : vals.Nonempty --- Mmm type coercion issue now?
-    . exact vals.le_max' (x := |a n|) (H2 := abs_a_n_in_vals)
-    . grind
-  admit
+  have aux (m : ℕ) : ∃ b, ∀ n < m, |a n| ≤ b := by
+    induction m with
+    | zero =>
+      use 0; grind
+    | succ m ih =>
+      let ⟨b, ihb⟩ := ih
+      let b' := max b |a m|
+      use b'
+      intro n n_lt_succ_m
+      by_cases h : n < m
+      . specialize ihb n h
+        apply le_trans ihb (show b ≤ b' by grind)
+      . have : n = m := by linarith
+        rw [this]; grind
+  rw [is_cauchy, is_bounded]
+  intro hcauchy
+  specialize hcauchy 1 (by linarith)
+  obtain ⟨m, hm⟩ := hcauchy
+  have aux' : ∀ n ≥ m, |a n| <= |a m| + 1 := by
+    intro n n_ge_m
+    specialize hm n n_ge_m m (by grind)
+    calc |a n|
+      _ = |a m + (a n - a m)| := by ring_nf
+      _ ≤ |a m| + |a n - a m| := by apply abs_add_le
+      _ ≤ |a m| + 1           := by linarith
+  let ⟨b, hb⟩ := aux m
+  let x := max b (|a m| + 1)
+  use x
+  intro n
+  by_cases h : n < m
+  . specialize hb n h
+    apply le_trans hb (show b ≤ x by grind)
+  . simp only [not_lt] at h
+    specialize aux' n h
+    apply le_trans aux' (show |a m| + 1 ≤ x by grind)
