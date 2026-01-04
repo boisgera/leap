@@ -42,7 +42,7 @@ lemma strictMono_of_lt_succ' {α} [p : Preorder α] (a : ℕ → α) :
 /-
 If we want to use the Mathlib version instead to derive this result, we can:
 -/
-s
+
 lemma strictMono_of_lt_succ'' {α} [p : Preorder α] (a : ℕ → α) :
     (∀ n, a n < a (n + 1)) -> StrictMono a := by
   intro h
@@ -116,7 +116,7 @@ theorem strictMono_and_p_holds_aux (p : ℕ → Prop) :
     apply lemma_1
   . apply lemma_2
 
-theorem strictMono_and_p_holds (p : ℕ → Prop) :
+theorem choice_sequence (p : ℕ → Prop) :
     (∀ n, ∃ m ≥ n, p m) ->
     ∃ ns : ℕ → ℕ, StrictMono ns ∧ (∀ i, p (ns i)) := by
   intro h
@@ -143,7 +143,7 @@ example (p : ℕ → Prop):
 --   fun {α} {β} [Preorder α] [Preorder β] f =>
 --     ∀ ⦃a b : α⦄, a < b → f a < f b
 
-def IsSubSeq {α} (a b : ℕ → α) := ∃ (σ : ℕ → ℕ), StrictMono σ ∧ a = b ∘ σ
+def SubSeq {α} (a b : ℕ → α) := ∃ (σ : ℕ → ℕ), StrictMono σ ∧ a = b ∘ σ
 
 -- Function iterate: `f^[n]` stands for `f ∘ f ∘ ... ∘ f`,
 -- with `n` occurences of `f`
@@ -155,7 +155,7 @@ def IsSubSeq {α} (a b : ℕ → α) := ∃ (σ : ℕ → ℕ), StrictMono σ �
 
 
 
-lemma strictMono_of_lt_succ' {α} [p : Preorder α] (a : ℕ → α) :
+lemma strictMono_of_lt_succ''' {α} [p : Preorder α] (a : ℕ → α) :
     (∀ n, a n < a (n + 1)) -> StrictMono a := by
   intro h
   rw [StrictMono]
@@ -170,7 +170,7 @@ lemma strictMono_of_lt_succ' {α} [p : Preorder α] (a : ℕ → α) :
     apply h
 
 theorem strictMono_of_superDiagonal (a : ℕ → ℕ) (h : ∀ n, a n > n) :
-    ∃ b, IsSubSeq b a ∧ StrictMono b := by
+    ∃ b, SubSeq b a ∧ StrictMono b := by
   let b := fun n => a^[n] (a 0)
   use b
   constructor
