@@ -84,40 +84,70 @@ inductive Tree where
 | node : String → Tree → Tree → Tree
 deriving BEq
 
-abbrev Bools := List Bool
+def spoon : Tree :=
+  .node ""
+    (.node "" -- 0
+      (.node "" -- 00
+        (.node "-" .nil .nil) -- 000
+        (.node "" -- 001
+          (.node "" -- 0010
+            (.node "[" .nil .nil) -- 00100
+            (.node "" -- 00101
+              (.node "." .nil .nil) -- 001010
+              (.node "" -- 001011
+                (.node "," .nil .nil) -- 0010110, read
+                (.node "" -- 0010111
+                  (.node "d" .nil .nil) -- 00101110, dump memory
+                  (.node "x" .nil .nil) -- 00101110, exit
+                )
+              )
+            ) -- 00101
+          )
+          (.node "]" .nil .nil) -- 0011, end loop
+        )
+      )
+      (.node "" -- 01
+        (.node ">" .nil .nil) -- 010, move right
+        (.node "<" .nil .nil) -- 011, move left
+      )
+    )
+    (.node "+" .nil .nil) -- 1, increment
 
-def Tree.decode (tree : Tree) (bools : Bools) : String :=
+
+-- TODO: make something that stops at the first non-empty string and
+--       returns the remaining bools. Panic is not GREAT. We may
+--       panic when the bools cannot be interpreted as a proper path
+--       but to have the stream decoded, we need to intercept the
+--       "the path is not incorrect, but it does not end up in a leaf".
+--       And BAM, again we need to have a combination of option and
+--       state!
+def Tree.decode (tree : Tree) (bools : List Bool) : Option (String × List Bool) :=
   match tree with
-  | nil => panic! "Decoding error"
+  | nil => panic! "Decoding error" -- invalid bool path
   | node string left right =>
-    match bools with
-    | [] => string
-    | false :: bools => decode left bools
-    | true :: bools => decode right bools
+    if string != "" then
+      some (string, bools)
+    else
+      match bools with
+      | [] => none -- The bool path is valid so far, but we didn't reach a leaf.
+      | false :: bools => decode left bools
+      | true :: bools => decode right bools
 
 def Tree.decodeStream
-    (tree : Tree) (bools : Bools) (stream : List String := []) :
-    List String :=
-  match bools with
-  | [] => stream -- mmm sometimes we should probably panic instead here.
-  -- TODO: use Tree.decode ffs! Arf, it's not the appropriate signature
-  -- it should return the bools that where not consumed.
-  | b :: bools =>
-    match tree with
-    | nil => panic! "Decoding error"
-    | node string left right =>
-      let stream := if string = "" then stream else [string] ++ stream
-      let tree := if b then right else left
-      stream ++ (tree.decodeStream bools stream)
+    (tree : Tree) (bools : List Bool) :
+    (List String) × (List Bool) :=
+  let tokens : List String := []
+  -- try to parse 1 token, then panic, fail to progress and return, or recurse
+  sorry
 
 instance {α β} [Repr α] [Repr β] [BEq α] [Hashable α] :
   Repr (Std.HashMap α β) where
     reprPrec m _ := repr m.toList
 
-abbrev HashMap := Std.HashMap String (Bools)
+abbrev HashMap := Std.HashMap String (List Bool)
 
 def Tree.hashmap_aux
-    (tree : Tree) (path : Bools) (hashmap : HashMap) : HashMap :=
+    (tree : Tree) (path : List Bool) (hashmap : HashMap) : HashMap :=
   match tree with
   | nil => panic! "Invalid path or tree"
   | node string left right =>
@@ -130,7 +160,7 @@ def Tree.hashmap (tree : Tree) : HashMap :=
   tree.hashmap_aux [] Std.HashMap.emptyWithCapacity
 
 -- Panics if the key is not found.
-def Tree.encode (tree : Tree) (string : String) : Bools :=
+def Tree.encode (tree : Tree) (string : String) : List Bool :=
   tree.hashmap[string]!
 
 end Huffman_1
