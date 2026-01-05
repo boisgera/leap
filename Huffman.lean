@@ -95,6 +95,20 @@ def Tree.decode (tree : Tree) (bools : Bools) : String :=
     | false :: bools => decode left bools
     | true :: bools => decode right bools
 
+def Tree.decodeStream
+    (tree : Tree) (bools : Bools) (stream : List String := []) :
+    List String :=
+  match bools with
+  | [] => stream -- mmm sometimes we should probably panic instead here.
+  -- TODO: use Tree.decode ffs! Arf, it's not the appropriate signature
+  -- it should return the bools that where not consumed.
+  | b :: bools =>
+    match tree with
+    | nil => panic! "Decoding error"
+    | node string left right =>
+      let stream := if string = "" then stream else [string] ++ stream
+      let tree := if b then right else left
+      stream ++ (tree.decodeStream bools stream)
 
 instance {α β} [Repr α] [Repr β] [BEq α] [Hashable α] :
   Repr (Std.HashMap α β) where
@@ -115,7 +129,9 @@ def Tree.hashmap_aux
 def Tree.hashmap (tree : Tree) : HashMap :=
   tree.hashmap_aux [] Std.HashMap.emptyWithCapacity
 
--- TODO: encode
+-- Panics if the key is not found.
+def Tree.encode (tree : Tree) (string : String) : Bools :=
+  tree.hashmap[string]!
 
 end Huffman_1
 
