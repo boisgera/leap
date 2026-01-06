@@ -84,6 +84,14 @@ inductive Tree where
 | node : String → Tree → Tree → Tree
 deriving BEq
 
+/-
+I would appreciate having a code (as a hash), an algorithm that decides if
+the code is a prefix code, and under this condition turn it into a Huffman
+Tree (yeah that's not how it really works since we would start from the
+probas, get the tree and thus the prefix-free nature for free, but that would
+be convenient nonetheless).
+-/
+
 def spoon : Tree :=
   .node ""
     (.node "" -- 0
@@ -132,6 +140,23 @@ def Tree.decode (tree : Tree) (bools : List Bool) : Option (String × List Bool)
       | [] => none -- The bool path is valid so far, but we didn't reach a leaf.
       | false :: bools => decode left bools
       | true :: bools => decode right bools
+
+
+#eval spoon.decode []
+-- none
+#eval spoon.decode [false]
+-- none
+#eval spoon.decode [false, false]
+-- none
+#eval spoon.decode [false, false, false]
+-- some ("-", [])
+#eval spoon.decode [false, false, false, false]
+-- som ("-", [false])
+#eval spoon.decode [false, false, false, false]
+-- som ("-", [false, false])
+
+#eval spoon.decode [false, true, false]
+-- some (">", [])
 
 def Tree.decodeStream
     (tree : Tree) (bools : List Bool) :
