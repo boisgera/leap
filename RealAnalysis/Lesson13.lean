@@ -96,6 +96,5 @@ lemma lemma_1 (a : ℕ → ℝ) :
   assumption
 
 theorem main (a : ℕ → ℝ) :
-    (∃ (b : ℕ → ℝ), SubSeq b a ∧ StrictMono b) ∨
-    (∃ (b : ℕ → ℝ), SubSeq b a ∧ Antitone b) := by
+    ∃ (b : ℕ → ℝ), SubSeq b a ∧ (StrictMono b ∨ Antitone b) := by
     admit
