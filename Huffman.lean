@@ -183,10 +183,6 @@ def Tree.decodeStream
 #eval spoon.decodeStream [false, true, false, false, false, false]
 -- ([">", "-"], [])
 
-
-
-
-
 instance {α β} [Repr α] [Repr β] [BEq α] [Hashable α] :
   Repr (Std.HashMap α β) where
     reprPrec m _ := repr m.toList
