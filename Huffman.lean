@@ -2,12 +2,17 @@ import Std.Data.HashMap
 
 /-!
 
-TODO: Huffman codes:
+Huffman codes
 
-
-- [X] Define a "naive^2" Huffman tree with String payload, "" which
-  encodes for nothing (conventionally). Nothing is correct by construction,
-  and we will allow some panics if something goes wrong down the line
+- [X] Define a naive binary coding tree as a classic Tree with String payload,
+  and "" which encodes for nothing (conventionally). Nothing is correct by
+  construction (for example the prefix-free property is not enforced by the
+  compiler), and we will allow some panics if something goes wrong down the
+  line. Nota: we could use Option String instead of the "" convention but
+  we are so far from being correct by construction that it changes very little.
+  But the other option is legitimate, of course. Even if our mental model is
+  Python, None or str would make more sense that the sentinel convention,
+  which is more C-like in spirit. Well, do both if required.
 
 - [X] `Tree.decode` that works on list of bools and panics when needed.
 
@@ -37,47 +42,7 @@ TODO: Huffman codes:
 -/
 
 
--- namespace Huffman
-
-/- Not great here : -/
-
-
--- inductive Tree where
--- | nil : Tree
--- | leaf
---     (string? : Option String)
---     (left : Tree)
---     (right : Tree)
---     (check : string?.isSome → (left = Tree.nil) ∧ (right = Tree.nil)) :
---     Tree
-
-/-
-inductive Tree : Bool → Type where
-  | nil : Tree true
-  | leaf
-      (string? : Option String)
-      {lisNil risNil}
-      (left : Tree lisNil)
-      (right : Tree risNil)
-      (check : string?.isSome → lisNil ∧ risNil) :
-      Tree false
--/
-
-/-
--- Pretty good, *except* that pseudo-leaves without string payloads exist
-inductive Tree where
-| nil : Tree
-| branch : Tree → Tree → Tree
-| leaf : String → Tree
--/
-
-/-!
-Let's start with the naive stuff, right? Conventionally, String = "" means
-"no payload" and the fact that payload appear only when the node is terminal
-is *not* given by construction.
--/
-
-namespace Huffman_1
+namespace Huffman_0
 
 inductive Tree where
 | nil : Tree
@@ -129,15 +94,16 @@ def spoon : Tree :=
 --       "the path is not incorrect, but it does not end up in a leaf".
 --       And BAM, again we need to have a combination of option and
 --       state!
-def Tree.decode (tree : Tree) (bools : List Bool) : Option (String × List Bool) :=
+def Tree.decode
+    (tree : Tree) (bools : List Bool) : Option (String × List Bool) :=
   match tree with
-  | nil => panic! "Decoding error" -- invalid bool path
+  | nil => panic! "Decoding error" -- invalid bool path (or tree)
   | node string left right =>
     if string != "" then
       some (string, bools)
     else
       match bools with
-      | [] => none -- The bool path is valid so far, but we didn't reach a leaf.
+      | [] => none -- The bool path is valid so far, but we didn't reach a token.
       | false :: bools => decode left bools
       | true :: bools => decode right bools
 
@@ -154,16 +120,60 @@ def Tree.decode (tree : Tree) (bools : List Bool) : Option (String × List Bool)
 -- som ("-", [false])
 #eval spoon.decode [false, false, false, false]
 -- som ("-", [false, false])
-
 #eval spoon.decode [false, true, false]
 -- some (">", [])
+
+
+/-
+I have used the fixpoint style of implementation which is probably neither
+idiomatic not obvious to the beginner. A recursive `decodeLoop` without the
+fixpoint abstraction defined inside `decodeStream` would be a simpler first
+step. That would also suppress the need for the `step` function (`decodeLoop`
+does everything`). And then, *afterwards*, show the fixpoint structure?
+-/
+
+/-
+Note: the other option is the monadic approach with `do`. Probably many
+options here: start to work with the `Id` monad (use `Id.run do`),
+just to get mutable structures and whil loops, then afterwards,
+see that we actually have a state Monad and use that?
+-/
+
+partial def fixpoint {α} [BEq α] (f : α → α) (initial : α) : α :=
+  let next := f initial
+  if next == initial then
+    initial
+  else
+    fixpoint f next
 
 def Tree.decodeStream
     (tree : Tree) (bools : List Bool) :
     (List String) × (List Bool) :=
-  let tokens : List String := []
-  -- try to parse 1 token, then panic, fail to progress and return, or recurse
-  sorry
+  -- adapt `tree.decode` to be used in a fixed-point
+  let step (tokens_bools : (List String) × (List Bool)) :
+      (List String) × (List Bool) :=
+    let (tokens, bools) := tokens_bools
+    match tree.decode bools with
+    | none => (tokens, bools)
+    | some (token, bools) => (tokens ++ [token], bools)
+  fixpoint step ([], bools)
+
+#eval spoon.decodeStream [false]
+-- ([""], [false])
+#eval spoon.decodeStream [false, true]
+-- ([], [false, true])
+#eval spoon.decodeStream [false, true, false]
+-- ([], [false, true])
+#eval spoon.decodeStream [false, true, false, false]
+-- ([">"], [false])
+#eval spoon.decodeStream [false, true, false, false, false]
+-- ([">"], [false, false])
+#eval spoon.decodeStream [false, true, false, false, false, false]
+-- ([">", "-"], [])
+
+
+
+
 
 instance {α β} [Repr α] [Repr β] [BEq α] [Hashable α] :
   Repr (Std.HashMap α β) where
@@ -188,6 +198,6 @@ def Tree.hashmap (tree : Tree) : HashMap :=
 def Tree.encode (tree : Tree) (string : String) : List Bool :=
   tree.hashmap[string]!
 
-end Huffman_1
+end Huffman_0
 
 -- end Huffman
