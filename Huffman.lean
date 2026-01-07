@@ -1,6 +1,18 @@
 import Std.Data.HashMap
 
 /-!
+Wild ideas:
+
+  - do something with "Thing Explainer",
+
+  - use some populat Wikipedia samples to build a dictionary?
+
+  - use some BPE (byte-pair encoding) to get tokens instead of the
+    "split on space" strategy to get words?
+
+-/
+
+/-!
 
 Huffman codes
 
