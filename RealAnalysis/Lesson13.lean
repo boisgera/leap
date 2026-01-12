@@ -45,7 +45,7 @@ Main theorem
 --     (∀ (n : ℕ), ∃ m ≥ n, p m) →
 --     ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i)
 
-theorem monotone_subsequence_of_boundedPeaks {a : ℕ → ℝ} :
+theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     ¬FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ Antitone b := by
   intro h_not_finitelyManyPeaks
   have h := (not_finitelyManyPeaks a).mp h_not_finitelyManyPeaks
@@ -66,11 +66,30 @@ theorem monotone_subsequence_of_boundedPeaks {a : ℕ → ℝ} :
   . rw [SubSeq]
     use ns
   . simp only [IsAPeak] at h_peak
-    have : ∀ i, ns i < ns (i+1) → a (ns i) < a (ns (i + 1)) := by
+    have : ∀ i, b (i + 1) ≤ b i := by
+      simp only [b]
       intro i
       specialize h_peak i (ns (i + 1))
-      intro h
-      specialize h_peak (show ns i ≤ ns (i +1) from by linarith [h])
+      have : ns (i + 1) ≥ ns i := by
+        apply le_of_lt
+        apply h_strictMono
+        linarith
+      specialize h_peak this
+      simp only [Function.comp_apply]
+      assumption
+    apply antitone_nat_of_succ_le
+    assumption
 
-      admit
-    admit
+theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
+    FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ StrictMono b := by
+  intro h_finitelyManyPeaks
+  rw [FinitelyManyPeaks] at h_finitelyManyPeaks
+  let ⟨m, hm⟩ := h_finitelyManyPeaks; clear h_finitelyManyPeaks
+  have hm' : ∀ n > m, ¬IsAPeak a n := by
+    intro n
+    specialize hm n
+    rw [gt_iff_lt, <- not_le]
+    apply mt
+    exact hm
+
+  admit
