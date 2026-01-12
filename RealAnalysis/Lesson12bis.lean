@@ -67,6 +67,21 @@ example : Fin 2 ≃ Bool := {
     rw [Function.LeftInverse]
     grind
   right_inv := by
-    rw [Function.RightInverse]
+    rw [Function.RightInverse, Function.LeftInverse]
+    grind
+}
+
+def EvenNumber := {n : ℕ // n % 2 = 0}
+
+example : ℕ ≃ EvenNumber := {
+  toFun (n : ℕ) := ⟨2 * n, by grind⟩
+  invFun (en : EvenNumber) :=
+    let ⟨n, _⟩ := en
+    n / 2
+  left_inv := by
+    rw [Function.LeftInverse]
+    grind
+  right_inv := by
+    rw [Function.RightInverse, Function.LeftInverse]
     grind
 }
