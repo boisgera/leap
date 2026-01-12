@@ -91,5 +91,7 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     rw [gt_iff_lt, <- not_le]
     apply mt
     exact hm
+  simp only [IsAPeak] at hm'
+  push_neg at hm'
 
   admit
