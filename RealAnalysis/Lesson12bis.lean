@@ -48,13 +48,14 @@ infixl:25 " ≃ " => Equiv
 ```
 -/
 
+
 #print Function.LeftInverse
 -- def Function.LeftInverse.{u_1, u_2} :
 --     {α : Sort u_1} → {β : Sort u_2} →
 --     (β → α) → (α → β) → Prop :=
 --     fun {α} {β} g f => ∀ (x : α), g (f x) = x
 
-example : Fin 2 ≃ Bool := {
+def bijectionFin2Bool : Fin 2 ≃ Bool := {
   toFun (n : Fin 2) : Bool :=
     match n with
     | 0 => false
@@ -71,6 +72,33 @@ example : Fin 2 ≃ Bool := {
     grind
 }
 
+/-
+Note: `Equiv` is a `Type`, not a `Prop`! If this is want you need,
+instead of `α ≃ β`, consider `Cardinal.mk α = \Cardinal.mk β`.
+Use `Cardinal.eq.mpr` to get this prop from the bijection.
+-/
+
+#print Cardinal
+-- def Cardinal.{u} : Type (u + 1) :=
+-- Quotient Cardinal.isEquivalent
+
+#print Cardinal.isEquivalent
+-- def Cardinal.isEquivalent.{u} : Setoid (Type u) :=
+-- { r := fun α β => Nonempty (α ≃ β), iseqv := Cardinal.isEquivalent._proof_1 }
+
+#check Cardinal.eq
+-- Cardinal.eq.{u} {α β : Type u} : Cardinal.mk α = Cardinal.mk β ↔ Nonempty (α ≃ β)
+
+#print Nonempty
+-- inductive Nonempty.{u} : Sort u → Prop
+-- number of parameters: 1
+-- constructors:
+-- Nonempty.intro : ∀ {α : Sort u} (val : α), Nonempty α
+
+example : Cardinal.mk (Fin 2) = Cardinal.mk Bool :=
+  let nonempty := Nonempty.intro bijectionFin2Bool
+  Cardinal.eq.mpr nonempty
+
 def EvenNumber := {n : ℕ // n % 2 = 0}
 
 example : ℕ ≃ EvenNumber := {
@@ -85,3 +113,6 @@ example : ℕ ≃ EvenNumber := {
     rw [Function.RightInverse, Function.LeftInverse]
     grind
 }
+
+example : ¬ (Bool ≃ Fin 3) := by
+  admit
