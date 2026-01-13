@@ -28,6 +28,10 @@ name = "slider"
 root = "Slider"
 
 [[lean_exe]]
+name = "tasks"
+root = "Tasks"
+
+[[lean_exe]]
 name = "fs"
 root = "FileSize"
 
