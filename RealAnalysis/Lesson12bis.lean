@@ -48,6 +48,8 @@ infixl:25 " ≃ " => Equiv
 ```
 -/
 
+#check Equiv
+-- Equiv.{u_1, u_2} (α : Sort u_1) (β : Sort u_2) : Sort (max (max 1 u_1) u_2)
 
 #print Function.LeftInverse
 -- def Function.LeftInverse.{u_1, u_2} :
