@@ -32,6 +32,10 @@ name = "tasks"
 root = "Tasks"
 
 [[lean_exe]]
+name = "tt"
+root = "TasksTest"
+
+[[lean_exe]]
 name = "fs"
 root = "FileSize"
 
@@ -46,3 +50,7 @@ root = "MarkdownOfLean"
 [[lean_exe]]
 name = "brainfuck"
 root = "BrainFuck"
+
+[[lean_exe]]
+name = "led"
+root = "Tasks.LED"
