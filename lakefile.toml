@@ -62,3 +62,7 @@ root = "Tasks.PingPong"
 [[lean_exe]]
 name = "task-counter"
 root = "Tasks.Counter"
+
+[[lean_exe]]
+name = "no-deadlock"
+root = "Tasks.NoDeadlock"
