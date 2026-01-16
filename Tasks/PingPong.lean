@@ -11,7 +11,7 @@ AAAAAAH: by casting the channel to Channel.Sync (a no-op), one can get the
 sync version of the send and/or recv, with a different signature (no Task
 wrapper). Or can unlock the synchronous API by casting to Std.Channel.Sync
 (this is implicit) or when needed, calling the methods on `channel.sync`
-rather than `channel`. Any of theses two idiom is probably better than
+rather than `channel`. Any of theses two idioms is probably better than
 combining manually the receive and the get on the task to get a synchronous
 recv.
 
