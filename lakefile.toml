@@ -54,3 +54,11 @@ root = "BrainFuck"
 [[lean_exe]]
 name = "led"
 root = "Tasks.LED"
+
+[[lean_exe]]
+name = "ping-pong"
+root = "Tasks.PingPong"
+
+[[lean_exe]]
+name = "task-counter"
+root = "Tasks.Counter"
