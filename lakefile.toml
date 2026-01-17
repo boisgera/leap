@@ -66,3 +66,7 @@ root = "Tasks.Counter"
 [[lean_exe]]
 name = "no-deadlock"
 root = "Tasks.NoDeadlock"
+
+[[lean_exe]]
+name = "unsafe-counter"
+root = "Tasks.UnsafeCounter"
