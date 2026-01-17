@@ -73,6 +73,19 @@ def choice_sequence'
     ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i) :=
   next_to_global p h0 h1 |> choice_sequence p
 
+/-!
+This we need below to prove `strictMono_subSeq_of_finitelyManyPeaks`
+(at least a very specialized version of it).
+Is it or is it not a corollary of choice_sequence'? Dunno, not obvious.
+-/
+
+theorem choice_sequence_dep
+    (p : ℕ → ℕ → Prop)
+    (h0 : ∃ k > 0, p 0 k)
+    (h1 : ∀ m, ∀ n > m, p m n  → ∃ k > n, p n k) :
+    ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i) (ns (i + 1)) := by
+  admit
+
 theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     ¬FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ Antitone b := by
   intro h_not_finitelyManyPeaks
@@ -120,6 +133,26 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     apply mt
     exact hm
   simp only [IsAPeak] at hm'
-  push_neg at hm'
-
-  admit
+  push_neg at hm' -- ∀ n > m, ∃ k ≥ n, a n < a k
+  -- Now we just need to choice the fuck up hm' to get a fct f : n > m -> k
+  -- and then build by recursion (actually dependent choice would be enough)
+  choose f hf using hm'
+  -- need to build the indice by recursion and prove at each step that they
+  -- are > m. Jeeez that stuff is complex. Good luck proving what we need
+  -- with it!
+  let ns : ℕ → { k : ℕ // k > m } := Nat.rec
+    ⟨m + 1, show (m + 1) > m by linarith⟩
+    fun i ⟨n, n_gt_m⟩ =>
+      let n' := f n n_gt_m
+      ⟨
+        n',
+        show n' > m from by
+          specialize hf n n_gt_m
+          simp [n']
+          linarith
+      ⟩
+  let b := a ∘ (·.val ) ∘ ns
+  use b
+  constructor
+  . admit -- ⊢ SubSeq b a
+  . admit -- ⊢ StrictMono b
