@@ -4,7 +4,7 @@ def UnsafeCounter := IO.Ref Int -- exposes get, set, modify, take, ...
 
 namespace UnsafeCounter
 
-def new (n : Int) : IO UnsafeCounter :=
+def new (n : Int := 0) : IO UnsafeCounter :=
   IO.mkRef n
 
 def add (counter : UnsafeCounter) (n : Int) : IO Unit := do
@@ -16,6 +16,33 @@ unsafe def safe_add (counter : UnsafeCounter) (n : Int) : IO Unit := do
   counter.set (count + n)
 
 end UnsafeCounter
+
+
+--- Mmm rethink this, the design is fuzzy in my head.
+
+structure CounterChannel where
+  add : Std.Channel Int
+  get : Std.Channel.Sync Int
+  -- The state is stored in a long-running task
+
+namespace CounterChannel
+
+partial def loop
+    (count : Int) (add : Std.Channel Int) (get : Std.Channel.Sync Int) :
+    IO Unit := do
+  -- we need to select if we deal with add or
+  let extra <- add.sync.recv
+  loop (count + extra) add get
+
+def new (n : Int := 0): IO CounterChannel := do
+  let add <- Std.Channel.new (α := Int)
+  let get <- Std.Channel.new (α := Int) (capacity := some 0)
+  loop n add get.sync |> IO.asTask |> discard
+  return { add, get := get.sync }
+
+
+end CounterChannel
+
 
 unsafe def main : IO Unit := do
   let counter <- UnsafeCounter.new 0
