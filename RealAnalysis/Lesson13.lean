@@ -4,18 +4,21 @@ import RealAnalysis.Lesson12
 set_option pp.showLetValues true
 
 
-/-
+/-!
 New definition: peak
 
-This concept appears when you think about maximal (i.e. non-extendable)
-finite "subsequences" of increasing functions: the latest point in the
-finite sequence has to be a peak.
+This concept appears when you think about "maximal" (i.e. non-extendable
+on the right) finite "subsequences" of increasing functions: such as
+finite sequence is non-extendable iff the its latest value is a peak.
 -/
 
 def IsAPeak (a : ℕ → ℝ) (n : ℕ) := ∀ m ≥ n, a m ≤ a n
 
-def FinitelyManyPeaks (a : ℕ → ℝ) :=
-  ∃ m, ∀ n, IsAPeak a n -> n ≤ m
+/-!
+The practical definition of having a finite number of peak
+(which conveniently bypasses the explicit use of finiteness)
+-/
+def FinitelyManyPeaks (a : ℕ → ℝ) := ∃ m, ∀ n, IsAPeak a n → n ≤ m
 
 theorem not_finitelyManyPeaks (a : ℕ → ℝ) :
     ¬FinitelyManyPeaks a ↔ ∀ m, ∃ n > m, IsAPeak a n := by
@@ -44,6 +47,31 @@ Main theorem
 -- choice_sequence (p : ℕ → Prop) :
 --     (∀ (n : ℕ), ∃ m ≥ n, p m) →
 --     ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i)
+
+-- Note: I'd like to complement that with another lemma that "lifts" the
+--       local ("next") existence to global by induction.
+
+lemma next_to_global (p : ℕ → Prop) (h0 : ∃ n, p n)
+    (h1 : ∀ n, p n → ∃ m > n, p m) :
+    (∀ n, ∃ m ≥ n, p m) := by
+  intro n
+  induction n with
+  | zero =>
+    let ⟨n, hn⟩ := h0
+    use n
+    grind
+  | succ n ih =>
+    let ⟨m, m_ge_n, p_m⟩ := ih
+    have ⟨l, l_gt_m, p_l⟩ := h1 m p_m
+    use l
+    grind
+
+def choice_sequence'
+    (p : ℕ → Prop)
+    (h0 : ∃ n, p n)
+    (h1 : ∀ n, p n → ∃ m > n, p m) :
+    ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i) :=
+  next_to_global p h0 h1 |> choice_sequence p
 
 theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     ¬FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ Antitone b := by
