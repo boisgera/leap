@@ -140,6 +140,11 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
   -- need to build the indice by recursion and prove at each step that they
   -- are > m. Jeeez that stuff is complex. Good luck proving what we need
   -- with it!
+  -- Update. TODO: add the property that each new sample is greater than
+  -- the other in the result instead of extracting it later.
+  -- Arf nope, I can't do that... Or can I?
+  -- let ns : (i : ℕ) → { k : ℕ // k > m } ∧ a (i + 1) > a i
+  -- Mmmm let's try!
   let ns : ℕ → { k : ℕ // k > m } := Nat.rec
     ⟨m + 1, show (m + 1) > m by linarith⟩
     fun i ⟨n, n_gt_m⟩ =>
