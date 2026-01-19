@@ -12,16 +12,16 @@ on the right) finite "subsequences" of increasing functions: such as
 finite sequence is non-extendable iff the its latest value is a peak.
 -/
 
-def IsAPeak (a : ℕ → ℝ) (n : ℕ) := ∀ m ≥ n, a m ≤ a n
+def IsPeak (a : ℕ → ℝ) (n : ℕ) := ∀ m ≥ n, a m ≤ a n
 
 /-!
 The practical definition of having a finite number of peak
 (which conveniently bypasses the explicit use of finiteness)
 -/
-def FinitelyManyPeaks (a : ℕ → ℝ) := ∃ m, ∀ n, IsAPeak a n → n ≤ m
+def FinitelyManyPeaks (a : ℕ → ℝ) := ∃ m, ∀ n, IsPeak a n → n ≤ m
 
 theorem not_finitelyManyPeaks (a : ℕ → ℝ) :
-    ¬FinitelyManyPeaks a ↔ ∀ m, ∃ n > m, IsAPeak a n := by
+    ¬FinitelyManyPeaks a ↔ ∀ m, ∃ n > m, IsPeak a n := by
   constructor
   . intro h
     rw [FinitelyManyPeaks] at h
@@ -90,7 +90,7 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     ¬FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ Antitone b := by
   intro h_not_finitelyManyPeaks
   have h := (not_finitelyManyPeaks a).mp h_not_finitelyManyPeaks
-  have h' : ∀ (m : ℕ), ∃ n ≥ m, IsAPeak a n := by
+  have h' : ∀ (m : ℕ), ∃ n ≥ m, IsPeak a n := by
     intro m
     specialize h m
     have ⟨n, n_gt_m, isAPeak_a_n⟩ := h
@@ -98,7 +98,7 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     apply And.intro
     . linarith
     . assumption
-  have hseq := choice_sequence (IsAPeak a)
+  have hseq := choice_sequence (IsPeak a)
   specialize hseq h'
   have ⟨ns, h_strictMono, h_peak⟩ := hseq
   let b := a ∘ ns
@@ -106,7 +106,7 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
   constructor
   . rw [SubSeq]
     use ns
-  . simp only [IsAPeak] at h_peak
+  . simp only [IsPeak] at h_peak
     have : ∀ i, b (i + 1) ≤ b i := by
       simp only [b]
       intro i
@@ -135,18 +135,48 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
 -- "has no peak" assumption. The induction that is required can be
 -- carried on on ℕ instead of a subtype and that is MUCH easier.
 
+theorem strictMono_subSeq_of_noPeak {a : ℕ → ℝ} :
+    (∀ n, ¬IsPeak a n) -> ∃ b, SubSeq b a ∧ StrictMono b := by
+  intro noPeak
+  simp_rw [IsPeak] at noPeak
+  push_neg at noPeak
+  choose f hf using noPeak
+  have f_gt_id (n : ℕ) : f n > n := by
+    specialize hf n
+    let ⟨fn_ge_n, a_n_lt_a_f_n⟩ := hf
+    let eq_or_lt := eq_or_gt_of_not_lt (show ¬ (f n < n) from by grind)
+    cases eq_or_lt with
+    | inl fn_eq_n => -- this branch is absurd
+        have h := hf.right
+        rw [fn_eq_n] at h
+        simp at h
+    | inr n_lt_fn =>
+        exact n_lt_fn
+  let σ (k : ℕ) : ℕ := f^[k] 0
+  let b := a ∘ σ
+  use b
+  constructor
+  . rw [SubSeq]
+    use σ
+    constructor
+    . simp only [σ]
+      -- perform an induction on k. Or use an existing theorem. Yes, do that
+      admit
+    . simp only [b]
+  . admit
+
 theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ StrictMono b := by
   intro h_finitelyManyPeaks
   rw [FinitelyManyPeaks] at h_finitelyManyPeaks
   let ⟨m, hm⟩ := h_finitelyManyPeaks; clear h_finitelyManyPeaks
-  have hm' : ∀ n > m, ¬IsAPeak a n := by
+  have hm' : ∀ n > m, ¬IsPeak a n := by
     intro n
     specialize hm n
     rw [gt_iff_lt, <- not_le]
     apply mt
     exact hm
-  simp only [IsAPeak] at hm'
+  simp only [IsPeak] at hm'
   push_neg at hm' -- ∀ n > m, ∃ k ≥ n, a n < a k
 
   -
@@ -185,7 +215,7 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
       simp only [Function.comp_apply, Subtype.coe_lt_coe]
       conv => rhs ; simp only [ns] -- the def of ns for the rsh only (ns (i + 1))
       --- Mmm how could we simplify the rec given that's its applied to a (i + 1)?
-      simp only [Nat.rec_add_one] -- Doesn't work??? Ah SHOOT, now our induction
+      -- simp only [Nat.rec_add_one] -- Doesn't work??? Ah SHOOT, now our induction
       -- is defined on the subtype { k : ℕ // k > m }, not ℕ ...
       admit
     . grind
