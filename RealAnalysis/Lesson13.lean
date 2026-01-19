@@ -121,6 +121,20 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     apply antitone_nat_of_succ_le
     assumption
 
+#check strictMono_nat_of_lt_succ
+-- strictMono_nat_of_lt_succ.{u} {α : Type u} [Preorder α] {f : ℕ → α}
+--     (hf : ∀ (n : ℕ), f n < f (n + 1)) : StrictMono f
+
+#print Nat.rec_add_one
+-- @[defeq] theorem Nat.rec_add_one.{u_1} : ∀ {C : ℕ → Sort u_1}
+--     (h0 : C 0) (h : (n : ℕ) → C n → C (n + 1)) (n : ℕ),
+--      Nat.rec h0 h (n + 1) = h n (Nat.rec h0 h n) :=
+--   fun {C} h0 h n => rfl
+
+-- TODO: make the aux result with the same conclusion but with the
+-- "has no peak" assumption. The induction that is required can be
+-- carried on on ℕ instead of a subtype and that is MUCH easier.
+
 theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ StrictMono b := by
   intro h_finitelyManyPeaks
@@ -134,6 +148,9 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     exact hm
   simp only [IsAPeak] at hm'
   push_neg at hm' -- ∀ n > m, ∃ k ≥ n, a n < a k
+
+  -
+
   -- Now we just need to choice the fuck up hm' to get a fct f : n > m -> k
   -- and then build by recursion (actually dependent choice would be enough)
   choose f hf using hm'
@@ -159,5 +176,17 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
   let b := a ∘ (·.val ) ∘ ns
   use b
   constructor
-  . admit -- ⊢ SubSeq b a
+  . -- ⊢ SubSeq b a
+    rw [SubSeq]
+    use (·.val ) ∘ ns
+    constructor
+    . apply strictMono_nat_of_lt_succ
+      intro i
+      simp only [Function.comp_apply, Subtype.coe_lt_coe]
+      conv => rhs ; simp only [ns] -- the def of ns for the rsh only (ns (i + 1))
+      --- Mmm how could we simplify the rec given that's its applied to a (i + 1)?
+      simp only [Nat.rec_add_one] -- Doesn't work??? Ah SHOOT, now our induction
+      -- is defined on the subtype { k : ℕ // k > m }, not ℕ ...
+      admit
+    . grind
   . admit -- ⊢ StrictMono b
