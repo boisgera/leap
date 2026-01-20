@@ -1,22 +1,19 @@
 import Mathlib
-import RealAnalysis.Lesson12
+-- import RealAnalysis.Lesson12 -- get `SubSeq` and `choice_sequence`
 
 set_option pp.showLetValues true
 
 
-/-!
-New definition: peak
-
-This concept appears when you think about "maximal" (i.e. non-extendable
+/--
+The peak concept appears when you think about "maximal" (non-extendable
 on the right) finite "subsequences" of increasing functions: such as
 finite sequence is non-extendable iff the its latest value is a peak.
 -/
-
 def IsPeak (a : ℕ → ℝ) (n : ℕ) := ∀ m ≥ n, a m ≤ a n
 
-/-!
+/--
 The practical definition of having a finite number of peak
-(which conveniently bypasses the explicit use of finiteness)
+(which conveniently bypasses explicit use of finiteness)
 -/
 def FinitelyManyPeaks (a : ℕ → ℝ) := ∃ m, ∀ n, IsPeak a n → n ≤ m
 
@@ -37,54 +34,6 @@ theorem not_finitelyManyPeaks (a : ℕ → ℝ) :
     specialize h m
     let ⟨n, n_gt_m, isAPeak_a_n⟩ := h
     use n
-
-/-
-Main theorem
--/
-
--- From the previous lesson
-#check choice_sequence
--- choice_sequence (p : ℕ → Prop) :
---     (∀ (n : ℕ), ∃ m ≥ n, p m) →
---     ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i)
-
--- Note: I'd like to complement that with another lemma that "lifts" the
---       local ("next") existence to global by induction.
-
-lemma next_to_global (p : ℕ → Prop) (h0 : ∃ n, p n)
-    (h1 : ∀ n, p n → ∃ m > n, p m) :
-    (∀ n, ∃ m ≥ n, p m) := by
-  intro n
-  induction n with
-  | zero =>
-    let ⟨n, hn⟩ := h0
-    use n
-    grind
-  | succ n ih =>
-    let ⟨m, m_ge_n, p_m⟩ := ih
-    have ⟨l, l_gt_m, p_l⟩ := h1 m p_m
-    use l
-    grind
-
-def choice_sequence'
-    (p : ℕ → Prop)
-    (h0 : ∃ n, p n)
-    (h1 : ∀ n, p n → ∃ m > n, p m) :
-    ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i) :=
-  next_to_global p h0 h1 |> choice_sequence p
-
-/-!
-This we need below to prove `strictMono_subSeq_of_finitelyManyPeaks`
-(at least a very specialized version of it).
-Is it or is it not a corollary of choice_sequence'? Dunno, not obvious.
--/
-
-theorem choice_sequence_dep
-    (p : ℕ → ℕ → Prop)
-    (h0 : ∃ k > 0, p 0 k)
-    (h1 : ∀ m, ∀ n > m, p m n  → ∃ k > n, p n k) :
-    ∃ ns, StrictMono ns ∧ ∀ (i : ℕ), p (ns i) (ns (i + 1)) := by
-  admit
 
 theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
     ¬FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ Antitone b := by
@@ -120,20 +69,6 @@ theorem antitone_subsequence_of_infinitelyManyPeaks {a : ℕ → ℝ} :
       assumption
     apply antitone_nat_of_succ_le
     assumption
-
-#check strictMono_nat_of_lt_succ
--- strictMono_nat_of_lt_succ.{u} {α : Type u} [Preorder α] {f : ℕ → α}
---     (hf : ∀ (n : ℕ), f n < f (n + 1)) : StrictMono f
-
-#print Nat.rec_add_one
--- @[defeq] theorem Nat.rec_add_one.{u_1} : ∀ {C : ℕ → Sort u_1}
---     (h0 : C 0) (h : (n : ℕ) → C n → C (n + 1)) (n : ℕ),
---      Nat.rec h0 h (n + 1) = h n (Nat.rec h0 h n) :=
---   fun {C} h0 h n => rfl
-
--- TODO: make the aux result with the same conclusion but with the
--- "has no peak" assumption. The induction that is required can be
--- carried on on ℕ instead of a subtype and that is MUCH easier.
 
 theorem strictMono_subSeq_of_noPeak {a : ℕ → ℝ} :
     (∀ n, ¬IsPeak a n) -> ∃ b, SubSeq b a ∧ StrictMono b := by
@@ -193,29 +128,61 @@ lemma peak_translation_invariance (a : ℕ → ℝ) (m n : ℕ) :
     rw [show p - m + m = p from by omega] at h
     exact h
 
--- The desired theorem is a corollary of `strictMono_subSeq_of_noPeak`
+/--
+Corollary of `strictMono_subSeq_of_noPeak`
+-/
+
 theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ StrictMono b := by
   intro finitelyManyPeak_a
   rw [FinitelyManyPeaks] at finitelyManyPeak_a
   let ⟨m, no_peak_after_m⟩ := finitelyManyPeak_a
   let σ : ℕ → ℕ := fun n => n + (m + 1)
-  let a' := a ∘ σ
+  let a_σ := a ∘ σ
 
-  have no_peak_a' : (∀ n, ¬IsPeak a' n) := by
-    simp only [a', σ]
+  have no_peak_a_σ : (∀ n, ¬IsPeak a_σ n) := by
+    simp only [a_σ, σ]
     intro n
     rw [<- peak_translation_invariance a (m + 1)]
     intro h
     specialize no_peak_after_m (m + 1 + n) h
     omega
 
-  let ⟨b', subseq_b'_a', strictMono_b'⟩ : ∃ b', SubSeq b' a' ∧ StrictMono b' :=
-    strictMono_subSeq_of_noPeak no_peak_a'
-  let b := b' ∘ σ
-  use b
+  let ⟨b_σ, subseq_b_σ_a_σ, strictMono_b_σ⟩ :
+      ∃ b_σ, SubSeq b_σ a_σ ∧ StrictMono b_σ :=
+    strictMono_subSeq_of_noPeak no_peak_a_σ
+  use b_σ
   constructor
-  . rw [SubSeq] at *
-    simp only [a'] at subseq_b'_a'
-    admit
-  . admit
+  . rw [SubSeq] at subseq_b_σ_a_σ ⊢
+    have ⟨τ, strictMono_τ, b_σ_eq_a_σ_comp_τ⟩ := subseq_b_σ_a_σ
+    simp only [a_σ] at b_σ_eq_a_σ_comp_τ
+    use σ ∘ τ
+    constructor
+    . apply StrictMono.comp
+      . simp only [σ, StrictMono]
+        intro a b a_lt_b
+        linarith
+      . exact strictMono_τ
+    . rw [Function.comp_assoc] at b_σ_eq_a_σ_comp_τ
+      exact b_σ_eq_a_σ_comp_τ
+  . exact strictMono_b_σ
+
+/--
+Main theorem
+-/
+theorem strictMono_or_antitone_subsequence (a : ℕ → ℝ) :
+  ∃ b, SubSeq b a ∧ (StrictMono b ∨ Antitone b)
+    := by
+  by_cases h : FinitelyManyPeaks a
+  . let ⟨b, subSeq_b, strictMono_b⟩ := strictMono_subSeq_of_finitelyManyPeaks h
+    use b
+    constructor
+    . exact subSeq_b
+    . left
+      exact strictMono_b
+  . let ⟨b, subSeq_b, antitone_b⟩ := antitone_subsequence_of_infinitelyManyPeaks h
+    use b
+    constructor
+    . exact subSeq_b
+    . right
+      exact antitone_b
