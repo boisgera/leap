@@ -183,7 +183,15 @@ lemma peak_translation_invariance (a : ℕ → ℝ) (m n : ℕ) :
     rw [Function.comp_apply]
     rw [add_comm m n] at h
     exact h
-  . admit
+  . intro h
+    rw [IsPeak] at *
+    simp only [Function.comp_apply] at h
+    intro p p_ge_m_add_n
+    specialize h (p - m)
+    specialize h (show p - m ≥ n from by omega)
+    rw [add_comm n m] at h
+    rw [show p - m + m = p from by omega] at h
+    exact h
 
 -- The desired theorem is a corollary of `strictMono_subSeq_of_noPeak`
 theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
@@ -195,12 +203,19 @@ theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
   let a' := a ∘ σ
 
   have no_peak_a' : (∀ n, ¬IsPeak a' n) := by
-    intro k
     simp only [a', σ]
-    simp only [IsPeak] at *
-    repeat simp only [Function.comp]
-    push_neg
+    intro n
+    rw [<- peak_translation_invariance a (m + 1)]
+    intro h
+    specialize no_peak_after_m (m + 1 + n) h
+    omega
 
+  let ⟨b', subseq_b'_a', strictMono_b'⟩ : ∃ b', SubSeq b' a' ∧ StrictMono b' :=
+    strictMono_subSeq_of_noPeak no_peak_a'
+  let b := b' ∘ σ
+  use b
+  constructor
+  . rw [SubSeq] at *
+    simp only [a'] at subseq_b'_a'
     admit
-
-  admit
+  . admit
