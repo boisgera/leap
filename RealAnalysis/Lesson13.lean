@@ -144,12 +144,12 @@ theorem strictMono_subSeq_of_noPeak {a : ℕ → ℝ} :
   have f_gt_id (n : ℕ) : f n > n := by
     specialize hf n
     let ⟨fn_ge_n, a_n_lt_a_f_n⟩ := hf
-    let eq_or_lt := eq_or_gt_of_not_lt (show ¬ (f n < n) from by grind)
+    let eq_or_lt := eq_or_gt_of_not_lt (show ¬(f n < n) from by grind)
     cases eq_or_lt with
-    | inl fn_eq_n => -- this branch is absurd
+    | inl fn_eq_n => -- absurd
         have h := hf.right
         rw [fn_eq_n] at h
-        simp at h
+        simp only [lt_self_iff_false] at h
     | inr n_lt_fn =>
         exact n_lt_fn
   let σ (k : ℕ) : ℕ := f^[k] 0
@@ -160,63 +160,47 @@ theorem strictMono_subSeq_of_noPeak {a : ℕ → ℝ} :
     use σ
     constructor
     . simp only [σ]
-      -- perform an induction on k. Or use an existing theorem. Yes, do that
-      admit
+      apply strictMono_nat_of_lt_succ
+      intro n
+      rw [Function.iterate_succ']
+      rw [Function.comp_apply]
+      apply f_gt_id
     . simp only [b]
+  . apply strictMono_nat_of_lt_succ
+    intro n
+    simp only [b, Function.comp_apply, σ, Function.iterate_succ']
+    specialize hf (f^[n] 0)
+    exact hf.right
+
+lemma peak_translation_invariance (a : ℕ → ℝ) (m n : ℕ) :
+    IsPeak a (m + n) ↔ IsPeak (a ∘ (· + m)) n := by
+  constructor
+  . simp only [IsPeak] at *
+    intro h
+    rw [Function.comp_apply]
+    intro n_1 n_1_ge_n
+    specialize h (n_1 + m) (show n_1 + m ≥ m + n from by linarith)
+    rw [Function.comp_apply]
+    rw [add_comm m n] at h
+    exact h
   . admit
 
+-- The desired theorem is a corollary of `strictMono_subSeq_of_noPeak`
 theorem strictMono_subSeq_of_finitelyManyPeaks {a : ℕ → ℝ} :
     FinitelyManyPeaks a -> ∃ b, SubSeq b a ∧ StrictMono b := by
-  intro h_finitelyManyPeaks
-  rw [FinitelyManyPeaks] at h_finitelyManyPeaks
-  let ⟨m, hm⟩ := h_finitelyManyPeaks; clear h_finitelyManyPeaks
-  have hm' : ∀ n > m, ¬IsPeak a n := by
-    intro n
-    specialize hm n
-    rw [gt_iff_lt, <- not_le]
-    apply mt
-    exact hm
-  simp only [IsPeak] at hm'
-  push_neg at hm' -- ∀ n > m, ∃ k ≥ n, a n < a k
+  intro finitelyManyPeak_a
+  rw [FinitelyManyPeaks] at finitelyManyPeak_a
+  let ⟨m, no_peak_after_m⟩ := finitelyManyPeak_a
+  let σ : ℕ → ℕ := fun n => n + (m + 1)
+  let a' := a ∘ σ
 
-  -
+  have no_peak_a' : (∀ n, ¬IsPeak a' n) := by
+    intro k
+    simp only [a', σ]
+    simp only [IsPeak] at *
+    repeat simp only [Function.comp]
+    push_neg
 
-  -- Now we just need to choice the fuck up hm' to get a fct f : n > m -> k
-  -- and then build by recursion (actually dependent choice would be enough)
-  choose f hf using hm'
-  -- need to build the indice by recursion and prove at each step that they
-  -- are > m. Jeeez that stuff is complex. Good luck proving what we need
-  -- with it!
-  -- Update. TODO: add the property that each new sample is greater than
-  -- the other in the result instead of extracting it later.
-  -- Arf nope, I can't do that... Or can I?
-  -- let ns : (i : ℕ) → { k : ℕ // k > m } ∧ a (i + 1) > a i
-  -- Mmmm let's try!
-  let ns : ℕ → { k : ℕ // k > m } := Nat.rec
-    ⟨m + 1, show (m + 1) > m by linarith⟩
-    fun i ⟨n, n_gt_m⟩ =>
-      let n' := f n n_gt_m
-      ⟨
-        n',
-        show n' > m from by
-          specialize hf n n_gt_m
-          simp [n']
-          linarith
-      ⟩
-  let b := a ∘ (·.val ) ∘ ns
-  use b
-  constructor
-  . -- ⊢ SubSeq b a
-    rw [SubSeq]
-    use (·.val ) ∘ ns
-    constructor
-    . apply strictMono_nat_of_lt_succ
-      intro i
-      simp only [Function.comp_apply, Subtype.coe_lt_coe]
-      conv => rhs ; simp only [ns] -- the def of ns for the rsh only (ns (i + 1))
-      --- Mmm how could we simplify the rec given that's its applied to a (i + 1)?
-      -- simp only [Nat.rec_add_one] -- Doesn't work??? Ah SHOOT, now our induction
-      -- is defined on the subtype { k : ℕ // k > m }, not ℕ ...
-      admit
-    . grind
-  . admit -- ⊢ StrictMono b
+    admit
+
+  admit
