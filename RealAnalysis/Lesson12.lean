@@ -126,13 +126,13 @@ theorem choice_sequence (p : ℕ → Prop) :
     grind
   apply strictMono_and_p_holds_aux p h_aux
 
-example (p : ℕ → Prop):
-    (∀ n, ∃ m ≥ n, p m) ->
-    ∃ ns : ℕ → ℕ, StrictMono ns ∧ ∀ i, p (ns i) := by
-  intro h
-  let ns : Nat → Nat :=
-    Nat.rec (Classical.choose (h 0)) (fun n ih => Classical.choose (h ih))
-  admit -- TODO
+-- example (p : ℕ → Prop):
+--     (∀ n, ∃ m ≥ n, p m) ->
+--     ∃ ns : ℕ → ℕ, StrictMono ns ∧ ∀ i, p (ns i) := by
+--   intro h
+--   let ns : Nat → Nat :=
+--     Nat.rec (Classical.choose (h 0)) (fun n ih => Classical.choose (h ih))
+--   admit -- TODO
 
 #print Nat.rec
 
@@ -169,13 +169,13 @@ lemma strictMono_of_lt_succ''' {α} [p : Preorder α] (a : ℕ → α) :
     apply lt_trans ih _
     apply h
 
-theorem strictMono_of_superDiagonal (a : ℕ → ℕ) (h : ∀ n, a n > n) :
-    ∃ b, SubSeq b a ∧ StrictMono b := by
-  let b := fun n => a^[n] (a 0)
-  use b
-  constructor
-  . admit
-  . admit
+-- theorem strictMono_of_superDiagonal (a : ℕ → ℕ) (h : ∀ n, a n > n) :
+--     ∃ b, SubSeq b a ∧ StrictMono b := by
+--   let b := fun n => a^[n] (a 0)
+--   use b
+--   constructor
+--   . admit
+--   . admit
 
 
 def SeqLim (a : ℕ -> ℝ) (ℓ : ℝ) : Prop := ∀ ε > 0, ∃ m, ∀ n ≥ m, |a n - ℓ| < ε

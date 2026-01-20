@@ -1,5 +1,5 @@
 import Mathlib
--- import RealAnalysis.Lesson12 -- get `SubSeq` and `choice_sequence`
+import RealAnalysis.Lesson12 -- get `SubSeq` and `choice_sequence`
 
 set_option pp.showLetValues true
 
