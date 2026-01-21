@@ -49,18 +49,42 @@ lemma Monotone.isCauchy_iff {a : ℕ → ℝ} (monotone_a : Monotone a) :
       specialize monotone_a (show p ≤ n from by omega)
       grind
 
+
+def is_approximate_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α] [NoMinOrder α]
+    (a : ℕ → α) (ε : α) (_ε_pos : ε > 0) (ℓ : α) : Prop :=
+  (∀ n, a n ≤ ℓ) ∧ (∃ n, ℓ ≤ a n + ε)
+
+-- Nope that's not what i want! I really want the ε > 0 and ub
+lemma improve_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α] [NoMinOrder α]
+    (a : ℕ → α) (ε : α) (ε_pos : ε > 0) :
+    (approximate_lub a ub ε ε_pos) → (approximate_lub a ub (ε / 2))  :=
+  by admit
+
+-- TODO:
+-- - show that if a lub exists for some ε,
+-- - find some ε for which there is a lub
+-- - conclude by induction that there is a lub for any ε
+
+
 theorem IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
     Monotone a -> (∃ ub, ∀ n, a n ≤ ub) -> IsCauchy a := by
   intro monotone_a ⟨ub, a_n_le_ub⟩
-  rw [IsCauchy]
-  intro ε ε_pos
-  by_contra h
-  push_neg at h -- ∀ (m : ℕ), ∃ n ≥ m, ∃ p ≥ m, ε ≤ |a n - a p|
-  -- extract a subsequence that breaks the bounded by induction?
-  -- first "sort" n and m by order to simplify the |·| (aux lemma).
-  have h' : ∀ (m : ℕ), ∃ n > m, ε ≤ a n - a m := by
-    admit
-  have h_2 : ∃ b, SubSeq b a ∧ ∀ n, ε ≤ a (n + 1) - a n := by
-    admit
-  have h_3 : ∃ n, a n > ub := by admit
-  grind
+  apply monotone_a.isCauchy_iff.mpr
+  -- by_contra h
+  -- push_neg at h
+
+  admit
+  -- rw [IsCauchy]
+  -- intro ε ε_pos
+  -- by_contra h
+  -- push_neg at h -- ∀ (m : ℕ), ∃ n ≥ m, ∃ p ≥ m, ε ≤ |a n - a p|
+  -- -- extract a subsequence that breaks the bounded by induction?
+  -- -- first "sort" n and m by order to simplify the |·| (aux lemma).
+  -- have h' : ∀ (m : ℕ), ∃ n > m, ε ≤ a n - a m := by
+  --   admit
+  -- have h_2 : ∃ b, SubSeq b a ∧ ∀ n, ε ≤ a (n + 1) - a n := by
+  --   admit
+  -- have h_3 : ∃ n, a n > ub := by admit
+  -- grind
