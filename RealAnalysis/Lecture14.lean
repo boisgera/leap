@@ -49,7 +49,8 @@ lemma Monotone.isCauchy_iff {a : ℕ → ℝ} (monotone_a : Monotone a) :
       specialize monotone_a (show p ≤ n from by omega)
       grind
 
-
+-- TODO: get rid of ε > 0? (ε ≥ 0 is a csq of the existence)?
+-- Encapsulate that in a subtype?
 def is_approximate_lub {α}
     [Field α] [LinearOrder α] [IsStrictOrderedRing α] [NoMinOrder α]
     (a : ℕ → α) (ε : α) (_ε_pos : ε > 0) (ℓ : α) : Prop :=
