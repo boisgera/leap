@@ -49,25 +49,42 @@ lemma Monotone.isCauchy_iff {a : ℕ → ℝ} (monotone_a : Monotone a) :
       specialize monotone_a (show p ≤ n from by omega)
       grind
 
--- TODO: get rid of ε > 0? (ε ≥ 0 is a csq of the existence)?
--- Encapsulate that in a subtype?
-def is_approximate_lub {α}
-    [Field α] [LinearOrder α] [IsStrictOrderedRing α] [NoMinOrder α]
-    (a : ℕ → α) (ε : α) (_ε_pos : ε > 0) (ℓ : α) : Prop :=
+def approximate_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α]
+    (a : ℕ → α) (ε : α) (ℓ : α) : Prop :=
   (∀ n, a n ≤ ℓ) ∧ (∃ n, ℓ ≤ a n + ε)
 
--- Nope that's not what i want! I really want the ε > 0 and ub
-lemma improve_lub {α}
-    [Field α] [LinearOrder α] [IsStrictOrderedRing α] [NoMinOrder α]
-    (a : ℕ → α) (ε : α) (ε_pos : ε > 0) :
-    (approximate_lub a ub ε ε_pos) → (approximate_lub a ub (ε / 2))  :=
-  by admit
+lemma worse_approximate_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α]
+    (a : ℕ → α) (ε₁ ε₂: α) (ℓ : α) :
+    ε₁ ≤ ε₂ →
+    approximate_lub a ε₁ ℓ →
+    approximate_lub a ε₂ ℓ := by
+  intro ε₁_le_ε₂ approximate_lub_a_ε₁_ℓ
+  rw [approximate_lub] at *
+  constructor
+  . exact approximate_lub_a_ε₁_ℓ.1
+  . have ⟨n, hn⟩ := approximate_lub_a_ε₁_ℓ.2
+    use n
+    linarith
+
+lemma improve_approximate_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α]
+    (a : ℕ → α) (ε : α) :
+    ε > 0 →
+    ∃ ℓ, approximate_lub a ℓ ε →
+    ∃ ℓ, approximate_lub a ℓ (ε / 2) := by
+  -- TODO: dichotomy
+  admit
 
 -- TODO:
 -- - show that if a lub exists for some ε,
 -- - find some ε for which there is a lub
 -- - conclude by induction that there is a lub for any ε
 
+
+-- TODO: document/do the "other way", by contradiction, where you don't need to
+--       focus on the precision of the lub but you need to use an induction.
 
 theorem IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
     Monotone a -> (∃ ub, ∀ n, a n ≤ ub) -> IsCauchy a := by
