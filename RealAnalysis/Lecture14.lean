@@ -1,6 +1,8 @@
 import Mathlib
 import RealAnalysis.Lesson13
 
+set_option pp.showLetValues true
+
 #print IsCauchy
 -- def IsCauchy : (ℕ → ℝ) → Prop :=
 --   fun a => ∀ ε > 0, ∃ m, ∀ n ≥ m, ∀ p ≥ m, |a n - a p| < ε
@@ -72,28 +74,93 @@ lemma improve_approximate_lub {α}
     [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     (a : ℕ → α) (ε : α) :
     ε > 0 →
-    ∃ ℓ, approximate_lub a ℓ ε →
-    ∃ ℓ, approximate_lub a ℓ (ε / 2) := by
-  -- TODO: dichotomy
-  admit
+    (∃ ℓ, approximate_lub a ε ℓ ) →
+    (∃ ℓ, approximate_lub a (ε / 2) ℓ) := by
+  intro ε_pos ⟨ℓ, approximate_lub_a_ℓ_ε⟩
+  let ℓ' := ℓ - ε / 2
+  by_cases h : approximate_lub a (ε / 2) ℓ'
+  . exact ⟨ℓ', h⟩
+  . simp only [approximate_lub] at *
+    use ℓ
+    push_neg at h
+    constructor
+    . exact approximate_lub_a_ℓ_ε.1
+    . by_contra h'
+      push_neg at h'
+      specialize h (by grind)
+      simp [ℓ'] at h
+      have ⟨n, hn⟩ := approximate_lub_a_ℓ_ε.2
+      specialize h n
+      linarith
 
 -- TODO:
 -- - show that if a lub exists for some ε,
 -- - find some ε for which there is a lub
 -- - conclude by induction that there is a lub for any ε
 
+lemma arbitrary_precision_approximate_lub {α}
+    [Field α] [LinearOrder α] [IsStrictOrderedRing α] [Archimedean α]
+    (a : ℕ → α) (ε : α) (ub : α) :
+    (∀ n, a n ≤ ub) →
+    ε > 0 →
+    (∃ ℓ, approximate_lub a ε ℓ ) := by
+  intro h_ub ε_pos
+  let ε₀ := ub - (a 0) + 1
+  have ε₀_pos : ε₀ > 0 := by
+    specialize h_ub 0
+    linarith
+  have approximate_lub_a_ε₀_ub : approximate_lub a ε₀ ub  := by
+    rw [approximate_lub]
+    constructor
+    . intro n
+      specialize h_ub n
+      linarith
+    . use 0
+      linarith
+  have has_approximate_lub_a_ε₀_div_two_pow_n (n : ℕ) :
+    ∃ ℓ, approximate_lub a (ε₀ / 2 ^ n) ℓ := by
+    induction n with
+    | zero =>
+      simp only [pow_zero, div_one]
+      exact ⟨ub, approximate_lub_a_ε₀_ub⟩
+    | succ n ih =>
+      have := improve_approximate_lub a (ε₀ / 2 ^ n) (by positivity) ih
+      field_simp at this
+      grind
+  have chose_n : ∃ n, ε₀ / 2 ^ n ≤ ε := by
+    have : ε₀ / ε > 0 := by positivity
+    have ⟨n, hn⟩ : ∃ n, (ε₀ / ε) < 2 ^ n := by
+      apply pow_unbounded_of_one_lt
+      linarith
+    use n
+    field_simp at ⊢ hn
+    linarith
 
--- TODO: document/do the "other way", by contradiction, where you don't need to
---       focus on the precision of the lub but you need to use an induction.
+  let ⟨n, ε'_le_ε⟩ := chose_n
+  let ε' := ε₀ / 2 ^ n
+  let ⟨ℓ, approximate_lub_a_ε'_ℓ⟩ := has_approximate_lub_a_ε₀_div_two_pow_n n
+  use ℓ
+  apply worse_approximate_lub a ε' ε ℓ ε'_le_ε approximate_lub_a_ε'_ℓ
+
 
 theorem IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
     Monotone a -> (∃ ub, ∀ n, a n ≤ ub) -> IsCauchy a := by
   intro monotone_a ⟨ub, a_n_le_ub⟩
   apply monotone_a.isCauchy_iff.mpr
-  -- by_contra h
-  -- push_neg at h
-
   admit
+
+-- TODO: document/do the "other way", by contradiction, where you don't need to
+--       focus on the precision of the lub but you prove that by contradiction
+--       if you are not Cauchy you exceeded any threshold.
+
+-- theorem IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
+--     Monotone a -> (∃ ub, ∀ n, a n ≤ ub) -> IsCauchy a := by
+--   intro monotone_a ⟨ub, a_n_le_ub⟩
+--   apply monotone_a.isCauchy_iff.mpr
+--   -- by_contra h
+--   -- push_neg at h
+
+--   admit
   -- rw [IsCauchy]
   -- intro ε ε_pos
   -- by_contra h
