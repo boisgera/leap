@@ -7,10 +7,6 @@ set_option pp.showLetValues true
 -- def IsCauchy : (ℕ → ℝ) → Prop :=
 --   fun a => ∀ ε > 0, ∃ m, ∀ n ≥ m, ∀ p ≥ m, |a n - a p| < ε
 
-def BolzanoWeierstrass (a : ℕ → ℝ) :
-    ∃ M > 0, ∀ n, |a n| ≤ M -> ∃ b, SubSeq b a ∧ IsCauchy b := by
-  admit
-
 #check strictMono_or_antitone_subsequence
 -- strictMono_or_antitone_subsequence (a : ℕ → ℝ) :
 --     ∃ b, SubSeq b a ∧ (StrictMono b ∨ Antitone b)
@@ -143,13 +139,69 @@ lemma arbitrary_precision_approximate_lub {α}
   apply worse_approximate_lub a ε' ε ℓ ε'_le_ε approximate_lub_a_ε'_ℓ
 
 
-theorem IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
+lemma IsCauchy_of_monotone_and_upperBound (a : ℕ → ℝ) :
     Monotone a -> (∃ ub, ∀ n, a n ≤ ub) -> IsCauchy a := by
   intro monotone_a ⟨ub, a_n_le_ub⟩
   apply monotone_a.isCauchy_iff.mpr
-  admit
+  intro ε ε_pos
+  have ⟨ℓ, h_ℓ⟩ := arbitrary_precision_approximate_lub
+    a (ε / 2) ub a_n_le_ub (show ε / 2 > 0 by linarith)
+  rw [approximate_lub] at h_ℓ
+  have ⟨ℓ_is_ub, m, h_m⟩ := h_ℓ
+  use m
+  intro n n_ge_m p p_gt_n
+  rw [Monotone] at monotone_a
+  have h₁ := monotone_a n_ge_m
+  specialize ℓ_is_ub p
+  linarith
 
--- TODO: document/do the "other way", by contradiction, where you don't need to
+lemma IsCauchy_of_antitone_and_lowerBound (a : ℕ → ℝ) :
+    Antitone a -> (∃ lb, ∀ n, lb ≤ a n ) -> IsCauchy a := by
+  intro antitone_a ⟨lb, lb_le_a_n⟩
+  have h₁ : Monotone (-a) := by
+    rw [Antitone, Monotone] at *
+    intro m n m_le_n
+    specialize antitone_a m_le_n
+    simp only [Pi.neg_apply]
+    linarith
+  have h₂ : ∀ n, (-a) n ≤ - lb := by
+    intro n
+    specialize lb_le_a_n n
+    simp only [Pi.neg_apply]
+    linarith
+  have : IsCauchy (-a) := IsCauchy_of_monotone_and_upperBound (-a) h₁ ⟨-lb, h₂⟩
+  rw [IsCauchy] at *
+  simp only [gt_iff_lt, ge_iff_le, Pi.neg_apply, sub_neg_eq_add] at this ⊢
+  ring_nf at this ⊢
+  conv at this =>
+    rhs; rhs; rhs; ext; ext; ext; ext; ext; arg 1; arg 1;
+    rw [add_comm, <- sub_eq_add_neg]
+  simp only [abs_sub_comm] at this
+  exact this
+
+def BolzanoWeierstrass (a : ℕ → ℝ) :
+    (∃ M > 0, ∀ n, |a n| ≤ M) -> ∃ b, SubSeq b a ∧ IsCauchy b := by
+  have ⟨b, subSeq_b_a, strictMono_or_antitone⟩ := strictMono_or_antitone_subsequence a
+  cases strictMono_or_antitone with
+  | inl strictMono =>
+    have monotone := strictMono.monotone
+    intro ⟨M, M_pos, M_bound⟩
+    use b
+    constructor
+    . exact subSeq_b_a
+    . apply IsCauchy_of_monotone_and_upperBound b monotone
+      use M
+      intro n
+      rw [SubSeq] at subSeq_b_a
+      have ⟨sigma, _, b_eq_a_comp_sigma⟩ := subSeq_b_a
+      rw [b_eq_a_comp_sigma]
+      rw [Function.comp_apply]
+      specialize M_bound (sigma n)
+      grind
+  | inr antitone => sorry
+
+
+-- TODO: also document/do the "other way", by contradiction, where you don't need to
 --       focus on the precision of the lub but you prove that by contradiction
 --       if you are not Cauchy you exceeded any threshold.
 
