@@ -198,7 +198,24 @@ def BolzanoWeierstrass (a : ℕ → ℝ) :
       rw [Function.comp_apply]
       specialize M_bound (sigma n)
       grind
-  | inr antitone => sorry
+  | inr antitone =>
+    intro ⟨M, M_pos, M_bound⟩
+    use b
+    constructor
+    . exact subSeq_b_a
+    . apply IsCauchy_of_antitone_and_lowerBound
+      exact antitone
+      use -M
+      intro n
+      rw [SubSeq] at subSeq_b_a
+      have ⟨sigma, _, b_eq_a_comp_sigma⟩ := subSeq_b_a
+      rw [b_eq_a_comp_sigma]
+      rw [Function.comp_apply]
+      specialize M_bound (sigma n)
+      grind
+
+
+
 
 
 -- TODO: also document/do the "other way", by contradiction, where you don't need to
