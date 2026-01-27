@@ -1,47 +1,80 @@
 import Mathlib
 
-set_option pp.showLetValues true
+-- TODO: explore the fact that in ℝ, Cauchy sequences converge.
 
--- Need a generic version wrt ℚ or ℝ?
+-- TODO: show that for real-valued sequences, the standard `CauchySeq` and
+--       our simple `IsCauchy` are equivalent. Do the same for limits and
+--       deduce a simple, concrete version of "ℝ is complete".
+
+/-!
+⚠️ Many new definitions to consider!
+-/
+
+#print CauchySeq
+-- def CauchySeq.{u, v} : {α : Type u} → {β : Type v} →
+-- [uniformSpace : UniformSpace α] → [Preorder β] → (β → α) → Prop :=
+-- fun {α} {β} [UniformSpace α] [Preorder β] u => Cauchy (Filter.map u Filter.atTop)
+
+#check Preorder -- ≤ which is reflexive and transitive; for us: ℕ
+-- Preorder.{u_2} (α : Type u_2) : Type u_2
+
+#check UniformSpace -- Here for us: ℝ
+-- Think of it as something a bit weaker than "metric space";
+-- the mere "topological space" is not enough to define Cauchy filter.
+-- This is actually a topological space with a "uniform structure" with four
+-- additional axioms.
+-- UniformSpace.{u} (α : Type u) : Type u
+
+/-!
+What `CauchySeq a` captures when `a : ℕ → ℝ` is that "some filter based on a
+is Cauchy". Need to investigate:
+  - what is a filter,
+  - what is this filter,
+  - what is a Cauchy filter.
+-/
+
+#print Filter
+-- structure Filter.{u_1} (α : Type u_1) : Type u_1
+-- number of parameters: 1
+-- fields:
+--   Filter.sets : Set (Set α)
+--   Filter.univ_sets : Set.univ ∈ self.sets
+--   Filter.sets_of_superset : ∀ {x y : Set α}, x ∈ self.sets → x ⊆ y → y ∈ self.sets
+--   Filter.inter_sets : ∀ {x y : Set α}, x ∈ self.sets → y ∈ self.sets → x ∩ y ∈ self.sets
+-- constructor:
+--   Filter.mk.{u_1} {α : Type u_1} (sets : Set (Set α)) (univ_sets : Set.univ ∈ sets)
+--     (sets_of_superset : ∀ {x y : Set α}, x ∈ sets → x ⊆ y → y ∈ sets)
+--     (inter_sets : ∀ {x y : Set α}, x ∈ sets → y ∈ sets → x ∩ y ∈ sets) : Filter α
+
+#print Filter.atTop -- "neighborhood" of "+∞" I guess?
+-- def Filter.atTop.{u_3} : {α : Type u_3} → [Preorder α] → Filter α :=
+-- fun {α} [Preorder α] => ⨅ a, Filter.principal (Set.Ici a)
+
+-- Note that filters instantiate ⊓ (inf) via `Filter.instInfSet`
+
+#check Filter.instInfSet
+-- Filter.instInfSet.{u_1} {α : Type u_1} : InfSet (Filter α)
+
+#print Set.Ici -- "Interval closed-infinity: Ici" (I guess)
+-- def Set.Ici.{u_1} : {α : Type u_1} → [Preorder α] → α → Set α :=
+-- fun {α} [Preorder α] a => {x | a ≤ x}
+
+#print Filter.principal
+-- def Filter.principal.{u_1} : {α : Type u_1} → Set α → Filter α :=
+-- fun {α} s => {
+--   sets := {t | s ⊆ t},
+--   univ_sets := ⋯,
+--   sets_of_superset := ⋯,
+--   inter_sets := ⋯
+-- }
+
+/-!
+OK, at this stage the definition of `CauchySeq` (partiallu) makes sense:
+a sequence is Cauchy if the image of the "neighbourhood of +∞" by the sequence
+is a Cauchy filter. But the definition of a Cauchy filter (in a uniform space)
+is a bitch. Consider:
+-/
 
 #print Cauchy
--- def Cauchy.{u} : {α : Type u} → [uniformSpace : UniformSpace α] →
---     Filter α → Prop :=
---   fun {α} [UniformSpace α] f => f.NeBot ∧ f ×ˢ f ≤ uniformity α
-
-namespace K -- avoid collisions wrt redefinitions
-
-def Cauchy (a : ℕ → ℝ) : Prop :=
-  ∀ ε > 0, ∃ m, ∀ n ≥ m, ∀ p ≥ m, |a n - a p| ≤ ε
-
-def SeqLim (a : ℕ → ℝ) (ℓ : ℝ) : Prop :=
-  ∀ ε > 0, ∃ m, ∀ n ≥ m, |a n - ℓ| ≤ ε
-
-def SeqConv (a : ℕ → ℝ) : Prop :=
-  ∃ ℓ, SeqLim a ℓ
-
-
--- Jump in, have a look at how real numbers are constructed?
--- Mmmm, we're going to have issue since it uses the "true" definition of
--- Cauchy of Mathlib that is rather complex.
-theorem seqConv_of_cauchy {a : ℕ → ℝ} : Cauchy a → SeqConv a := by
-  admit
-
-end K
-
--- Need to study what is done in
--- https://github.com/AlexKontorovich/RealAnalysisGame/blob/main/Game/Levels/L15Levels/L01_check.lean
--- what are the students actually doing themselves in these lectures?
-
-
--- Theorem (Conv of IsCauchy): If a sequence a : N → Q satisfies
--- IsCauchy a, then SeqConv a holds – that is, the sequence converges.
--- Given that such a limit exists, we can define it explicitly:
-
--- Definition (Real of CauSeq): This takes IsCauchy a (for a : N → Q)
--- and returns the real number that a converges to.
--- This real number does what we want:
-
--- Theorem (SeqLim of Real of Cau): If ha : IsCauchy (a : N→Q),
--- then SeqLim a (Real_of_CauSeq ha) holds – that is, the sequence a converges
--- to the real number defined by Real_of_CauSeq.
+-- def Cauchy.{u} : {α : Type u} → [uniformSpace : UniformSpace α] → Filter α → Prop :=
+-- fun {α} [UniformSpace α] f => f.NeBot ∧ f ×ˢ f ≤ uniformity α
