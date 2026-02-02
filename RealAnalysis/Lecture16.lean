@@ -132,7 +132,7 @@ theorem cauchy_for_dummies {α} [m : MetricSpace α] {f : Filter α} :
     . grind
 
 -- Specialize to sequences
-theorem cauchySeq_for_dummies {α} [m : MetricSpace α] (a : ℕ → α) :
+theorem cauchySeq_for_dummies {α} [Nonempty α] [m : MetricSpace α] (a : ℕ → α) :
     CauchySeq a ↔
     ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε := by
   simp only [CauchySeq]
@@ -163,7 +163,12 @@ theorem cauchySeq_for_dummies {α} [m : MetricSpace α] (a : ℕ → α) :
   . intro h
     apply cauchy_for_dummies.mpr
     constructor
-    . admit
+    . -- ⊢ (Filter.map a Filter.atTop).NeBot
+      by_contra not_neBot
+      simp only [Filter.not_neBot, Filter.map_eq_bot_iff] at not_neBot
+      have := Filter.atTop_neBot (α := ℕ)
+      simp at this
+      exact this.ne not_neBot
     . simp only [f_aTop]
       intro ε ε_pos
       specialize h ε ε_pos
@@ -171,12 +176,21 @@ theorem cauchySeq_for_dummies {α} [m : MetricSpace α] (a : ℕ → α) :
       use Set.image a {i : ℕ | i ≥ n}
       constructor
       . use n
-        admit
+        grind
       . use Set.image a {i : ℕ | i ≥ n}
-        admit
+        constructor
+        . use n
+          grind
+        . simp
+          grind
 
 -- Specialize to real-valued sequences
 theorem real_cauchySeq_for_dummies (a : ℕ → ℝ) :
     CauchySeq a ↔
     ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, |a i -  a j| < ε := by
-  admit
+  have :
+      (∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε) ↔
+      (∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, |a i -  a j| < ε)
+      := by
+    simp only [Real.dist_eq]
+  exact Iff.trans (cauchySeq_for_dummies a) this
