@@ -1,5 +1,8 @@
 import Mathlib
 
+set_option pp.showLetValues true
+
+
 -- TODO: explore the fact that in ℝ, Cauchy sequences converge.
 
 -- TODO: show that for real-valued sequences, the standard `CauchySeq` and
@@ -72,7 +75,7 @@ is Cauchy". Need to investigate:
 OK, at this stage the definition of `CauchySeq` (partially) makes sense:
 a sequence is Cauchy if the image of the "neighbourhood of +∞" by the sequence
 is a Cauchy filter. But the definition of a Cauchy filter (in a uniform space)
-is a bitch. Consider:
+is quite a bitch. Consider:
 -/
 
 #print Cauchy
@@ -94,24 +97,56 @@ is a bitch. Consider:
 -- Metric.mem_uniformity_dist.{u} {α : Type u} [PseudoMetricSpace α] {s : Set (α × α)} :
 --     s ∈ uniformity α ↔ ∃ ε > 0, ∀ ⦃a b : α⦄, dist a b < ε → (a, b) ∈ s
 
-example {α : Type u} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) : True
-   -- So far, we have:
-    -- ∀ (x : Set (α × α)), (∃ ε > 0, ∀ ⦃a b : α⦄, dist a b < ε → (a, b) ∈ x) → x ∈ f ×ˢ f
-    -- To go beyond that we probably need to rw/simp/charac ×ˢ
-    := by
+#check Filter.mem_prod_iff
+-- Filter.mem_prod_iff.{u_1, u_2}
+--   {α : Type u_1} {β : Type u_2} {s : Set (α × β)} {f : Filter α} {g : Filter β} :
+--   s ∈ f ×ˢ g ↔ ∃ t₁ ∈ f, ∃ t₂ ∈ g, t₁ ×ˢ t₂ ⊆ s
+
+-- Wait we could probably simplify the hypothesis "being a neighbourhood of the
+-- diagonal" further, right? Yes, we could pick for such neighbourghoods exactly
+-- the set of points (x, y) such that dist x y < ε !!!
+theorem t₁ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
+    ∀ (x : Set (α × α)),
+    (∃ ε > 0, ∀ ⦃a b : α⦄, dist a b < ε → (a, b) ∈ x) →
+    ∃ t₁ ∈ f, ∃ t₂ ∈ f, t₁ ×ˢ t₂ ⊆ x := by
   rw [Cauchy] at c
   have ⟨h, le⟩ := c
   rw [Filter.le_def] at le
   simp only [Metric.mem_uniformity_dist] at le
-  rw [Filter.prod_eq_inf] at le
-  simp [Filter.mem_inf_iff] at le -- , Filter.mem_comap, Filter.mem_comap] at le
-
-  admit
+  simp only [Filter.mem_prod_iff] at le
+  exact le
 
   -- Mechanical rewriting without the lemmas is a rabbit hole that goes nowhere aifaict
   -- rw [uniformity] at le -- f ×ˢ f ≤ UniformSpace.uniformity
   -- rw [UniformSpace.uniformity] at le -- f ×ˢ f ≤ PseudoMetricSpace.toUniformSpace.2
   -- rw [PseudoMetricSpace.toUniformSpace] at le -- f ×ˢ f ≤ m.toPseudoMetricSpace.7.2
   -- rw [MetricSpace.toPseudoMetricSpace] at le -- f ×ˢ f ≤ m.1.7.2
+
+theorem t₂ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
+    ∀ ε > 0, ∃ t₁ ∈ f, ∃ t₂ ∈ f, t₁ ×ˢ t₂ ⊆ {(x, y) : α × α | dist x y < ε} := by
+  intro ε ε_pos
+  let s := {(x, y) : α × α | dist x y < ε}
+  have k : ∃ ε > 0, ∀ a b : α, dist a b < ε → (a, b) ∈ s := by
+    use ε
+    constructor
+    . linarith [ε_pos]
+    . exact fun _ _ h => h
+  apply t₁ c s
+  exact k
+
+
+-- TODO: specialize
+theorem t₃ {α} [m : MetricSpace α] (a : ℕ → α) (c : CauchySeq a) :
+    ∀ ε > 0, ∃ n : ℕ, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε
+:= by
+  rw [CauchySeq] at c
+  have h : ∀ ε > 0,
+      ∃ t₁ ∈ Filter.map a Filter.atTop, -- need to simplify these assump.
+      ∃ t₂ ∈ Filter.map a Filter.atTop,
+      t₁ ×ˢ t₂ ⊆ {(x, y) | dist x y < ε} := t₂ c
+  have lem {x : Set α} :
+      x ∈ Filter.map a Filter.atTop ↔
+      ∃ m, ∀ n ≥ m, a n ∈ x := by simp
+  simp only [lem] at h
 
   admit
