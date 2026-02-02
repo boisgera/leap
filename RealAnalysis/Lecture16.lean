@@ -106,63 +106,73 @@ is quite a bitch. Consider:
 -- TODO: Arf, we need to make another pass to prove the converse: what we want
 -- is something like Cauchy f ↔ ...
 
-theorem t₁ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
-    ∀ (x : Set (α × α)),
-    (∃ ε > 0, ∀ ⦃a b : α⦄, dist a b < ε → (a, b) ∈ x) →
-    ∃ t₁ ∈ f, ∃ t₂ ∈ f, t₁ ×ˢ t₂ ⊆ x := by
-  rw [Cauchy] at c
-  have ⟨h, le⟩ := c
-  rw [Filter.le_def] at le
-  simp only [Metric.mem_uniformity_dist] at le
-  simp only [Filter.mem_prod_iff] at le
-  exact le
-
-  -- Mechanical rewriting without the lemmas is a rabbit hole that goes nowhere aifaict
-  -- rw [uniformity] at le -- f ×ˢ f ≤ UniformSpace.uniformity
-  -- rw [UniformSpace.uniformity] at le -- f ×ˢ f ≤ PseudoMetricSpace.toUniformSpace.2
-  -- rw [PseudoMetricSpace.toUniformSpace] at le -- f ×ˢ f ≤ m.toPseudoMetricSpace.7.2
-  -- rw [MetricSpace.toPseudoMetricSpace] at le -- f ×ˢ f ≤ m.1.7.2
-
-theorem t₂ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
-    ∀ ε > 0, ∃ t₁ ∈ f, ∃ t₂ ∈ f, t₁ ×ˢ t₂ ⊆ {(x, y) : α × α | dist x y < ε} := by
-  intro ε ε_pos
-  let s := {(x, y) : α × α | dist x y < ε}
-  have k : ∃ ε > 0, ∀ a b : α, dist a b < ε → (a, b) ∈ s := by
-    use ε
+theorem cauchy_for_dummies {α} [m : MetricSpace α] {f : Filter α} :
+    Cauchy f ↔
+    f.NeBot ∧
+    ∀ ε > 0, ∃ s₁ ∈ f, ∃ s₂ ∈ f, s₁ ×ˢ s₂ ⊆ {(x, y) : α × α | dist x y < ε} := by
+  simp only [
+    Cauchy,
+    Filter.le_def,
+    Metric.mem_uniformity_dist,
+    Filter.mem_prod_iff
+  ]
+  constructor
+  . intro ⟨h, le⟩
     constructor
-    . linarith [ε_pos]
-    . exact fun _ _ h => h
-  apply t₁ c s
-  exact k
-
+    . exact h
+    . intro ε ε_pos
+      let s := {(x, y) : α × α | dist x y < ε}
+      have : ∃ ε > 0, ∀ a b : α, dist a b < ε → (a, b) ∈ s := by grind
+      apply le
+      exact this
+  . intro h
+    let ⟨f_neBot, h'⟩ := h
+    constructor
+    . exact f_neBot
+    . grind
 
 -- Specialize to sequences
-theorem t₃ {α} [m : MetricSpace α] (a : ℕ → α) (c : CauchySeq a) :
-    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε
-:= by
-  rw [CauchySeq] at c
-  have h : ∀ ε > 0,
-      ∃ t₁ ∈ Filter.map a Filter.atTop, -- need to simplify these assump.
-      ∃ t₂ ∈ Filter.map a Filter.atTop,
-      t₁ ×ˢ t₂ ⊆ {(x, y) | dist x y < ε} := t₂ c
-  have lem {x : Set α} :
-      x ∈ Filter.map a Filter.atTop ↔
-      ∃ m, ∀ n ≥ m, a n ∈ x := by simp
-  simp only [lem] at h
-  intro ε ε_pos
-  specialize h ε ε_pos
-  let ⟨s₁, ⟨m₁, h₁⟩, s₂, ⟨m₂, h₂⟩, h₃⟩ := h
-  let n := max m₁ m₂
-  use n
-  intro i i_ge_n j j_ge_n
-  specialize h₁ i (show i ≥ m₁ from by grind)
-  specialize h₂ j (show j ≥ m₂ from by grind)
-  have : (a i, a j) ∈ s₁ ×ˢ s₂ := by grind
-  specialize h₃ this
-  simp only [Set.mem_setOf_eq] at h₃
-  exact h₃
+theorem cauchySeq_for_dummies {α} [m : MetricSpace α] (a : ℕ → α) :
+    CauchySeq a ↔
+    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε := by
+  simp only [CauchySeq]
+  have f_aTop {x : Set α} :
+      x ∈ Filter.map a Filter.atTop ↔ ∃ m, ∀ n ≥ m, a n ∈ x := by
+      simp only [
+        Filter.mem_map,
+        Filter.mem_atTop_sets,
+        ge_iff_le,
+        Set.mem_preimage
+      ]
+  constructor
+  . intro c
+    have ⟨f_neBot, h⟩ := cauchy_for_dummies.mp c
+    simp only [f_aTop] at h
+    intro ε ε_pos
+    specialize h ε ε_pos
+    let ⟨s₁, ⟨m₁, h₁⟩, s₂, ⟨m₂, h₂⟩, h₃⟩ := h
+    let n := max m₁ m₂
+    use n
+    intro i i_ge_n j j_ge_n
+    specialize h₁ i (show i ≥ m₁ from by grind)
+    specialize h₂ j (show j ≥ m₂ from by grind)
+    have : (a i, a j) ∈ s₁ ×ˢ s₂ := by grind
+    specialize h₃ this
+    simp only [Set.mem_setOf_eq] at h₃
+    exact h₃
+  . intro h
+    apply cauchy_for_dummies.mpr
+    constructor
+    . admit
+    . simp only [f_aTop]
+      intro ε ε_pos
+      specialize h ε ε_pos
+      have ⟨n, hn⟩ := h
+      use Set.image a {i : ℕ | i ≥ n}
+      admit
 
 -- Specialize to real-valued sequences
-theorem t₄ (a : ℕ → ℝ) (c : CauchySeq a) :
-    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, |a i -  a j| < ε :=
-    by admit
+theorem real_cauchySeq_for_dummies (a : ℕ → ℝ) :
+    CauchySeq a ↔
+    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, |a i -  a j| < ε := by
+  admit
