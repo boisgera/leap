@@ -169,7 +169,11 @@ theorem cauchySeq_for_dummies {α} [m : MetricSpace α] (a : ℕ → α) :
       specialize h ε ε_pos
       have ⟨n, hn⟩ := h
       use Set.image a {i : ℕ | i ≥ n}
-      admit
+      constructor
+      . use n
+        admit
+      . use Set.image a {i : ℕ | i ≥ n}
+        admit
 
 -- Specialize to real-valued sequences
 theorem real_cauchySeq_for_dummies (a : ℕ → ℝ) :
