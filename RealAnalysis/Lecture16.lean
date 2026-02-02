@@ -102,9 +102,10 @@ is quite a bitch. Consider:
 --   {α : Type u_1} {β : Type u_2} {s : Set (α × β)} {f : Filter α} {g : Filter β} :
 --   s ∈ f ×ˢ g ↔ ∃ t₁ ∈ f, ∃ t₂ ∈ g, t₁ ×ˢ t₂ ⊆ s
 
--- Wait we could probably simplify the hypothesis "being a neighbourhood of the
--- diagonal" further, right? Yes, we could pick for such neighbourghoods exactly
--- the set of points (x, y) such that dist x y < ε !!!
+
+-- TODO: Arf, we need to make another pass to prove the converse: what we want
+-- is something like Cauchy f ↔ ...
+
 theorem t₁ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
     ∀ (x : Set (α × α)),
     (∃ ε > 0, ∀ ⦃a b : α⦄, dist a b < ε → (a, b) ∈ x) →
@@ -135,9 +136,9 @@ theorem t₂ {α} [m : MetricSpace α] {f : Filter α} (c : Cauchy f) :
   exact k
 
 
--- TODO: specialize
+-- Specialize to sequences
 theorem t₃ {α} [m : MetricSpace α] (a : ℕ → α) (c : CauchySeq a) :
-    ∀ ε > 0, ∃ n : ℕ, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε
+    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, dist (a i) (a j) < ε
 := by
   rw [CauchySeq] at c
   have h : ∀ ε > 0,
@@ -148,5 +149,20 @@ theorem t₃ {α} [m : MetricSpace α] (a : ℕ → α) (c : CauchySeq a) :
       x ∈ Filter.map a Filter.atTop ↔
       ∃ m, ∀ n ≥ m, a n ∈ x := by simp
   simp only [lem] at h
+  intro ε ε_pos
+  specialize h ε ε_pos
+  let ⟨s₁, ⟨m₁, h₁⟩, s₂, ⟨m₂, h₂⟩, h₃⟩ := h
+  let n := max m₁ m₂
+  use n
+  intro i i_ge_n j j_ge_n
+  specialize h₁ i (show i ≥ m₁ from by grind)
+  specialize h₂ j (show j ≥ m₂ from by grind)
+  have : (a i, a j) ∈ s₁ ×ˢ s₂ := by grind
+  specialize h₃ this
+  simp only [Set.mem_setOf_eq] at h₃
+  exact h₃
 
-  admit
+-- Specialize to real-valued sequences
+theorem t₄ (a : ℕ → ℝ) (c : CauchySeq a) :
+    ∀ ε > 0, ∃ n, ∀ i ≥ n, ∀ j ≥ n, |a i -  a j| < ε :=
+    by admit
