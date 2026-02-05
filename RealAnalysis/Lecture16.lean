@@ -2,6 +2,7 @@ import Mathlib
 
 set_option pp.showLetValues true
 
+open Filter
 
 -- TODO: explore the fact that in ℝ, Cauchy sequences converge.
 
@@ -194,3 +195,25 @@ theorem real_cauchySeq_for_dummies (a : ℕ → ℝ) :
       := by
     simp only [Real.dist_eq]
   exact Iff.trans (cauchySeq_for_dummies a) this
+
+#print CompleteSpace
+-- class CompleteSpace.{u} (α : Type u) [UniformSpace α] : Prop
+-- number of parameters: 2
+-- fields:
+--   CompleteSpace.complete : ∀ {f : Filter α}, Cauchy f → ∃ x, f ≤ nhds x
+-- constructor:
+--   CompleteSpace.mk.{u} {α : Type u} [UniformSpace α] (complete : ∀ {f : Filter α}, Cauchy f → ∃ x, f ≤ nhds x) :
+--     CompleteSpace α
+
+-- Show the "easy version" of completeness in metric spaces (nota: the reverse
+-- property would be nice, but let's keep that simple)
+
+theorem completeSpace_for_dummies {α} [MetricSpace α] [CompleteSpace α]:
+    ∀ (a : ℕ → α), CauchySeq a → ∃ ℓ, Tendsto a atTop (nhds ℓ) := by
+  intro a cauchySeq_a
+  let c : CompleteSpace α := inferInstance
+  have h_conv:= c.complete (f := Filter.map a atTop)
+  rw [CauchySeq] at cauchySeq_a
+  specialize h_conv cauchySeq_a
+  simp only [Tendsto]
+  exact h_conv
