@@ -51,9 +51,86 @@ example : Tendsto (partial_sum a₁) atTop (nhds 1) := by
     admit
   admit
 
+-- TODO: prove that ∑ 1 / (k + 1)^2 is convergent.
+-- Steps:
+--  1. study ∑ 1 / (k + 1)(k + 2), (partial sum and convergence)
+--  2. Show that the original series is monotone and bounded and thus converges.
+
+noncomputable def LeibnizSeries (n : ℕ) : ℝ :=
+  ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1) / (k + 2)
+
+lemma Leibniz_term (k : ℕ) :
+    (1 / (k + 1) / (k + 2) : ℝ) = 1 / (k + 1) - 1 / (k + 2) := by
+  field_simp
+  norm_num
+
+lemma Leibniz_sum (n : ℕ) : LeibnizSeries n = (1 - 1 / (n + 2) : ℝ) := by
+  rw [LeibnizSeries]
+  induction n with
+  | zero =>
+    simp only [zero_add, Finset.range_one, Finset.sum_singleton]
+    simp only [Nat.cast_zero, zero_add]
+    norm_num
+  | succ n ih =>
+    rw [Finset.sum_range_succ]
+    rw [ih]
+    simp only [Nat.cast_add, Nat.cast_one]
+    field_simp
+    ring_nf
+
+#check Metric.tendsto_atTop
+-- Metric.tendsto_atTop.{u, v} {α : Type u} {β : Type v}
+--     [PseudoMetricSpace α] [Nonempty β] [SemilatticeSup β] {u : β → α} {a : α} :
+--     Tendsto u atTop (nhds a) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, dist (u n) a < ε
+
+theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1.0) := by
+  simp only [Metric.tendsto_atTop, Real.dist_eq]
+  simp only [Leibniz_sum]
+  -- ⊢ ∀ ε > 0, ∃ N, ∀ n ≥ N, |1 - 1 / (↑n + 2) - 1.0| < ε
+  ring_nf
+  simp only [gt_iff_lt, ge_iff_le, abs_neg, abs_inv]
+  -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ N, ∀ (n : ℕ), N ≤ n → |2 + ↑n|⁻¹ < ε
+  field_simp
+  -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ N, ∀ (n : ℕ), N ≤ n → 1 < ε * |2 + ↑n|
+  have h_pos (n : ℕ) : (2 + ↑n : ℝ) ≥ 0 := by admit
+  -- Enter in conv mode so that we don't have to unfold the predicate
+  -- which would force us to select the N yet immediately. The proper
+  -- choice of N will be clear once we have simplified the inner expression.
+  -- The other (simpler?) solution: use `let N := sorry` and change afterwards.
+  conv =>
+    intro ε ε_pos
+    right
+    ext n
+    intro N
+    intro n_ne_N
+    rw [abs_of_nonneg (h_pos N)]
+
+  -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ n, ∀ (N : ℕ), n ≤ N → 1 < ε * (2 + ↑N)
+  intro ε ε_pos
+  use ⌈1 / ε⌉₊ -- what we are really interested in: ⌈1 / ε⌉₊ ≥ 1 / ε
+  intro N
+  -- ⊢ ⌈1 / ε⌉₊ ≤ N → 1 < ε * (2 + ↑N)
+  intro N_ge_t
+  have l1 : ↑N ≥ 1 / ε := by
+    admit
+  have l2 : ε * (2 + ↑N) ≥ ε * (2 + (1 / ε)) := by
+    admit
+  apply lt_of_lt_of_le _ l2
+  -- ⊢ 1 < ε * (2 + 1 / ε)
+  field_simp
+  have : ε * 2 > 0 := by positivity
+  linarith
+
+
+  --simp only [abs_of_nonneg]
+  admit
+  -- intro ε ε_pos
+  -- admit
+
+
 end Series
 
--- TODO: Manange infinite sums via
+-- TODO: Manage infinite sums via
 --     https://leanprover-community.github.io/mathlib4_docs/Mathlib/Topology/Algebra/InfiniteSum/Defs.html#tsum
 
 -- Summation Filters:
