@@ -121,13 +121,6 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1.0) := by
   have : ε * 2 > 0 := by positivity
   linarith
 
-
-  --simp only [abs_of_nonneg]
-  admit
-  -- intro ε ε_pos
-  -- admit
-
-
 end Series
 
 -- TODO: Manage infinite sums via
