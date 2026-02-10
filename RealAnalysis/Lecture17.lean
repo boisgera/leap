@@ -54,7 +54,12 @@ example : Tendsto (partial_sum a₁) atTop (nhds 1) := by
 -- TODO: prove that ∑ 1 / (k + 1)^2 is convergent.
 -- Steps:
 --  1. study ∑ 1 / (k + 1)(k + 2), (partial sum and convergence)
---  2. Show that the original series is monotone and bounded and thus converges.
+--  2. Show that the original series is monotone and bounded
+--     and thus converges (via Cauchy and completeness).
+--
+-- Nota: we have 1 / (k + 1)^2 ≤ 1 if k = 1 else ≤ 1 / k * (k + 1).
+-- Unfortunately there is an index shift wrt the Leibniz series,
+-- that's a small extra difficulty.
 
 noncomputable def LeibnizSeries (n : ℕ) : ℝ :=
   ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1) / (k + 2)
@@ -118,6 +123,23 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
   field_simp
   have : ε * 2 > 0 := by positivity
   linarith
+
+noncomputable def sum_inv_squares (n : ℕ) : ℝ := ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1)^2
+
+lemma strict_mono : StrictMono sum_inv_squares := by
+  admit
+
+lemma domination (n : ℕ) :
+    (n = 0 → sum_inv_squares n ≤ 1) ∧
+    (n > 1 → sum_inv_squares n ≤ 1 + LeibnizSeries (n - 1))
+    := by
+  -- TODO: induction on n
+  admit
+
+lemma domination' (n : ℕ) : sum_inv_squares n ≤ 2 - 1 / (n + 1) := by
+  admit
+
+-- TODO: uniform bound from domination' ∧ strict_mono -> Cauchy -> converges.
 
 end Series
 
