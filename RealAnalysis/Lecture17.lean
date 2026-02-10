@@ -83,7 +83,7 @@ lemma Leibniz_sum (n : ℕ) : LeibnizSeries n = (1 - 1 / (n + 2) : ℝ) := by
 --     [PseudoMetricSpace α] [Nonempty β] [SemilatticeSup β] {u : β → α} {a : α} :
 --     Tendsto u atTop (nhds a) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, dist (u n) a < ε
 
-theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1.0) := by
+theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
   simp only [Metric.tendsto_atTop, Real.dist_eq]
   simp only [Leibniz_sum]
   -- ⊢ ∀ ε > 0, ∃ N, ∀ n ≥ N, |1 - 1 / (↑n + 2) - 1.0| < ε
@@ -92,8 +92,8 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1.0) := by
   -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ N, ∀ (n : ℕ), N ≤ n → |2 + ↑n|⁻¹ < ε
   field_simp
   -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ N, ∀ (n : ℕ), N ≤ n → 1 < ε * |2 + ↑n|
-  have h_pos (n : ℕ) : (2 + ↑n : ℝ) ≥ 0 := by admit
-  -- Enter in conv mode so that we don't have to unfold the predicate
+  have h_pos (n : ℕ) : (2 + ↑n : ℝ) ≥ 0 := by positivity
+  -- We enter in conv mode so that we don't have to unfold the predicate
   -- which would force us to select the N yet immediately. The proper
   -- choice of N will be clear once we have simplified the inner expression.
   -- The other (simpler?) solution: use `let N := sorry` and change afterwards.
@@ -107,14 +107,12 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1.0) := by
 
   -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ n, ∀ (N : ℕ), n ≤ N → 1 < ε * (2 + ↑N)
   intro ε ε_pos
-  use ⌈1 / ε⌉₊ -- what we are really interested in: ⌈1 / ε⌉₊ ≥ 1 / ε
+  use ⌈1 / ε⌉₊ -- what we are actually interested in: ⌈1 / ε⌉₊ ≥ 1 / ε
   intro N
   -- ⊢ ⌈1 / ε⌉₊ ≤ N → 1 < ε * (2 + ↑N)
   intro N_ge_t
-  have l1 : ↑N ≥ 1 / ε := by
-    admit
-  have l2 : ε * (2 + ↑N) ≥ ε * (2 + (1 / ε)) := by
-    admit
+  have l1 : ↑N ≥ 1 / ε := Nat.ceil_le.mp N_ge_t
+  have l2 : ε * (2 + ↑N) ≥ ε * (2 + (1 / ε)) := by nlinarith
   apply lt_of_lt_of_le _ l2
   -- ⊢ 1 < ε * (2 + 1 / ε)
   field_simp
