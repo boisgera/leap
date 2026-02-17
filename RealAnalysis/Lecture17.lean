@@ -113,9 +113,7 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
   -- ⊢ ∀ (ε : ℝ), 0 < ε → ∃ n, ∀ (N : ℕ), n ≤ N → 1 < ε * (2 + ↑N)
   intro ε ε_pos
   use ⌈1 / ε⌉₊ -- what we are actually interested in: ⌈1 / ε⌉₊ ≥ 1 / ε
-  intro N
-  -- ⊢ ⌈1 / ε⌉₊ ≤ N → 1 < ε * (2 + ↑N)
-  intro N_ge_t
+  intro N N_ge_t
   have l1 : ↑N ≥ 1 / ε := Nat.ceil_le.mp N_ge_t
   have l2 : ε * (2 + ↑N) ≥ ε * (2 + (1 / ε)) := by nlinarith
   apply lt_of_lt_of_le _ l2
@@ -127,14 +125,38 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
 noncomputable def sum_inv_squares (n : ℕ) : ℝ := ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1)^2
 
 lemma strict_mono : StrictMono sum_inv_squares := by
-  admit
+  simp only [StrictMono, sum_inv_squares]
+  apply strictMono_nat_of_lt_succ
+  intro n
+  nth_rw 2 [Finset.sum_range_succ]
+  simp only [lt_add_iff_pos_right]
+  positivity
 
 lemma domination (n : ℕ) :
-    (n = 0 → sum_inv_squares n ≤ 1) ∧
-    (n > 1 → sum_inv_squares n ≤ 1 + LeibnizSeries (n - 1))
+    (n = 0 → sum_inv_squares n ≤ 1) ∧ -- TODO: "factor in" the two clauses
+    (n ≥ 1 → sum_inv_squares n ≤ 1 + LeibnizSeries (n - 1))
     := by
-  -- TODO: induction on n
-  admit
+  induction n with
+  | zero =>
+    constructor
+    . intro n_eq_0
+      simp only [n_eq_0, sum_inv_squares]
+      simp only [
+        zero_add,
+        Finset.range_one,
+        Finset.sum_singleton,
+      ]
+      grind
+    . grind
+  | succ n ih =>
+    constructor
+    . grind
+    . intro _
+      simp only [sum_inv_squares, LeibnizSeries]
+      simp only [add_tsub_cancel_right]
+      -- 🚧 TODO
+      admit
+
 
 lemma domination' (n : ℕ) : sum_inv_squares n ≤ 2 - 1 / (n + 1) := by
   admit
