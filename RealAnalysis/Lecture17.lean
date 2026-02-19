@@ -139,8 +139,8 @@ lemma domination (n : ℕ) :
   induction n with
   | zero =>
     constructor
-    . intro n_eq_0
-      simp only [n_eq_0, sum_inv_squares]
+    . intro n_eq_0; clear n_eq_0
+      simp only [sum_inv_squares]
       simp only [
         zero_add,
         Finset.range_one,
@@ -154,9 +154,29 @@ lemma domination (n : ℕ) :
     . intro _
       simp only [sum_inv_squares, LeibnizSeries]
       simp only [add_tsub_cancel_right]
-      -- 🚧 TODO
-      admit
-
+      by_cases h : n = 0
+      . simp only [h]
+        norm_num
+      . have n_ge_1 : n ≥ 1 := by grind
+        let ih' := ih.right
+        specialize ih' n_ge_1
+        rw [sum_inv_squares, LeibnizSeries] at ih'
+        simp only [Nat.sub_add_cancel n_ge_1] at ih'
+        rw [Finset.sum_range_succ]
+        nth_rewrite 2 [Finset.sum_range_succ]
+        have aux:
+          (∑ x ∈ Finset.range (n + 1),
+            (1 / (↑x + 1) ^ 2 : ℝ)) + (1 / (↑(n + 1) + 1) ^ 2 : ℝ) ≤
+          (1 : ℝ) +
+            (∑ x ∈ Finset.range n, (1 / (↑x + 1) / (↑x + 2) : ℝ)
+          ) + 1 / (↑n + 1) / (↑n + 2) := by
+          apply add_le_add
+          . assumption
+          . field_simp
+            simp only [Nat.cast_add, Nat.cast_one]
+            ring_nf
+            nlinarith
+        grind
 
 lemma domination' (n : ℕ) : sum_inv_squares n ≤ 2 - 1 / (n + 1) := by
   admit
