@@ -122,7 +122,8 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
   have : ε * 2 > 0 := by positivity
   linarith
 
-noncomputable def sum_inv_squares (n : ℕ) : ℝ := ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1)^2
+noncomputable def sum_inv_squares (n : ℕ) : ℝ :=
+  ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1)^2
 
 lemma strict_mono : StrictMono sum_inv_squares := by
   simp only [StrictMono, sum_inv_squares]
@@ -179,9 +180,37 @@ lemma domination (n : ℕ) :
         grind
 
 lemma domination' (n : ℕ) : sum_inv_squares n ≤ 2 - 1 / (n + 1) := by
+  match n  with
+  | 0 =>
+    rw [
+      sum_inv_squares,
+      zero_add,
+      Finset.range_one,
+      Finset.sum_singleton
+    ]
+    norm_num
+  | n + 1 =>
+    have dom : sum_inv_squares (n + 1) ≤ 1 + LeibnizSeries n :=
+      (domination (n + 1)).right (by grind)
+    -- lemma Leibniz_sum (n : ℕ) : LeibnizSeries n = (1 - 1 / (n + 2) : ℝ)
+    simp [Leibniz_sum] at dom
+    simp only [Nat.cast_add, Nat.cast_one]
+    grind
+
+theorem bound_sum_inv_squares  (n : ℕ) : sum_inv_squares n ≤ 2 := by
+  have dom := domination' n -- sum_inv_squares n ≤ 2 - 1 / (↑n + 1)
+  apply le_trans (a := sum_inv_squares n) (b := 2 - 1 / (n + 1))
+  . exact dom
+  . field_simp
+    linarith
+
+-- TODO: uniform bound ∧ strict_mono -> CauchySeq -> converges.
+
+theorem cauchySeq_sum_inv_squares: CauchySeq sum_inv_squares := by
+  apply Metric.cauchySeq_iff.mpr
   admit
 
--- TODO: uniform bound from domination' ∧ strict_mono -> Cauchy -> converges.
+
 
 end Series
 
