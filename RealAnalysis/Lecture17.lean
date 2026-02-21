@@ -204,10 +204,42 @@ theorem bound_sum_inv_squares  (n : ℕ) : sum_inv_squares n ≤ 2 := by
   . field_simp
     linarith
 
--- TODO: uniform bound ∧ strict_mono -> CauchySeq -> converges.
+theorem cauchySeq_of_upperBound_and_strictMono
+    (a : ℕ → ℝ)
+    (ub : ∃ b, ∀ n, a n ≤ b)
+    (strictMono : StrictMono a) :
+    CauchySeq a := by
+  apply Metric.cauchySeq_iff.mpr
+  simp only [Real.dist_eq] at *
+  by_contra h
+  push_neg at h
+  let ⟨ε, ε_pos, h'⟩ := h
+  have p : ∀ (m : ℕ), ∃ n ≥ m, a n ≥ a m + ε := by
+    admit
+  choose next h_next using p
+  -- Actually a definition by induction would be simpler to deal with!
+  -- let a_sub := a ∘ (next^[·] 0)
+  let next_iter := Nat.rec (motive := fun (_ : ℕ) => ℕ)
+    0 (fun _ n => next n)
+  let a' := a ∘ next_iter
+  have (n : ℕ) : a' 0 + n * ε ≤ a' n  := by
+    induction n with
+    | zero =>
+      grind
+    | succ n ih =>
+      simp only [a', next_iter]
+      simp only [Function.comp_apply, Nat.rec_zero, Nat.cast_add, Nat.cast_one, ge_iff_le]
+      -- ouch
+      admit
 
+  admit
+
+
+-- TODO: use cauchySeq_of_upperBound_and_strictMono instead (apply)
 theorem cauchySeq_sum_inv_squares: CauchySeq sum_inv_squares := by
   apply Metric.cauchySeq_iff.mpr
+  -- TODO: by contradiction? Assume that there is a threshold ε > 0 that
+  -- we can't get under eventually, show that the upper bound cannot stand?
   admit
 
 
