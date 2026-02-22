@@ -126,3 +126,52 @@ example : ∀ n, (psum' natCast') n = n * (n - 1) / 2 :=
       rw [natCast'_eq]
       grind
     )
+
+#print Tree
+-- inductive Tree.{u} : Type u → Type u
+-- number of parameters: 1
+-- constructors:
+-- Tree.nil : {α : Type u} → Tree α
+-- Tree.node : {α : Type u} → α → Tree α → Tree α → Tree α
+
+#check Tree.rec
+-- Tree.rec.{u_1, u} {α : Type u} {motive : Tree α → Sort u_1}
+--     (nil : motive Tree.nil)
+--     (node :
+--       (a : α) →
+--       (a_1 a_2 : Tree α) →
+--       motive a_1 → motive a_2 →
+--       motive (Tree.node a a_1 a_2)
+--     )
+--     (t : Tree α) : motive t
+
+-- TODO: define # of nodes and depth and compare (using recursion)
+
+def Tree.count {α} (t : Tree α) : ℕ := -- i.e. Tree.numNodes in Mathlib
+  match t with
+  | nil => 0
+  | node _ t1 t2 => Tree.count t1 + Tree.count t2 + 1
+
+def Tree.depth {α} (t : Tree α) : ℕ := -- i.e. Tree.height in Mathlib
+  match t with
+  | nil => 0
+  | node _ t1 t2 => max (Tree.depth t1) (Tree.depth t2) + 1
+
+lemma max_le_add : max (α := ℕ) ≤ Nat.add := by
+  intro m n
+  simp only [Nat.max_def]
+  grind
+
+example {α} : ∀ (t : Tree α), t.depth ≤ t.count := by
+  intro t
+  induction t with
+  | nil =>
+    rw [Tree.depth, Tree.count]
+  | node _ t1 t2 ih1 ih2 =>
+    rw [Tree.depth, Tree.count]
+    -- ⊢ max t1.depth t2.depth + 1 ≤ t1.count + t2.count + 1
+    have : max t1.depth t2.depth + 1 ≤ t1.depth + t2.depth + 1 := by
+      simp only [add_le_add_iff_right]
+      apply max_le_add
+    apply le_trans this
+    linarith
