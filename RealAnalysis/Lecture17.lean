@@ -243,6 +243,21 @@ theorem cauchySeq_sum_inv_squares: CauchySeq sum_inv_squares := by
   admit
 
 
+-- # Problem set 15
+
+-- Ex #1
+noncomputable def d (n : ℕ) : ℝ :=
+  match n with
+  | 0 => Real.sqrt 2
+  | n + 1 => Real.sqrt (2 + Real.sqrt (d n))
+
+-- TODO: prove that d n < 2 for all n and that d converges
+
+-- Ex #2. Compute the limit of Real.sqrt(n * n + n) - n
+
+-- Ex #3. Show that the (Cesaro-)average of a series converging to ℓ
+-- converges to ℓ.
+
 
 end Series
 
