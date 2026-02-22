@@ -3,21 +3,39 @@ import Mathlib
 -- Demonstration of classic use of definition by recursion and
 -- proof by induction and their low-level counterpart using Nat.rec.
 
--- ⚠️ Warning: with this convention the partial sum starts at 0; a 0 comes next.
+-- ⚠️ Warning: with our convention the partial sum starts at 0; a 0 comes next.
 --  But OTOH, the definition of the reciprocal (diff) is more natural.
-def psum (a : ℕ → ℝ) (n : ℕ) : ℝ := ∑ i ∈ Finset.range n, a i
+def psum (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+  match n with
+  | 0 => 0
+  | n + 1 => (psum a n) + a n
 
--- We could/should also define psum by recursion and show that it's the same.
+theorem psum_eq_sum_range (a : ℕ → ℝ) (n : ℕ) :
+    psum a n = ∑ i ∈ Finset.range n, a i := by
+  induction n with
+  | zero =>
+    rw [psum]
+    rw [Finset.range_zero, Finset.sum_empty]
+  | succ n ih =>
+    rw [psum]
+    rw [Finset.sum_range_succ]
+    rw [ih]
 
 def diff (a : ℕ → ℝ) (n : ℕ) : ℝ := a (n + 1) - a n
 
-#check Finset.sum_insert
-
-theorem diff_of_sum_eq_id (a : ℕ → ℝ) : diff (psum a) = a := by
-  ext n
-  simp only [psum, diff]
-  simp only [Finset.sum_range_succ]
-  simp only [add_sub_cancel_left]
+theorem diff_of_psum : diff ∘ psum  = id := by
+  ext a n
+  rw [Function.comp_apply]
+  rw [id] -- ⊢ diff (psum a) n = a n
+  induction n with
+  | zero =>
+    rw [diff]
+    simp only [psum]
+    ring
+  | succ n ih =>
+    rw [diff]
+    repeat rw [psum]
+    ring
 
 -- The sequence 0, 1, 2, 3, etc. (as real values), defined by recursion.
 def natCast (n : ℕ) : ℝ :=
@@ -40,20 +58,13 @@ example : ∀ n, (psum natCast) n = n * (n - 1) / 2 := by
   intro n
   induction n with
   | zero =>
-    rw [Nat.cast_zero]
+    rw [psum]
     norm_num
-    rw [psum, Finset.range_zero, Finset.sum_empty]
   | succ n ih =>
-    rw [psum] at *
-    rw [Finset.sum_range_succ]
+    rw [psum]
+    nth_rewrite 2 [natCast_eq]
     rw [ih]
-    rw [natCast_eq]
-    -- ⊢ ↑n * (↑n - 1) / 2 + ↑n = ↑(n + 1) * (↑(n + 1) - 1) / 2
-    -- at this stage, grind would work.
-    simp only [Nat.cast_add, Nat.cast_one]
-    -- ↑n * (↑n - 1) / 2 + ↑n = (↑n + 1) * (↑n + 1 - 1) / 2
-    field_simp
-    ring
+    grind
 
 #check Nat.rec -- The full dependent recursor (needed for the proofs;
 -- for the construction of mathematical objects, constant motives are enough)
@@ -62,16 +73,19 @@ example : ∀ n, (psum natCast) n = n * (n - 1) / 2 := by
 -- motive t
 
 def psum' (a : ℕ → ℝ) : ℕ → ℝ :=
-  let motive : ℕ → Type := fun _ => ℝ -- constant type-valued motive
-  Nat.rec (motive := motive) 0 (fun n sum_n => sum_n + a n)
+  let motive : ℕ → Type := fun _ => ℝ -- (constant) type-valued motive
+  Nat.rec
+    (motive := motive) -- here we could do without giving explicitly the motive
+    (zero := 0)
+    (succ := fun n sum_n => sum_n + a n)
 
-def natCast' := psum' (fun _ => 1) -- to get the ramp, add ones.
+def natCast' := psum' (fun _ => 1) -- just add ones.
 
 theorem natCast'_eq : natCast' = Nat.cast := by
   let motive (n : ℕ) : Prop := natCast' n = Nat.cast n -- not constant!
   let p := Nat.rec
-    (motive := motive)
-    (show
+    (motive := motive) -- here we *need* and explicit motive
+    (zero := show
         natCast' 0 = Nat.cast 0 from by
       rw [Nat.cast_zero]
       rw [natCast', psum'] -- Nat.rec 0 (fun n sum_n => sum_n + 1) 0 = 0
@@ -91,3 +105,24 @@ theorem natCast'_eq : natCast' = Nat.cast := by
     )
   ext n
   exact p n
+
+example : ∀ n, (psum' natCast') n = n * (n - 1) / 2 :=
+  let motive (n : ℕ) : Prop := (psum' natCast') n = n * (n - 1) / 2
+  Nat.rec
+    (motive := motive)
+    (zero := show motive 0 from by
+      simp only [motive]
+      rw [psum']
+      simp only -- uses Nat.rec_zero
+      norm_num
+    )
+    (succ := show (n : ℕ) → motive n → motive (n + 1) from by
+      simp only [motive]
+      intro n hn
+      rw [psum']
+      simp only -- uses Nat.rec_add_one
+      rw [<- psum']
+      rw [hn]
+      rw [natCast'_eq]
+      grind
+    )
