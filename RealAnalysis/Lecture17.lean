@@ -290,20 +290,26 @@ noncomputable def a (n : ℕ) : ℝ :=
   | 0 => √2
   | n + 1 => √(2 + a n)
 
-theorem a_nonneg_and_lt_two (n : ℕ) : 0 ≤ a n ∧ a n < 2 := by
+theorem a_nonneg (n : ℕ) : 0 ≤ a n := by
   induction n with
   | zero =>
-    rw [a]
-    constructor
-    . apply Real.sqrt_nonneg
-    . apply (Real.sqrt_lt _ _).mpr
-      repeat grind
+    simp only [a]
+    positivity
   | succ n ih =>
-    constructor
-    . apply Real.sqrt_nonneg
-    . rw [a]
-      apply (Real.sqrt_lt _ _).mpr
-      repeat linarith
+    simp only [a]
+    apply Real.sqrt_nonneg
+
+theorem a_lt_two (n : ℕ) : a n < 2 := by
+  induction n with
+  | zero =>
+    simp only [a]
+    apply (Real.sqrt_lt _ _).mpr
+    repeat grind
+  | succ n ih =>
+    simp only [a]
+    have := a_nonneg n
+    apply (Real.sqrt_lt _ _).mpr
+    repeat grind
 
 theorem a_strictMono : StrictMono a := by
   apply strictMono_nat_of_lt_succ
@@ -317,14 +323,75 @@ theorem a_strictMono : StrictMono a := by
     positivity
   | succ n ih =>
     simp only [a]
+    have := a_nonneg n
     apply Real.sqrt_lt_sqrt
-    . admit
-    . admit
+    repeat linarith
 
+theorem bingo : CauchySeq a :=
+  cauchySeq_of_upperBound_and_strictMono
+    a
+    ⟨2, show ∀ n, a n ≤ 2 from by
+      intro n ; linarith [a_lt_two n]
+    ⟩
+    a_strictMono
 
 end Ex1
 
 -- Ex #2. Compute the limit of Real.sqrt(n * n + n) - n
+namespace Ex2
+
+noncomputable def a (n : ℕ) := √(n ^ 2 + n) - n
+
+theorem trick
+    (a b : ℝ)
+    (a_add_b_nonzero : a + b ≠ 0) :
+    a - b = (a^2 - b^2) / (a + b) := by
+  field_simp
+  ring_nf
+
+theorem a_eq₁ (n : ℕ) (n_pos : n > 0) : a n = n / (√(n ^ 2 + n) + n) := by
+  rw [a]
+  have : ↑n > 0 := by positivity
+  have : ↑n ^ 2 + ↑n > (0 : ℝ) := by positivity
+  have : √(↑n ^ 2 + ↑n) > 0 := by positivity
+  have : √(↑n ^ 2 + ↑n) + ↑n > 0 := by positivity
+  rw [trick]
+  grind
+  grind
+
+theorem a_eq (n : ℕ) (n_pos : n > 0) : a n = 1 / (√(1 + 1/n) + 1) := by
+  have n_nonzero : ↑n ≠ (0 : ℝ) := by
+    have : ↑n > (0 : ℝ) := by positivity
+    grind
+  have : ↑n > 0 := by positivity
+  have : ↑n ^ 2 + ↑n > (0 : ℝ) := by positivity
+  have : √(↑n ^ 2 + ↑n) > 0 := by positivity
+  have : √(↑n ^ 2 + ↑n) + ↑n > 0 := by positivity
+  have q_ne_0 : √(↑n ^ 2 + ↑n) + ↑n ≠ (0 : ℝ) := by positivity
+
+  rw [← mul_div_mul_left (c := ↑n) _ _ n_nonzero]
+  simp only [mul_one]
+  rw [← Real.sqrt_sq (show 0 ≤ ↑ n from by admit)]
+  rw [mul_add]
+  rw [← Real.sqrt_mul]
+  have : √(↑n ^ 2) = (↑n : ℝ) := by
+    apply Real.sqrt_sq
+    linarith
+  simp only [this]
+  field_simp
+  nth_rewrite 2 [mul_add]
+  rw [mul_one]
+  rw [← sq]
+  rw [← eq_div_iff q_ne_0]
+  apply a_eq₁
+  repeat positivity
+
+-- TODO: use a_eq and the continuity at 0 of x ↦ 1 / (sqrt(1 + x) + 1)
+-- at 0 (TODO) to prove that:
+theorem a_tendsto_one : Filter.Tendsto a atTop (nhds 1) := by
+  admit
+
+end Ex2
 
 -- Ex #3. Show that the (Cesaro-)average of a series converging to ℓ
 -- converges to ℓ.
