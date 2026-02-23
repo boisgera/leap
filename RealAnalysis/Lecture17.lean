@@ -125,7 +125,7 @@ theorem LeibnizSeries_lim_eq_one : Tendsto LeibnizSeries atTop (nhds 1) := by
 noncomputable def sum_inv_squares (n : ℕ) : ℝ :=
   ∑ k ∈ (Finset.range (n + 1)), 1 / (k + 1)^2
 
-lemma strict_mono : StrictMono sum_inv_squares := by
+lemma strictMono_sum_inv_squares : StrictMono sum_inv_squares := by
   simp only [StrictMono, sum_inv_squares]
   apply strictMono_nat_of_lt_succ
   intro n
@@ -217,46 +217,118 @@ theorem cauchySeq_of_upperBound_and_strictMono
   have p : ∀ (m : ℕ), ∃ n ≥ m, a n ≥ a m + ε := by
     admit
   choose next h_next using p
-  -- Actually a definition by induction would be simpler to deal with!
-  -- let a_sub := a ∘ (next^[·] 0)
-  let next_iter := Nat.rec (motive := fun (_ : ℕ) => ℕ)
-    0 (fun _ n => next n)
+  -- A definition by induction of `a'` will be easier to deal with.
+  -- let a' := a ∘ (next^[·] 0)
+  let next_iter := Nat.rec
+    (motive := fun (_ : ℕ) => ℕ)
+    (zero := 0)
+    (succ := (fun _ n => next n))
+  -- There is not someting like that which is automatically generated?
+  -- Not for local functions?
+  have next_iter_eq : next_iter = Nat.rec 0 (fun _ n => next n) := by
+    rfl
   let a' := a ∘ next_iter
-  have (n : ℕ) : a' 0 + n * ε ≤ a' n  := by
+  have a'_eq (n : ℕ) : a' n = a (next_iter n) := by
+    simp only [a']
+    rw [Function.comp_apply]
+  have super_linear_subseq(n : ℕ) : a' 0 + n * ε ≤ a' n  := by
     induction n with
     | zero =>
       grind
     | succ n ih =>
-      simp only [a', next_iter]
-      simp only [Function.comp_apply, Nat.rec_zero, Nat.cast_add, Nat.cast_one, ge_iff_le]
-      -- ouch
-      admit
+      simp only [a']
+      simp only [Function.comp_apply]
+      simp only [next_iter]
+      simp only [Nat.rec_zero, Nat.cast_add, Nat.cast_one]
+      simp only [<- next_iter_eq]
+      -- ih : a' 0 + ↑n * ε ≤ a' n
+      -- a 0 + (↑n + 1) * ε ≤ a (next (next_iter n))
+      have : a (next (next_iter n)) ≥ a (next_iter n) + ε :=
+        h_next (next_iter n) |>.right
+      have : a' n + ε ≤ a (next (next_iter n)) := by
+        simp only [a'_eq]
+        exact this
+      ring_nf
+      have : a 0 + ↑n * ε + ε ≤ a' n + ε := by
+        simp only [add_le_add_iff_right]
+        exact ih
+      linarith
+  have ⟨b, b_bound⟩ := ub
+  -- Relevant context at this stage:
+  -- ε : ℝ
+  -- ε_pos : ε > 0
+  -- super_linear_subseq : ∀ (n : ℕ), a' 0 + ↑n * ε ≤ a' n
+  -- b : ℝ
+  -- b_bound : ∀ (n : ℕ), a n ≤ b
+  have ⟨n, n_gt_t⟩ := exists_nat_gt ((b - a' 0) / ε)
+  have : b < a' 0 + n * ε := by
+    field_simp at n_gt_t
+    grind
+  specialize super_linear_subseq n
+  have : b < a' n := by
+    linarith
+  have : b < a (next_iter n) := by
+    simp only [a'_eq] at this
+    exact this
+  specialize b_bound (next_iter n)
+  linarith
 
-  admit
-
-
--- TODO: use cauchySeq_of_upperBound_and_strictMono instead (apply)
 theorem cauchySeq_sum_inv_squares: CauchySeq sum_inv_squares := by
-  apply Metric.cauchySeq_iff.mpr
-  -- TODO: by contradiction? Assume that there is a threshold ε > 0 that
-  -- we can't get under eventually, show that the upper bound cannot stand?
-  admit
-
+  apply cauchySeq_of_upperBound_and_strictMono sum_inv_squares
+  . use 2
+    exact bound_sum_inv_squares
+  . exact strictMono_sum_inv_squares
 
 -- # Problem set 15
+-- ## Ex #1
 
--- Ex #1
-noncomputable def d (n : ℕ) : ℝ :=
+namespace Ex1
+
+-- Aim: prove that `a n < 2` for all n and that `a` converges.
+noncomputable def a (n : ℕ) : ℝ :=
   match n with
-  | 0 => Real.sqrt 2
-  | n + 1 => Real.sqrt (2 + Real.sqrt (d n))
+  | 0 => √2
+  | n + 1 => √(2 + a n)
 
--- TODO: prove that d n < 2 for all n and that d converges
+theorem a_nonneg_and_lt_two (n : ℕ) : 0 ≤ a n ∧ a n < 2 := by
+  induction n with
+  | zero =>
+    rw [a]
+    constructor
+    . apply Real.sqrt_nonneg
+    . apply (Real.sqrt_lt _ _).mpr
+      repeat grind
+  | succ n ih =>
+    constructor
+    . apply Real.sqrt_nonneg
+    . rw [a]
+      apply (Real.sqrt_lt _ _).mpr
+      repeat linarith
+
+theorem a_strictMono : StrictMono a := by
+  apply strictMono_nat_of_lt_succ
+  intro n
+  nth_rewrite 2 [a.eq_def]; simp only
+  induction n with
+  | zero =>
+    simp only [a.eq_def]
+    apply Real.sqrt_lt_sqrt (by grind)
+    simp only [lt_add_iff_pos_right]
+    positivity
+  | succ n ih =>
+    simp only [a]
+    apply Real.sqrt_lt_sqrt
+    . admit
+    . admit
+
+
+end Ex1
 
 -- Ex #2. Compute the limit of Real.sqrt(n * n + n) - n
 
 -- Ex #3. Show that the (Cesaro-)average of a series converging to ℓ
 -- converges to ℓ.
+
 
 
 end Series
