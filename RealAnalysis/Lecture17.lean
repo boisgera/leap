@@ -462,6 +462,78 @@ end Ex2
 -- Ex #3. Show that the (Cesaro-)average of a series converging to ℓ
 -- converges to ℓ.
 
+namespace Cesaro
+
+noncomputable def cesaro (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+  (∑ i ∈ Finset.range (n + 1), a i) / (n + 1)
+
+noncomputable def cesaro' (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+  match n with
+  | 0 => a 0
+  | n + 1 =>
+    (cesaro' a n) * (n + 1) / (n + 2) + (a (n + 1)) / (n + 2)
+
+theorem cesaro'_eq_cesaro : cesaro' = cesaro := by
+  ext a n
+  induction n with
+  | zero =>
+    rw [cesaro, cesaro']
+    rw [Nat.cast_zero, zero_add, zero_add, div_one]
+    rw [Finset.range_one, Finset.sum_singleton]
+  | succ n ih =>
+    rw [cesaro, cesaro']
+    rw [ih]
+    rw [Finset.sum_range_succ]
+    have : (∑ i ∈ Finset.range (n + 1), a i) = (cesaro a n) * (n + 1) := by
+      rw [cesaro]
+      rw [div_mul_cancel₀]
+      positivity
+    rw [this]
+    simp only [Nat.cast_add, Nat.cast_one]
+    field_simp
+    ring_nf
+
+
+-- Let's make our final result easier to reach:
+lemma cesaro_add (a b : ℕ → ℝ) : cesaro (a + b) = cesaro a + cesaro b := by
+  ext n
+  induction n with
+  | zero =>
+    simp only [Pi.add_apply]
+    simp only [cesaro]
+    simp only [
+      zero_add,
+      Finset.range_one,
+      Nat.cast_zero,
+      Pi.add_apply,
+      Finset.sum_singleton,
+      div_one
+    ]
+  | succ n ih =>
+    simp only [Pi.add_apply]
+    simp only [cesaro]
+    simp only [Finset.sum_range_add]
+    -- TODO
+    admit
+
+lemma cesaro_cst (c : ℝ) : cesaro (fun _ => c) = (fun _ => c) := by
+  ext n
+  simp only [cesaro]
+  simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+  simp only [Nat.cast_add, Nat.cast_one]
+  field_simp
+
+lemma lift₁:
+    (∀ (a : ℕ → ℝ), Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0)) ->
+    (∀ (a : ℕ → ℝ), ∀ (ℓ : ℝ), Tendsto a atTop (nhds ℓ) -> Tendsto (cesaro a) atTop (nhds ℓ)) := by
+  simp only [Metric.tendsto_atTop, Real.dist_eq]
+  intro h a ℓ hε
+  admit
+
+lemma TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0)) := by
+  admit
+
+end Cesaro
 
 
 end Series
