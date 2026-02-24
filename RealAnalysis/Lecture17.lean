@@ -1,4 +1,5 @@
 import Mathlib
+
 open Filter
 
 set_option pp.showLetValues true
@@ -386,14 +387,29 @@ theorem a_eq (n : ℕ) (n_pos : n > 0) : a n = 1 / (√(1 + 1/n) + 1) := by
   apply a_eq₁
   repeat positivity
 
-noncomputable def f (x : ℝ) := 1 / (√(1 + x) + 1)
+noncomputable def f (x : ℝ) : ℝ := 1 / (√(1 + x) + 1)
 
 lemma continuousAt_f_zero: ContinuousAt f 0 := by
   unfold f
   have : √(1 + 0) + 1 ≠ 0 := by grind
   fun_prop (disch := assumption)
 
-theorem lim_f_at_zero: Filter.Tendsto f (nhds (0: ℝ)) (nhds (1/2 : ℝ)) := by
+-- `Tendsto` is actually more than even the general concept of a limit AFAICT.
+-- It is the general concept of limit when the target filter is actually a
+-- class of neighbourhoods of some kind. But in general `Tendsto` captures
+-- that the image of filter by and application is finer that a given target
+-- filter. UPDATE: no, not exactly, pre-images are involved instead
+-- (as they should).
+-- Note: the documentation of `Tendsto` use terminology of neighbourhoods as
+-- generic members of filters, without any topological setting.
+#print Tendsto
+-- def Filter.Tendsto.{u_1, u_2} : {α : Type u_1} → {β : Type u_2} →
+--     (α → β) → Filter α → Filter β → Prop :=
+--   fun {α} {β} f l₁ l₂ => map f l₁ ≤ l₂
+
+#check map
+
+theorem lim_f_at_zero : Tendsto f (nhds (0 : ℝ)) (nhds (1/2 : ℝ)) := by
   have := continuousAt_f_zero
   rw [ContinuousAt] at this
   have f_zero_eq : f 0 = (1 / 2 : ℝ) := by
@@ -401,11 +417,45 @@ theorem lim_f_at_zero: Filter.Tendsto f (nhds (0: ℝ)) (nhds (1/2 : ℝ)) := by
   rw [f_zero_eq] at this
   exact this
 
--- TODO: need to show that 1/n -> 0 whenever n -> +∞ and compose that with
--- the limit that we know by continuity (see above). Bottom line: see how
--- to compose the filters.
-theorem a_tendsto_one : Filter.Tendsto a atTop (nhds 1) := by
+theorem lim_inv_at_top :
+    Tendsto (fun (n : ℕ) => (1 / n : ℝ)) atTop (nhds 0) := by
   admit
+
+#check Tendsto.comp
+
+-- This stuff is 99% there, except that the sequence used differ from a at n=0.
+theorem almost_a_tendsto_one :
+    Tendsto (fun (n : ℕ) => f (1 / (n : ℝ))) atTop (nhds (1 / 2)) := by
+  have comp := Tendsto.comp lim_f_at_zero lim_inv_at_top
+  have : (f ∘ (fun (n : ℕ) => 1 / (n : ℝ))) = (fun (n : ℕ) => f (1 / (n : ℝ))) := by
+    ext n; simp only [Function.comp_apply]
+  simp only [this] at comp
+  exact comp
+
+
+#check eventually_atTop
+-- Filter.eventually_atTop.{u_3} {α : Type u_3} [Preorder α] [IsDirectedOrder α] {p : α → Prop} [Nonempty α] :
+--   (∀ᶠ (x : α) in atTop, p x) ↔ ∃ a, ∀ b ≥ a, p b
+
+theorem a_eventuallyEq: a =ᶠ[atTop] (fun (n : ℕ) => f (1 / (n : ℝ))) := by
+  rw [EventuallyEq]
+  -- ⊢ ∀ᶠ (x : ℕ) in atTop, a x = f (1 / ↑x)
+  apply eventually_atTop.mpr
+  -- ⊢ ∃ a, ∀ b ≥ a, Ex2.a b = f (1 / ↑b)
+  use 1
+  intro n n_ge_one
+  rw [f]
+  apply a_eq
+  linarith
+
+#check Tendsto.congr'
+-- Filter.Tendsto.congr'.{u_1, u_2} {α : Type u_1} {β : Type u_2}
+--     {f₁ f₂ : α → β} {l₁ : Filter α} {l₂ : Filter β}
+--     (hl : f₁ =ᶠ[l₁] f₂) (h : Tendsto f₁ l₁ l₂) : Tendsto f₂ l₁ l₂
+
+theorem a_tendsto_one : Tendsto a atTop (nhds (1 / 2 : ℝ)) := by
+  apply Tendsto.congr' a_eventuallyEq.symm
+  exact almost_a_tendsto_one
 
 end Ex2
 
