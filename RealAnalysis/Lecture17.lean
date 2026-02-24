@@ -386,8 +386,24 @@ theorem a_eq (n : ℕ) (n_pos : n > 0) : a n = 1 / (√(1 + 1/n) + 1) := by
   apply a_eq₁
   repeat positivity
 
--- TODO: use a_eq and the continuity at 0 of x ↦ 1 / (sqrt(1 + x) + 1)
--- at 0 (TODO) to prove that:
+noncomputable def f (x : ℝ) := 1 / (√(1 + x) + 1)
+
+lemma continuousAt_f_zero: ContinuousAt f 0 := by
+  unfold f
+  have : √(1 + 0) + 1 ≠ 0 := by grind
+  fun_prop (disch := assumption)
+
+theorem lim_f_at_zero: Filter.Tendsto f (nhds (0: ℝ)) (nhds (1/2 : ℝ)) := by
+  have := continuousAt_f_zero
+  rw [ContinuousAt] at this
+  have f_zero_eq : f 0 = (1 / 2 : ℝ) := by
+    rw [f] ; norm_num
+  rw [f_zero_eq] at this
+  exact this
+
+-- TODO: need to show that 1/n -> 0 whenever n -> +∞ and compose that with
+-- the limit that we know by continuity (see above). Bottom line: see how
+-- to compose the filters.
 theorem a_tendsto_one : Filter.Tendsto a atTop (nhds 1) := by
   admit
 
