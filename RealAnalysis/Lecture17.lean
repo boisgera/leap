@@ -531,26 +531,23 @@ lemma lift₁:
   admit
 
 
--- TODO: extract cleanly the existence of a bound on a finite set.
--- TODO; ask Claude for a nice formulation of that.
-def b (a : ℕ → ℝ) (m : ℕ) : ℝ :=
-  match m with
-  | 0 => 0
-  | m + 1 =>
-    let range := Finset.range (m + 1)
-    let image := Finset.image a range
-    have : range.Nonempty := by grind
-    have image_nonempty : image.Nonempty := Finset.image_nonempty.mpr this
-    Finset.max' image image_nonempty
 
-def b_is_bound (a : ℕ → ℝ) (m : ℕ): ∀ n < m, a n ≤ b a m := by
-  intro n
-  induction n with
+def exists_bound (a : ℕ → ℝ) (m : ℕ): ∃ b, ∀ n < m, a n ≤ b := by
+  induction m with
   | zero =>
-    simp [b]
-    -- ...
-    admit
-  | succ n ih => sorry
+    use 0
+    intro n n_neg -- impossible
+    grind
+  | succ m ih =>
+    let ⟨b, is_bound⟩ := ih
+    use max b (a m)
+    intro n n_lt_succ_m
+    by_cases h : n < m
+    . specialize is_bound n h
+      grind
+    . have : n = m := by grind
+      grind
+
 
 theorem convergent_sequences_are_bounded (a : ℕ → ℝ) (ℓ : ℝ) :
     Tendsto a atTop (nhds ℓ) ->
@@ -567,17 +564,16 @@ theorem convergent_sequences_are_bounded (a : ℕ → ℝ) (ℓ : ℝ) :
     linarith
   -- a is also bounded on range m since this set is finite.
 
-  have bounded_on_finite (n : ℕ) : ∃ b, n < m -> |a n| ≤ b := by
-    induction n with
-    | zero =>
-      use |a 0|
-      intro _
-      rfl
-    | succ n ih =>
-
-      sorry
-
-  admit
+  let ⟨b, hb⟩ := exists_bound (|a ·|) m
+  let b' := max b (|ℓ| + 1)
+  use b'
+  intro n
+  by_cases h : n < m
+  . specialize hb n h
+    grind
+  . have : n ≥ m := by grind
+    specialize eventually_bounded n this
+    grind
 
 lemma TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0)) := by
   admit
