@@ -530,6 +530,55 @@ lemma lift₁:
   intro h a ℓ hε
   admit
 
+
+-- TODO: extract cleanly the existence of a bound on a finite set.
+-- TODO; ask Claude for a nice formulation of that.
+def b (a : ℕ → ℝ) (m : ℕ) : ℝ :=
+  match m with
+  | 0 => 0
+  | m + 1 =>
+    let range := Finset.range (m + 1)
+    let image := Finset.image a range
+    have : range.Nonempty := by grind
+    have image_nonempty : image.Nonempty := Finset.image_nonempty.mpr this
+    Finset.max' image image_nonempty
+
+def b_is_bound (a : ℕ → ℝ) (m : ℕ): ∀ n < m, a n ≤ b a m := by
+  intro n
+  induction n with
+  | zero =>
+    simp [b]
+    -- ...
+    admit
+  | succ n ih => sorry
+
+theorem convergent_sequences_are_bounded (a : ℕ → ℝ) (ℓ : ℝ) :
+    Tendsto a atTop (nhds ℓ) ->
+    ∃ b, ∀ n, |a n| ≤ b := by
+  intro h
+  simp only [Metric.tendsto_atTop, Real.dist_eq] at h
+  -- To begin with, a is *eventually* bounded
+  specialize h 1 (by positivity)
+  have ⟨m, hm⟩ := h
+  have eventually_bounded (n : ℕ) : n ≥ m → |a n| ≤ |ℓ| + 1 := by
+    intro n_ge_m
+    specialize hm n n_ge_m
+    have : |a n| - |ℓ| ≤ |a n - ℓ| := abs_sub_abs_le_abs_sub (a n) ℓ
+    linarith
+  -- a is also bounded on range m since this set is finite.
+
+  have bounded_on_finite (n : ℕ) : ∃ b, n < m -> |a n| ≤ b := by
+    induction n with
+    | zero =>
+      use |a 0|
+      intro _
+      rfl
+    | succ n ih =>
+
+      sorry
+
+  admit
+
 lemma TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0)) := by
   admit
 
