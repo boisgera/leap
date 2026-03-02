@@ -424,6 +424,10 @@ example : {-1, 1} ⊆ (fun (x : ℝ) =>  x ^ 2) ⁻¹' {1} := by
   . rw [h₂]
     norm_num
 
+-- **TODO.** Image/Preimage and unions/intersections of families of sets.
+
+-- **TODO.** Injectivity, surjectivity, left and right inverse
+
 -- -----------------------------------------------------------------------------
 
 -- **TODO.** Finsets and stuff
