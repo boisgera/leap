@@ -377,6 +377,54 @@ example {α} : ⋃ x : α, {x} = Set.univ := by
   simp only [iff_true]
   use y; simp only [Set.mem_singleton_iff]
 
+example {ι} {α} (s : Set α) (t : ι → Set α) :
+    s ∩ (⋃ i, t i) = ⋃ i, s ∩ t i := by
+  ext x
+  simp only [Set.mem_iUnion]
+  constructor
+  . intro h
+    rw [Set.inter_def, Set.mem_setOf] at h
+    have ⟨x_in_s, x_in_iUnion_t⟩ := h
+    rw [Set.mem_iUnion] at x_in_iUnion_t
+    have ⟨i, x_in_ti⟩ := x_in_iUnion_t
+    use i
+    rw [Set.inter_def, Set.mem_setOf]
+    exact And.intro x_in_s x_in_ti
+  . rintro ⟨i, x_in_s_inter_ti⟩
+
+    rw [Set.inter_def, Set.mem_setOf, Set.mem_iUnion]
+    constructor
+    .
+      admit
+    . admit
+
+-- ## Image and Preimage
+
+#print Set.image -- notation: ''
+-- def Set.image.{u, v} : {α : Type u} → {β : Type v} → (α → β) → Set α → Set β :=
+-- fun {α} {β} f s => {x | ∃ a ∈ s, f a = x}
+
+#print Set.preimage -- notation: ⁻¹'
+-- def Set.preimage.{u, v} : {α : Type u} → {β : Type v} → (α → β) → Set β → Set α :=
+-- fun {α} {β} f s => {x | f x ∈ s}
+
+def evenNumbers : Set ℕ := { n : ℕ | 2 ∣ n }
+
+example : (2 * ·) '' Set.univ = evenNumbers := by
+  simp only [Set.image, Set.mem_univ, true_and]
+  simp only [evenNumbers, dvd_def, eq_comm]
+
+example : {-1, 1} ⊆ (fun (x : ℝ) =>  x ^ 2) ⁻¹' {1} := by
+  simp only [Set.preimage, Set.mem_singleton_iff]
+  intro x
+  rw [Set.mem_setOf]
+  rintro (h₁ | h₂)
+  . rw [h₁]
+    norm_num
+  . rw [h₂]
+    norm_num
+
+-- -----------------------------------------------------------------------------
 
 -- **TODO.** Finsets and stuff
 -- **TODO.** coutable union and stuff (think σ-algebra axioms).
