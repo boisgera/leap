@@ -36,6 +36,14 @@ example {α} : Inhabited α → Nonempty α := by
 #check Classical.choice
 -- Classical.choice.{u} {α : Sort u} : Nonempty α → α
 
+-- TODO: this is also more explicitly : {α : Type u} → Nonempty α → α
+-- Or: the existence of a function defined on all types that are not empty
+-- and which creates an element of the type. This is VERY close to what the
+-- global choice function is doing in NBG and could somehow helps us explain
+-- why this is not so different from the set-theoretic version after all.
+-- (At first sight, it looks VERY different)
+-- But there is some explaining work to do ...
+
 noncomputable example {α} : Nonempty α → Inhabited α := by
   intro nonempty
   exact Classical.choice nonempty |> Inhabited.mk
