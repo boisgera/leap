@@ -77,8 +77,38 @@ noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
     let f := choice' (ι := Unit) (h := fun _ => nonempty)
     f () |> Inhabited.mk
 
--- TODO: work the way up to `Classical.choose` and `Classical.choose_spec`
+-- TODO: work the way up from `choice` to `choose` and `choose_spec`
 -- before dealing with the set-theoretic version of the axiom of choice.
+
+#check Classical.choose
+-- Classical.choose.{u} {α : Sort u} {p : α → Prop} (h : ∃ x, p x) : α
+
+#check Classical.choose_spec
+-- Classical.choose_spec.{u} {α : Sort u} {p : α → Prop}
+--     (h : ∃ x, p x) : p (Classical.choose h)
+
+-- The construct that combines `choose` and `choose_spec`
+#print Classical.indefiniteDescription
+-- Classical.indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
+--   (h : ∃ x, p x) : { x // p x }
+
+noncomputable def indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
+    (h : ∃ x, p x) : { x // p x } :=
+    ( -- This destructuring needs to be confined to a Prop context.
+      let ⟨x, px⟩ := h;  -- TODO: keep working on this!
+                         -- It probably can be streamlined a bit
+      ⟨x, px⟩ |> Nonempty.intro
+    ) |> Classical.choice
+
+noncomputable def indefiniteDescription'.{u} {α : Sort u} (p : α → Prop)
+    (h : ∃ x, p x) : { x // p x } :=
+    ( -- This destructuring needs to be confined to a Prop context.
+      Nonempty.intro h
+    ) |> Classical.choice
+
+-- TODO: make a subtype version that encapsulate choose and choose_spec?
+
+-- -----------------------------------------------------------------------------
 
 -- The set-theoretic version would use the `Nonempty` method defined
 -- for sets, not the type-theoretic version:
@@ -90,8 +120,9 @@ noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
 #print Set.nonempty_iff_ne_empty
 -- Set.nonempty_iff_ne_empty.{u} {α : Type u} {s : Set α} : s.Nonempty ↔ s ≠ ∅
 
--- whose proof does not require the axiom of choice (but is not constructive
--- however, it requires classical logic):
+-- whose proof does not explicitly requires the axiom of choice ...
+-- but it needs contradiction which relies on em ... which is actually
+-- a consequence of choice by Diaconescu's theorem!
 example {α} {s : Set α} : s.Nonempty ↔ s ≠ ∅ := by
   constructor
   . rintro ⟨x, hx⟩ s_eq_empty
