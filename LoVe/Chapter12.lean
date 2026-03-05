@@ -1,6 +1,57 @@
 import Mathlib
 
--- ## 12.3 The Axiom of Choice
+/-
+
+## 12.3 The Axiom of Choice
+
+
+### The Axiom of Choice in Set Theory
+
+⚠️ Warning: Large digression
+
+Here we try to "massage" the classical formulation of the axiom of choice in
+ZFC, until we end up with a formulation and understanding that will make
+the transition to the type-theoretic version much smoother.
+
+The classic:
+
+$$
+\forall c,
+\left(
+\emptyset \notin c
+\rightarrow
+\exists f: c \rightarrow \cup c \; \forall s \in c \; f(s) \in s
+\right)
+$$
+
+What lacks IMHO: the function $f$ depends on the collection of non-empty sets
+$c$ but if two collections share some sets we don't know if both associated
+choices are the same. That would be nice! More generally what it hints to
+is that we'd like to get a single *global* choice function, defined on
+the class of sets which are not empty (which is not a set, this is why
+we can't state that axiom in ZFC). All the "classic" choice functions
+would then be restrictions of this global choice to a specific family.
+
+This idea works perfectly in NBG and since NBG is a conservative extension of
+ZFC, and the consistency between our choice functions can be stated in ZFC,
+it actually works! This new, augmented version of the axiom of choice in ZFC
+make it appear as simply a bounded version of the global choice.
+
+Note that without the reference to NBG, we could work out the same result
+by a definition of the choice function in a consistent manner
+in the cumulative hierarchy. And since every collection is included at some
+stage in the cumulative hierarchy, the general result is obtained by
+restriction. Anyway, this stuff reads something like:
+
+For every ordinal $α$, there is a choice function
+$f: V_{α} \setminus {\varnothing} \to \cup V_{\alpha}$ such that
+for any $s \in V_{α} \setminus {\varnothing}$, $f(s) \in s$.
+
+This is *very* similar to what we're going to introduce as our axiom of choice
+in the type-theoretic context (except that the hierarchy is not cumulative
+and we don't have the equivalent of limit universes, only successors).
+
+-/
 
 #print Nonempty
 -- inductive Nonempty.{u} : Sort u → Prop
@@ -8,12 +59,35 @@ import Mathlib
 -- constructors:
 -- Nonempty.intro : ∀ {α : Sort u} (val : α), Nonempty α
 
--- Note the difference between `Nonempty` and `Inhabited`: `Inhabited α`
--- provides a default value of `α` that we can use in computations.
--- `Nonempty α` provides merely the proof that such a value exist.
--- This is different because there is no large elimination for props
--- (you generally cannot extract information from a proof and use it
--- in a program).
+/-
+`Nonempty α` captures that there is an element in `α`.
+In set theory we would state something like $\exists a, a \in \alpha$,
+but here, there is no extra "in α", since we only consider `a` in $α$ to
+begin with. So what we have is actually:
+-/
+
+example {α} : Nonempty α ↔ ∃ (_a : α), True := by
+  constructor
+  . intro nonempty
+    let ⟨a⟩ := nonempty
+    exact Exists.intro a trivial
+  . intro exists_a
+    let ⟨a, _⟩ := exists_a
+    exact Nonempty.intro a
+
+/-
+We can probably agree that having a custom prop is nicer than dealing
+with this existential statement with a dummy prop attached...
+-/
+
+/-
+Note the difference between `Nonempty` and `Inhabited`: `Inhabited α`
+provides a default value of `α` that we can use in computations.
+`Nonempty α` provides merely the proof that such a value exist.
+This is different because there is no large elimination for props
+(you generally cannot extract information from a proof and use it
+in a program).
+-/
 
 #print Inhabited
 -- class Inhabited.{u} (α : Sort u) : Sort (max 1 u)
