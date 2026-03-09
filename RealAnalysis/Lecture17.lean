@@ -459,29 +459,44 @@ theorem a_tendsto_one : Tendsto a atTop (nhds (1 / 2 : ℝ)) := by
 
 end Ex2
 
+-- -----------------------------------------------------------------------------
 -- Ex #3. Show that the (Cesaro-)average of a series converging to ℓ
 -- converges to ℓ.
 
 namespace Cesaro
 
 noncomputable def cesaro (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+  -- ∑ x ∈ s, f x is notation for Finset.sum s f
   (∑ i ∈ Finset.range (n + 1), a i) / (n + 1)
 
-noncomputable def cesaro' (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+-- Alternative notation, less idiomatic, but shorter
+noncomputable def cesaro_Iic (a : ℕ → ℝ) (n : ℕ) : ℝ :=
+  -- Notation for (∑ i ∈ Finset.Iic n, a i) / (↑n + 1)
+  -- 'i' for -∞, 'c' for closed
+  (∑ i ≤ n, a i) / (n + 1)
+
+-- Both definition are equivalent:
+lemma cesaro_eq_cesaro_Iic : cesaro = cesaro_Iic := by
+  ext a n
+  rw [cesaro, cesaro_Iic]
+  rw [Nat.range_succ_eq_Iic]
+
+-- The recursive definition is also interesting:
+noncomputable def cesaro_rec (a : ℕ → ℝ) (n : ℕ) : ℝ :=
   match n with
   | 0 => a 0
   | n + 1 =>
-    (cesaro' a n) * (n + 1) / (n + 2) + (a (n + 1)) / (n + 2)
+    (cesaro_rec a n) * (n + 1) / (n + 2) + (a (n + 1)) / (n + 2)
 
-theorem cesaro'_eq_cesaro : cesaro' = cesaro := by
+theorem cesaro_rec_eq_cesaro : cesaro_rec = cesaro := by
   ext a n
   induction n with
   | zero =>
-    rw [cesaro, cesaro']
+    rw [cesaro, cesaro_rec]
     rw [Nat.cast_zero, zero_add, zero_add, div_one]
     rw [Finset.range_one, Finset.sum_singleton]
   | succ n ih =>
-    rw [cesaro, cesaro']
+    rw [cesaro, cesaro_rec]
     rw [ih]
     rw [Finset.sum_range_succ]
     have : (∑ i ∈ Finset.range (n + 1), a i) = (cesaro a n) * (n + 1) := by
@@ -493,28 +508,37 @@ theorem cesaro'_eq_cesaro : cesaro' = cesaro := by
     field_simp
     ring_nf
 
+-- Some general properties of the Cesaro operator (that we need for the
+-- `cesaro_lift` helper lemma).
 
--- Let's make our final result easier to reach:
+-- The finite sum is additive:
+#check Finset.sum_add_distrib
+-- Finset.sum_add_distrib.{u_1, u_4} {ι : Type u_1} {M : Type u_4} {s : Finset ι}
+--     [AddCommMonoid M] {f g : ι → M} :
+--     ∑ x ∈ s, (f x + g x) = ∑ x ∈ s, f x + ∑ x ∈ s, g x
+
 lemma cesaro_add (a b : ℕ → ℝ) : cesaro (a + b) = cesaro a + cesaro b := by
   ext n
-  induction n with
-  | zero =>
-    simp only [Pi.add_apply]
-    simp only [cesaro]
-    simp only [
-      zero_add,
-      Finset.range_one,
-      Nat.cast_zero,
-      Pi.add_apply,
-      Finset.sum_singleton,
-      div_one
-    ]
-  | succ n ih =>
-    simp only [Pi.add_apply]
-    simp only [cesaro]
-    simp only [Finset.sum_range_add]
-    -- TODO
-    admit
+  rw [Pi.add_apply]
+  simp only [cesaro]
+  simp only [Pi.add_apply]
+  rw [Finset.sum_add_distrib]
+  ring_nf
+
+-- The finite sum is homogeneous:
+#check Finset.smul_sum
+-- Finset.smul_sum.{u_1, u_2, u_3} {M : Type u_1} {N : Type u_2} {γ : Type u_3}
+--     [AddCommMonoid N] [DistribSMul M N] {r : M} {f : γ → N} {s : Finset γ} :
+--     r • ∑ x ∈ s, f x = ∑ x ∈ s, r • f x
+
+lemma cesaro_smul(s : ℝ) (a : ℕ → ℝ) : cesaro (s • a) = s • cesaro a := by
+  ext n
+  rw [cesaro]
+  simp only [Pi.smul_apply]
+  rw [cesaro]
+  rw [<- Finset.smul_sum]
+  simp [smul_eq_mul]
+  ring_nf
 
 lemma cesaro_cst (c : ℝ) : cesaro (fun _ => c) = (fun _ => c) := by
   ext n
@@ -523,14 +547,42 @@ lemma cesaro_cst (c : ℝ) : cesaro (fun _ => c) = (fun _ => c) := by
   simp only [Nat.cast_add, Nat.cast_one]
   field_simp
 
-lemma lift₁:
+-- Let's define it as a `LinearMap` (bundle of the operator and the proof bits)
+-- We don't use it later on but we could easily use `cesaroMap` instead of
+-- `cesaro` since there is a coercion (right?)
+noncomputable def cesaroMap : (ℕ → ℝ) →ₗ[ℝ] (ℕ → ℝ) := {
+  toFun := cesaro,
+  map_add' := cesaro_add,
+  map_smul' := cesaro_smul,
+}
+
+lemma cesaro_lift:
     (∀ (a : ℕ → ℝ), Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0)) ->
     (∀ (a : ℕ → ℝ), ∀ (ℓ : ℝ), Tendsto a atTop (nhds ℓ) -> Tendsto (cesaro a) atTop (nhds ℓ)) := by
   simp only [Metric.tendsto_atTop, Real.dist_eq]
   intro h a ℓ hε
-  admit
-
-
+  let b := (a · - ℓ)
+  have b_eq (n : ℕ) : b n = (a n - ℓ) := by
+    rfl
+  have b_eq_a_sub_cst_ℓ : b = a - fun x => ℓ := by
+    rfl
+  simp only [<- b_eq] at hε
+  specialize h b
+  simp only [sub_zero] at *
+  specialize h hε
+  have lemma₁ (n : ℕ) : ℓ = cesaro (fun _ => ℓ) n := by
+    rw [cesaro_cst]
+  have lemma₂ (a b : ℕ → ℝ) (n : ℕ) : cesaro a n - cesaro b n = cesaro (a - b) n := by
+    have h := cesaro_add (a - b) b
+    simp only [sub_add_cancel] at h
+    rw [funext_iff] at h
+    specialize h n
+    simp only [Pi.add_apply] at h
+    grind
+  conv =>
+    rhs; rhs ; rhs; ext; ext n; rhs; lhs; arg 1
+    rw [lemma₁ n, lemma₂, <- b_eq_a_sub_cst_ℓ]
+  exact h
 
 def exists_bound (a : ℕ → ℝ) (m : ℕ): ∃ b, ∀ n < m, a n ≤ b := by
   induction m with
