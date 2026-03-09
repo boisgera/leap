@@ -169,7 +169,7 @@ noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
 -- Classical.choose_spec.{u} {α : Sort u} {p : α → Prop}
 --     (h : ∃ x, p x) : p (Classical.choose h)
 
--- The construct that combines `choose` and `choose_spec`
+-- The construct that actually encapsulate both `choose` and `choose_spec`
 #print Classical.indefiniteDescription
 -- Classical.indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
 --   (h : ∃ x, p x) : { x // p x }
@@ -177,18 +177,13 @@ noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
 noncomputable def indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
     (h : ∃ x, p x) : { x // p x } :=
     ( -- This destructuring needs to be confined to a Prop context.
-      let ⟨x, px⟩ := h;  -- TODO: keep working on this!
-                         -- It probably can be streamlined a bit
-      ⟨x, px⟩ |> Nonempty.intro
+      let ⟨x, px⟩ : ∃ x, p x := h;
+      -- we destructure only to restructure in a different type
+      let x_px : { x // p x } := ⟨x, px⟩
+      x_px |> Nonempty.intro -- OK, this is a Prop
     ) |> Classical.choice
 
-noncomputable def indefiniteDescription'.{u} {α : Sort u} (p : α → Prop)
-    (h : ∃ x, p x) : { x // p x } :=
-    ( -- This destructuring needs to be confined to a Prop context.
-      Nonempty.intro h
-    ) |> Classical.choice
 
--- TODO: make a subtype version that encapsulate choose and choose_spec?
 
 -- -----------------------------------------------------------------------------
 
