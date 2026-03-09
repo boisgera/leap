@@ -584,7 +584,7 @@ lemma cesaro_lift:
     rw [lemma₁ n, lemma₂, <- b_eq_a_sub_cst_ℓ]
   exact h
 
-def exists_bound (a : ℕ → ℝ) (m : ℕ): ∃ b, ∀ n < m, a n ≤ b := by
+def exists_local_bound (a : ℕ → ℝ) (m : ℕ): ∃ b, ∀ n < m, a n ≤ b := by
   induction m with
   | zero =>
     use 0
@@ -600,31 +600,25 @@ def exists_bound (a : ℕ → ℝ) (m : ℕ): ∃ b, ∀ n < m, a n ≤ b := by
     . have : n = m := by grind
       grind
 
-
-theorem convergent_sequences_are_bounded (a : ℕ → ℝ) (ℓ : ℝ) :
-    Tendsto a atTop (nhds ℓ) ->
+theorem exists_global_bound {a : ℕ → ℝ} {ℓ : ℝ} (h : Tendsto a atTop (nhds ℓ)) :
     ∃ b, ∀ n, |a n| ≤ b := by
-  intro h
   simp only [Metric.tendsto_atTop, Real.dist_eq] at h
-  -- To begin with, a is *eventually* bounded
   specialize h 1 (by positivity)
-  have ⟨m, hm⟩ := h
-  have eventually_bounded (n : ℕ) : n ≥ m → |a n| ≤ |ℓ| + 1 := by
-    intro n_ge_m
-    specialize hm n n_ge_m
-    have : |a n| - |ℓ| ≤ |a n - ℓ| := abs_sub_abs_le_abs_sub (a n) ℓ
+  let ⟨N, hN⟩ := h
+  have hb (n : ℕ) (n_ge_N : n ≥ N): |a n| < |ℓ| + 1 := by
+    specialize hN n n_ge_N
+    have : |a n| - |ℓ| ≤ |a n - ℓ| := by
+      apply abs_sub_abs_le_abs_sub
     linarith
-  -- a is also bounded on range m since this set is finite.
-
-  let ⟨b, hb⟩ := exists_bound (|a ·|) m
-  let b' := max b (|ℓ| + 1)
-  use b'
+  have ⟨b', hb'⟩ := exists_local_bound (|a ·|) N
+  let b := max (|ℓ| + 1) b'
+  use b
   intro n
-  by_cases h : n < m
-  . specialize hb n h
+  by_cases h : n < N
+  . specialize hb' n h
     grind
-  . have : n ≥ m := by grind
-    specialize eventually_bounded n this
+  . simp only [not_lt] at h
+    specialize hb n
     grind
 
 #check Finset.sum_range_add
@@ -635,10 +629,21 @@ theorem convergent_sequences_are_bounded (a : ℕ → ℝ) (ℓ : ℝ) :
 
 theorem TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0) := by
   intro h
-  let ⟨b, hb⟩ := convergent_sequences_are_bounded a 0 h
+  let ⟨b, hb⟩ := exists_global_bound h
   simp only [Metric.tendsto_atTop, Real.dist_eq] at *
-  simp only [gt_iff_lt, ge_iff_le, sub_zero] at *
+  simp only [sub_zero] at *
+  intro ε ε_pos
+
+  have lemma₁ : ∃ (N : ℕ), ∀ N' ≥ N, ∀ n ≥ N',
+      |(∑ i ∈ Finset.range (N' + 1), a i) / (n + 1)| < ε / 2 := by
+    admit
+  have lemma₂ : ∃ (N : ℕ), ∀ N' ≥ N, ∀ n ≥ N',
+      |(∑ i ∈ Finset.Ioo (N' + 1) (n + 1), a i) / (n + 1)| < ε / 2 := by
+    admit
+
   simp only [cesaro]
+
+
   intro ε ε_pos
   specialize h (ε / 2) (by positivity)
   have : 2 * b / ε ≥ 0 := by admit
