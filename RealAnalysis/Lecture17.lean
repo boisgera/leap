@@ -641,20 +641,20 @@ theorem TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) 
       |(∑ i ∈ Finset.Ioo (N' + 1) (n + 1), a i) / (n + 1)| < ε / 2 := by
     admit
 
-  simp only [cesaro]
+  -- simp only [cesaro]
 
 
-  intro ε ε_pos
-  specialize h (ε / 2) (by positivity)
-  have : 2 * b / ε ≥ 0 := by admit
-  let N := Int.toNat ⌈2 * b / ε⌉
-  -- Ah, fuck, we need to max that with the other constraint.
-  have : N ≥ 2 * b / ε := by admit
-  use N
-  intro n N_le_n
-  have : n + 1 = N + (n + 1 - N) := by admit
-  rw [this]
-  simp only [Finset.sum_range_add a (n + 1 - N) N]
+  -- intro ε ε_pos
+  -- specialize h (ε / 2) (by positivity)
+  -- have : 2 * b / ε ≥ 0 := by admit
+  -- let N := Int.toNat ⌈2 * b / ε⌉
+  -- -- Ah, fuck, we need to max that with the other constraint.
+  -- have : N ≥ 2 * b / ε := by admit
+  -- use N
+  -- intro n N_le_n
+  -- have : n + 1 = N + (n + 1 - N) := by admit
+  -- rw [this]
+  -- simp only [Finset.sum_range_add a (n + 1 - N) N]
 
   admit
 
