@@ -643,25 +643,85 @@ theorem TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) 
   have lemma₁ : ∀ (N' : ℕ), ∃ N ≥ N', ∀ n ≥ N,
       |(∑ i ∈ Finset.range (N' + 1), a i) / (n + 1)| < ε / 2 := by
     intro N'
-    let N := max N' ⌈2 * N' * b / ε⌉₊
-    have : N ≥ 2 * N' * b / ε := by grind
+
+    let ⟨N, ineq₁, ineq₂⟩ : ∃ N, N ≥ N' ∧ N + 1 > 2 * (N' + 1) * b / ε := by
+      let N := max N' ⌈2 * (N' + 1) * b / ε⌉₊
+      have ineq₁ : N ≥ N' := by grind
+      have : ⌈2 * (N' + 1) * b / ε⌉₊ ≤ N := by
+        apply le_max_right
+      have : ⌈2 * (N' + 1) * b / ε⌉₊ ≤ (N : ℝ) := by
+        apply Nat.cast_le.mpr this
+      have : 2 * (N' + 1) * b / ε ≤ ⌈2 * (N' + 1) * b / ε⌉₊ := by
+        apply Nat.le_ceil
+      have : 2 * (N' + 1) * b / ε ≤ N  := by
+        linarith
+      have ineq₂: 2 * (N' + 1) * b / ε < N + 1 := by
+        linarith
+      exact ⟨N, ineq₁, ineq₂⟩
+
     use N
     constructor
     . grind
     . simp only [abs_div]
       intro n n_ge_N
       calc |∑ i ∈ Finset.range (N' + 1), a i| / |↑n + 1|
-      _ ≤ ∑ i ∈ Finset.range (N' + 1), |a i| / |↑n + 1| := by admit
-      _ ≤ ∑ i ∈ Finset.range (N' + 1), b / |↑n + 1| := by admit
-      _ ≤ N' * b / |↑n + 1| := by admit
-      _ ≤ N' * b / (n + 1) := by admit
-      _ < ε / 2 := by linarith
+      _ ≤ ∑ i ∈ Finset.range (N' + 1), |a i| / |↑n + 1| := by
+        rw [← Finset.sum_div]
+        exact div_le_div_of_nonneg_right (Finset.abs_sum_le_sum_abs _ _) (abs_nonneg _)
+      _ ≤ ∑ i ∈ Finset.range (N' + 1), b / |↑n + 1| := by
+        apply Finset.sum_le_sum
+        intro i _
+        apply div_le_div_of_nonneg_right (hb i) (abs_nonneg _)
+      _ ≤ (N' + 1) * b / |↑n + 1| := by
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul, mul_div_assoc]
+        rw [Nat.cast_add, Nat.cast_one]
+      _ ≤ (N' + 1) * b / (n + 1) := by
+        rw [abs_of_pos (by positivity)]
+      _ < ε / 2 := by
+        rw [div_lt_div_iff₀ (by positivity) (by positivity)]
+        have hn : (n : ℝ) + 1 ≥ (N : ℝ) + 1 := by exact_mod_cast Nat.add_le_add_right n_ge_N 1
+        have ineq₂' : 2 * (↑N' + 1) * b < (↑N + 1) * ε := by
+          rwa [gt_iff_lt, div_lt_iff₀ ε_pos] at ineq₂
+        nlinarith
 
-
-
-  have lemma₂ : ∃ (N' : ℕ), ∀ N ≥ N', ∀ n ≥ N,
+  have lemma₂ : ∃ (N' : ℕ), ∀ n ≥ N',
       |(∑ i ∈ Finset.Ico (N' + 1) (n + 1), a i) / (n + 1)| < ε / 2 := by
-    admit
+    specialize h (ε / 2) (by positivity)
+    have ⟨N, hN⟩ := h; clear h
+    use N
+    intro n n_ge_N
+
+    rw [abs_div]
+
+    have : (n : ℝ) + 1 ≥ 0 := by positivity
+    simp only [abs_of_nonneg this]
+
+    apply div_lt_iff₀ (by positivity) |>.mpr
+
+    have : |∑ i ∈ Finset.Ico (N + 1) (n + 1), a i| < (↑n + 1) * (ε / 2) := by
+      rcases Nat.eq_or_lt_of_le n_ge_N with rfl | hn
+      · -- case n = N: Ico (N+1) (N+1) is empty
+        simp only [le_refl, Finset.Ico_eq_empty_of_le, Finset.sum_empty, abs_zero] --[Finset.Ico_self]
+        positivity
+      · -- case n > N: Ico is nonempty
+        calc |∑ i ∈ Finset.Ico (N + 1) (n + 1), a i|
+            ≤ ∑ i ∈ Finset.Ico (N + 1) (n + 1), |a i| := Finset.abs_sum_le_sum_abs _ _
+          _ < ∑ _i ∈ Finset.Ico (N + 1) (n + 1), ε / 2 := by
+              apply Finset.sum_lt_sum
+              · intro i hi
+                exact le_of_lt (hN i (by have := Finset.mem_Ico.mp hi; omega))
+              · exact ⟨N + 1, Finset.mem_Ico.mpr ⟨le_refl _, by omega⟩, hN (N+1) (by omega)⟩
+          _ = Finset.card (Finset.Ico (N + 1) (n + 1)) * (ε / 2) := by
+              rw [Finset.sum_const, nsmul_eq_mul]
+          _ ≤ (↑n + 1) * (ε / 2) := by
+              apply mul_le_mul_of_nonneg_right _ (by linarith)
+              simp only [Nat.card_Ico]
+              push_cast
+              exact_mod_cast (by omega : n - N ≤ n + 1)
+
+    linarith
+
+
 
   simp only [cesaro]
   have ⟨N', hN'⟩ := lemma₂
@@ -669,13 +729,13 @@ theorem TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) 
   specialize lemma₁ N'
   have ⟨N, hN⟩ := lemma₁
   clear lemma₁
-  specialize hN' N
+  -- specialize hN' N
   have ⟨N_ge_N', hN''⟩ := hN
   clear hN
-  specialize hN' N_ge_N'
+  -- specialize hN' N_ge_N'
   use N
   intro n n_ge_N
-  specialize hN' n n_ge_N
+  specialize hN' n (show n ≥ N' from by linarith)
   specialize hN'' n n_ge_N
   -- hN' : |(∑ i ∈ Finset.Ico (N' + 1) (n + 1), a i) / (↑n + 1)| < ε / 2
   -- hN'' : |(∑ i ∈ Finset.range (N' + 1), a i) / (↑n + 1)| < ε / 2
