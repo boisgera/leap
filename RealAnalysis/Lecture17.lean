@@ -630,33 +630,68 @@ theorem exists_global_bound {a : ℕ → ℝ} {ℓ : ℝ} (h : Tendsto a atTop (
 theorem TODO (a : ℕ → ℝ) : Tendsto a atTop (nhds 0) -> Tendsto (cesaro a) atTop (nhds 0) := by
   intro h
   let ⟨b, hb⟩ := exists_global_bound h
+  have b_nonneg : b ≥ 0 := by
+    specialize hb 0
+    have : |a 0| ≥ 0 := by
+      apply abs_nonneg
+    linarith
+
   simp only [Metric.tendsto_atTop, Real.dist_eq] at *
   simp only [sub_zero] at *
   intro ε ε_pos
 
-  have lemma₁ : ∃ (N : ℕ), ∀ N' ≥ N, ∀ n ≥ N',
+  have lemma₁ : ∀ (N' : ℕ), ∃ N ≥ N', ∀ n ≥ N,
       |(∑ i ∈ Finset.range (N' + 1), a i) / (n + 1)| < ε / 2 := by
+    intro N'
+    let N := max N' ⌈2 * N' * b / ε⌉₊
+    have : N ≥ 2 * N' * b / ε := by grind
+    use N
+    constructor
+    . grind
+    . simp only [abs_div]
+      intro n n_ge_N
+      calc |∑ i ∈ Finset.range (N' + 1), a i| / |↑n + 1|
+      _ ≤ ∑ i ∈ Finset.range (N' + 1), |a i| / |↑n + 1| := by admit
+      _ ≤ ∑ i ∈ Finset.range (N' + 1), b / |↑n + 1| := by admit
+      _ ≤ N' * b / |↑n + 1| := by admit
+      _ ≤ N' * b / (n + 1) := by admit
+      _ < ε / 2 := by linarith
+
+
+
+  have lemma₂ : ∃ (N' : ℕ), ∀ N ≥ N', ∀ n ≥ N,
+      |(∑ i ∈ Finset.Ico (N' + 1) (n + 1), a i) / (n + 1)| < ε / 2 := by
     admit
-  have lemma₂ : ∃ (N : ℕ), ∀ N' ≥ N, ∀ n ≥ N',
-      |(∑ i ∈ Finset.Ioo (N' + 1) (n + 1), a i) / (n + 1)| < ε / 2 := by
-    admit
 
-  -- simp only [cesaro]
+  simp only [cesaro]
+  have ⟨N', hN'⟩ := lemma₂
+  clear lemma₂
+  specialize lemma₁ N'
+  have ⟨N, hN⟩ := lemma₁
+  clear lemma₁
+  specialize hN' N
+  have ⟨N_ge_N', hN''⟩ := hN
+  clear hN
+  specialize hN' N_ge_N'
+  use N
+  intro n n_ge_N
+  specialize hN' n n_ge_N
+  specialize hN'' n n_ge_N
+  -- hN' : |(∑ i ∈ Finset.Ico (N' + 1) (n + 1), a i) / (↑n + 1)| < ε / 2
+  -- hN'' : |(∑ i ∈ Finset.range (N' + 1), a i) / (↑n + 1)| < ε / 2
+  -- ⊢ |(∑ i ∈ Finset.range (n + 1), a i) / (↑n + 1)| < ε
 
-
-  -- intro ε ε_pos
-  -- specialize h (ε / 2) (by positivity)
-  -- have : 2 * b / ε ≥ 0 := by admit
-  -- let N := Int.toNat ⌈2 * b / ε⌉
-  -- -- Ah, fuck, we need to max that with the other constraint.
-  -- have : N ≥ 2 * b / ε := by admit
-  -- use N
-  -- intro n N_le_n
-  -- have : n + 1 = N + (n + 1 - N) := by admit
-  -- rw [this]
-  -- simp only [Finset.sum_range_add a (n + 1 - N) N]
-
-  admit
+  have hsplit :
+      Finset.range (n + 1) =
+      Finset.range (N' + 1) ∪ (Finset.Ico (N' + 1) (n + 1)) := by
+    ext x
+    simp only [Finset.mem_range, Order.lt_add_one_iff, Finset.mem_union, Finset.mem_Ico,
+      Order.add_one_le_iff]
+    grind
+  rw [hsplit, Finset.sum_union (Finset.disjoint_left.mpr (by simp [Finset.mem_Ico]; omega)), add_div]
+  calc |(∑ x ∈ Finset.range (N' + 1), a x) / (↑n + 1) + (∑ x ∈ Finset.Ico (N' + 1) (n + 1), a x) / (↑n + 1)|
+    _ ≤ |(∑ x ∈ Finset.range (N' + 1), a x) / (↑n + 1)| + |(∑ x ∈ Finset.Ico (N' + 1) (n + 1), a x) / (↑n + 1)| := by apply abs_add_le _ _
+    _ < ε := by linarith
 
 end Cesaro
 
