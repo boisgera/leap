@@ -47,7 +47,14 @@ theorem convergence_of_absolute_convergence (a : ℕ → ℝ) :
 
   admit
 
+def Alternating (a : ℕ → ℝ) :=
+  (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) ∨
+  (∀ k, a (2 * k) ≤ 0 ∧  a (2 * k + 1) ≥ 0)
+
+lemma lemmama (a : ℕ → ℝ) : ∀ (m n : ℕ), (m ≤ n) →
+  |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by admit
+
 theorem t2 (a : ℕ → ℝ) :
-    Tendsto a atTop (nhds 0) → Antitone a →
-    ∃ ℓ, Tendsto (fun n => ∑ k ∈ Finset.range (n + 1), (-1)^k * (a k)) atTop (nhds ℓ) := by
+    Tendsto a atTop (nhds 0) → Alternating a → Antitone (|a ·|) →
+    ∃ ℓ, Tendsto (fun n => ∑ k ∈ Finset.range (n + 1), a k) atTop (nhds ℓ) := by
   admit
