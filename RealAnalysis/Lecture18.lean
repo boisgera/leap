@@ -51,8 +51,40 @@ def Alternating (a : ℕ → ℝ) :=
   (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) ∨
   (∀ k, a (2 * k) ≤ 0 ∧  a (2 * k + 1) ≥ 0)
 
-lemma lemmama (a : ℕ → ℝ) : ∀ (m n : ℕ), (m ≤ n) →
-  |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by admit
+theorem alternating_neg_of_alternating (a : ℕ → ℝ) :
+    Alternating a → Alternating (-a) := by
+  intro alt
+  rw [Alternating] at *
+  cases alt with
+  | inl h =>
+    right
+    simp only [Pi.neg_apply]
+    intro k
+    let ⟨h1, h2⟩ := h k
+    constructor
+    . linarith
+    . linarith
+  | inr h =>
+    left
+    simp only [Pi.neg_apply]
+    intro k
+    let ⟨h1, h2⟩ := h k
+    constructor
+    . linarith
+    . linarith
+
+theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
+    Antitone (|a ·|) → Antitone (|(-a) ·|) := by
+    intro anti
+    simp only [Pi.neg_apply]
+    simp only [abs_neg]
+    exact anti
+
+theorem workhorse (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ {m n : ℕ}, (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
+  -- many cases ... but to begin with we may assume that a m ≥ 0
+  -- prove the result, then apply it to -a to get the other case
+  admit
 
 theorem t2 (a : ℕ → ℝ) :
     Tendsto a atTop (nhds 0) → Alternating a → Antitone (|a ·|) →
