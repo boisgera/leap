@@ -80,10 +80,15 @@ theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
     simp only [abs_neg]
     exact anti
 
+-- TODO: prove that a shifted alteranting seq is alternating
+-- and that a shifted convergent to ℓ converges to ℓ
+
 #print Set.uIcc
 -- def Set.uIcc.{u_1} : {α : Type u_1} → [Lattice α] → α → α → Set α :=
 --     fun {α} [Lattice α] a b => Set.Icc (a ⊓ b) (a ⊔ b)
 
+-- Maybe we'd better "store" the info about which bound is low and
+-- which bound is the high one.
 theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
     ∀ n,
       ∑ k ∈ Finset.range (n + 2), a k ∈
@@ -91,9 +96,38 @@ theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
         (∑ k ∈ Finset.range n, a k)
         (∑ k ∈ Finset.range (n + 1), a k) := by admit
 
-theorem workhorse (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ {m n : ℕ}, (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
-  -- I still don't have the proper format idea behind the intuition...
+-- This one should be ok (from key)
+theorem coro (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ n,
+      Set.uIcc
+        (∑ k ∈ Finset.range (n + 1), a k)
+        (∑ k ∈ Finset.range (n + 2), a k)
+      ⊆
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k) := by admit
+
+-- This one is easy (from coro)
+theorem coro' (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ n,
+      Set.uIcc
+        0
+        (a 0)
+      ⊆
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k) := by admit
+
+-- This should be some massaging of coro'
+theorem almost_there (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ n , |∑ k ∈ Finset.range n, a k| ≤ |a 0| := by
+
+  admit
+
+-- TODO: use almost_there on the sequence a shifted by m
+theorem what_we_actually_need (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ (m n : ℕ), (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
+
   admit
 
 theorem t2 (a : ℕ → ℝ) :
