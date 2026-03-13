@@ -80,10 +80,20 @@ theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
     simp only [abs_neg]
     exact anti
 
+#print Set.uIcc
+-- def Set.uIcc.{u_1} : {α : Type u_1} → [Lattice α] → α → α → Set α :=
+--     fun {α} [Lattice α] a b => Set.Icc (a ⊓ b) (a ⊔ b)
+
+theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
+    ∀ n,
+      ∑ k ∈ Finset.range (n + 2), a k ∈
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k) := by admit
+
 theorem workhorse (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
     ∀ {m n : ℕ}, (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
-  -- many cases ... but to begin with we may assume that a m ≥ 0
-  -- prove the result, then apply it to -a to get the other case
+  -- I still don't have the proper format idea behind the intuition...
   admit
 
 theorem t2 (a : ℕ → ℝ) :
