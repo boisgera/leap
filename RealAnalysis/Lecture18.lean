@@ -87,14 +87,54 @@ theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
 -- def Set.uIcc.{u_1} : {α : Type u_1} → [Lattice α] → α → α → Set α :=
 --     fun {α} [Lattice α] a b => Set.Icc (a ⊓ b) (a ⊔ b)
 
--- Maybe we'd better "store" the info about which bound is low and
--- which bound is the high one.
+#check Finset.sum_pair
+-- Finset.sum_pair.{u_1, u_4} {ι : Type u_1} {M : Type u_4} [AddCommMonoid M]
+-- {f : ι → M} [DecidableEq ι] {a b : ι}
+-- (h : a ≠ b) : ∑ x ∈ {a, b}, f x = f a + f b
+
 theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
     ∀ n,
       ∑ k ∈ Finset.range (n + 2), a k ∈
       Set.uIcc
         (∑ k ∈ Finset.range n, a k)
-        (∑ k ∈ Finset.range (n + 1), a k) := by admit
+        (∑ k ∈ Finset.range (n + 1), a k) := by
+  intro alt anti n
+  induction n with
+  | zero =>
+    simp only [
+      Finset.range_zero,
+      Finset.sum_empty, zero_add,
+      Finset.range_one,
+      Finset.sum_singleton,
+      show Finset.range 2 = {0, 1} from by decide,
+      Finset.sum_pair (show 0 ≠ 1 from by norm_num)
+    ]
+    cases alt with
+    | inl h =>
+      have in1: 0 ≤ a 0 := (h 0).left
+      have in2: a 1 ≤ 0 := (h 0).right
+      have in3: - a 1 ≤ a 0 := by
+        rw [Antitone] at anti
+        specialize anti (show 0 ≤ 1 from by norm_num)
+        simp only [abs_of_nonneg in1] at anti
+        simp only [abs_of_nonpos in2] at anti
+        exact anti
+      rw [Set.uIcc_of_le in1, Set.mem_Icc]
+      constructor <;> linarith
+    | inr h =>
+      have in1: a 0 ≤ 0 := (h 0).left
+      have in2: 0 ≤ a 1  := (h 0).right
+      have in3: a 1 ≤ - a 0 := by
+        rw [Antitone] at anti
+        specialize anti (show 0 ≤ 1 from by norm_num)
+        simp only [abs_of_nonneg in2] at anti
+        simp only [abs_of_nonpos in1] at anti
+        exact anti
+      rw [Set.uIcc_of_ge in1, Set.mem_Icc]
+      constructor <;> linarith
+  | succ n ih =>
+
+    admit
 
 -- This one should be ok (from key)
 theorem coro (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
