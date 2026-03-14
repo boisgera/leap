@@ -47,9 +47,48 @@ theorem convergence_of_absolute_convergence (a : ℕ → ℝ) :
 
   admit
 
+-- This def has an issue here: since this is a prop we can't properly
+-- distinguish the two component cases to build a theorem?
 def Alternating (a : ℕ → ℝ) :=
   (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) ∨
   (∀ k, a (2 * k) ≤ 0 ∧  a (2 * k + 1) ≥ 0)
+
+-- Example: with
+
+-- theorem demo (a : ℕ → ℝ) (h : Alternating a) :
+--     match h with
+--     | Or.inl _ => a 0 ≥ 0
+--     | Or.inr _ => a 0 ≤ 0
+--   := by admit
+
+-- we get the error:
+
+-- Tactic `cases` failed with a nested error:
+-- Tactic `induction` failed: recursor `Or.casesOn` can only eliminate into `Prop`
+
+-- So let's do the same thing with types instead
+
+inductive Alt (a : ℕ → ℝ) where
+| up : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
+| down : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
+
+-- Use that on one hand and Nat.bodd on the other and pattern match in
+-- the theorem definition!
+
+theorem core_even (a : ℕ → ℝ) (k : ℕ) (alt : Alt a) (anti : Antitone (|a ·|)) :
+  ∀ n,
+    ∑ i ∈ Finset.range (n + 2), a i ∈
+      match alt, Nat.bodd n with
+      | Alt.up _, false | Alt.down _, true =>
+        Set.Icc
+          (∑ i ∈ Finset.range n, a i)
+          (∑ i ∈ Finset.range (n + 1), a i)
+      | Alt.up _, true | Alt.down _, false =>
+        Set.Icc
+          (∑ i ∈ Finset.range (n + 1), a i)
+          (∑ i ∈ Finset.range n, a i)
+  := by
+  admit -- induction on n?
 
 theorem alternating_neg_of_alternating (a : ℕ → ℝ) :
     Alternating a → Alternating (-a) := by
@@ -91,6 +130,21 @@ theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
 -- Finset.sum_pair.{u_1, u_4} {ι : Type u_1} {M : Type u_4} [AddCommMonoid M]
 -- {f : ι → M} [DecidableEq ι] {a b : ι}
 -- (h : a ≠ b) : ∑ x ∈ {a, b}, f x = f a + f b
+
+
+theorem core_even (a : ℕ → ℝ) (k : ℕ) : Alt a → Antitone (|a ·|) →
+    ∑ i ∈ Finset.range (2*k + 2), a i ∈
+      Set.Icc
+        (∑ i ∈ Finset.range (2*k), a i)
+        (∑ i ∈ Finset.range (2*k + 1), a i) := by
+  sorry
+
+theorem core_odd (a : ℕ → ℝ) (k : ℕ) : Alternating a → Antitone (|a ·|) →
+    ∑ i ∈ Finset.range (2*k + 3), a i ∈
+      Set.Icc
+        (∑ i ∈ Finset.range (2*k + 1), a i)
+        (∑ i ∈ Finset.range (2*k + 2), a i) := by
+  sorry
 
 theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
     ∀ n,
