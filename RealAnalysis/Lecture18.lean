@@ -66,29 +66,52 @@ def Alternating (a : ℕ → ℝ) :=
 -- Tactic `cases` failed with a nested error:
 -- Tactic `induction` failed: recursor `Or.casesOn` can only eliminate into `Prop`
 
--- So let's do the same thing with types instead
+inductive AlternatingAntitone (a : ℕ → ℝ) : Type where
+| up :
+    (∀ k, 0 ≤ a (2 * k)) →
+    (∀ k, a (2 * k + 1) ≤ 0) →
+    (∀ k, -a (2 * k + 1) ≤ a (2 * k)) →
+    (∀ k, a (2 * k + 2) ≤ -a (2 * k + 1)) →
+    AlternatingAntitone a
+| down :
+    (∀ k, a (2 * k) ≤ 0) →
+    (∀ k, 0 ≤ a (2 * k + 1)) →
+    (∀ k, a (2 * k + 1) ≤ -a (2 * k)) →
+    (∀ k, -a (2 * k + 2) ≤ a (2 * k + 1)) →
+    AlternatingAntitone a
+
+abbrev AA := AlternatingAntitone
+
+#check Nat.bodd
+
+theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
+  match aa, Nat.bodd n with
+  | .up _ _ _ _, false | .down _ _ _ _, true
+    =>
+      (∑ k ∈ Finset.range (n + 1), a k) ≤ (∑ k ∈ Finset.range n, a k) ∧
+      (∑ k ∈ Finset.range n, a k) ≤ (∑ k ∈ Finset.range (n + 2), a k)
+  | .down _ _ _ _, false | .up _ _ _ _, true
+    =>
+      (∑ k ∈ Finset.range n, a k) ≤ (∑ k ∈ Finset.range (n + 1), a k) ∧
+      (∑ k ∈ Finset.range (n + 2), a k) ≤ (∑ k ∈ Finset.range n, a k)
+  := by
+  -- TODO: induction on n
+  admit
+
+theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
+    ∑ k ∈ Finset.range (n + 2), a k ∈
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k)
+    := by
+  admit
+
 
 inductive Alt (a : ℕ → ℝ) where
 | up : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
 | down : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
 
--- Use that on one hand and Nat.bodd on the other and pattern match in
--- the theorem definition!
 
-theorem core_even (a : ℕ → ℝ) (k : ℕ) (alt : Alt a) (anti : Antitone (|a ·|)) :
-  ∀ n,
-    ∑ i ∈ Finset.range (n + 2), a i ∈
-      match alt, Nat.bodd n with
-      | Alt.up _, false | Alt.down _, true =>
-        Set.Icc
-          (∑ i ∈ Finset.range n, a i)
-          (∑ i ∈ Finset.range (n + 1), a i)
-      | Alt.up _, true | Alt.down _, false =>
-        Set.Icc
-          (∑ i ∈ Finset.range (n + 1), a i)
-          (∑ i ∈ Finset.range n, a i)
-  := by
-  admit -- induction on n?
 
 theorem alternating_neg_of_alternating (a : ℕ → ℝ) :
     Alternating a → Alternating (-a) := by
