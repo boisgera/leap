@@ -82,10 +82,50 @@ inductive AlternatingAntitone (a : ℕ → ℝ) : Type where
 
 abbrev AA := AlternatingAntitone
 
+
+
+-- `Nat.even_or_odd` is great (and standard) to deal with parity
+-- but it captures it as a Prop, not a Type
+#check Nat.even_or_odd
+-- Nat.even_or_odd (n : ℕ) : Even n ∨ Odd n
+
+-- The modulo `· % 2` would encode parity as a Type,
+-- but the result is in ℕ,
+-- so the pattern match on 0 and 1 is not exhaustive...
+#check Nat.mod
+-- Nat.mod : ℕ → ℕ → ℕ
+
+-- What we need here is `Nat.bodd` whicj encodes parity as a Bool.
 #check Nat.bodd
+-- Nat.bodd (n : ℕ) : Bool
+
+-- When we need the k such that n = 2 * k or n = 2 * k + 1,
+-- we can use k = n.div2 and prove the equality with `Nat.bodd_add_div2`
+#check Nat.bodd_add_div2
+-- Nat.bodd_add_div2 (n : ℕ) : n.bodd.toNat + 2 * n.div2 = n
+
+-- Yeah, Nat.div2 is equivalent to (· / 2), but it's not immediately
+-- obvious.
+
+#print Nat.div2
+-- def Nat.div2 : ℕ → ℕ :=
+--   fun n => n.boddDiv2.2
+
+#print Nat.boddDiv2
+-- def Nat.boddDiv2 : ℕ → Bool × ℕ :=
+-- fun x =>
+--   Nat.brecOn x fun x f =>
+--     (match (motive := (x : ℕ) → Nat.below x → Bool × ℕ) x with
+--       | 0 => fun x => (false, 0)
+--       | n.succ => fun x =>
+--         match x.1 with
+--         | (false, m) => (true, m)
+--         | (true, m) => (false, m.succ))
+--       f
+
 
 theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
-    match aa, Nat.bodd n with
+    match aa, n.bodd with
     | .up _ _ _ _, false | .down _ _ _ _, true
       =>
         (∑ k ∈ Finset.range (n + 2), a k) ≥ (∑ k ∈ Finset.range n, a k)  ∧
@@ -95,66 +135,98 @@ theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
         (∑ k ∈ Finset.range (n + 2), a k) ≤ (∑ k ∈ Finset.range n, a k)  ∧
         (∑ k ∈ Finset.range (n + 2), a k) ≥ (∑ k ∈ Finset.range (n + 1), a k)
     := by
-  induction n with
-  | zero =>
-    simp only [Nat.bodd_zero, zero_add, Finset.range_one, Finset.sum_singleton, Finset.range_zero,
-      Finset.sum_empty]
-    match aa with
-    | AlternatingAntitone.up a_1 a_2 a_3 a_4 =>
-      simp
-      constructor
-      . simp only [Finset.range_add_one]
-        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
-          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton]
-        linarith [a_3 0]
-      . rw [Finset.range_add_one]
+
+    let k := n.div2
+    let n_eq : match n.bodd with
+        | false => n = 2 * k
+        | true => n = 2 * k + 1 := by
+      match p : n.bodd with
+      | false =>
+        have := Nat.bodd_add_div2 n
         simp only [
-          Finset.range_one,
-          Finset.mem_singleton,
-          one_ne_zero,
-          not_false_eq_true,
-          Finset.sum_insert,
-          Finset.sum_singleton]
-        linarith [a_2 0]
-    | AlternatingAntitone.down a_1 a_2 a_3 a_4 =>
-      simp
-      constructor
-      . simp only [Finset.range_add_one]
-        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
-          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton]
-        linarith [a_3 0]
-      . simp only [Finset.range_add_one]
-        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
-          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton, le_add_iff_nonneg_left]
-        linarith [a_2 0]
-  | succ n ih =>
-    match aa, parity: (n + 1).bodd with
-    | .up a_1 a_2 a_3 a_4, false =>
-      simp only [Nat.bodd_succ, Bool.not_eq_eq_eq_not, Bool.not_false] at parity
-      rw [parity] at ih
-      have ⟨k, hk⟩ : ∃ k, n = 2 * k + 1 := by
+          show n.div2 = k from by rfl,
+          show n.bodd.toNat = 0 from by grind
+        ] at this
         grind
-      simp only at ih
+      | true =>
+        have := Nat.bodd_add_div2 n
+        simp only [
+          show n.div2 = k from by rfl,
+          show n.bodd.toNat = 1 from by grind
+        ] at this
+        grind
+
+    match aa, parity: n.bodd with
+    | .up a_1 a_2 a_3 a_4, false =>
       simp only
       constructor
       . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
         rw [Finset.range_add_one, Finset.sum_insert (by grind)]
         rw [<- add_assoc]
         simp only [ge_iff_le, le_add_iff_nonneg_left]
-        rw [hk]
-        simp [add_assoc]
-        specialize a_3 (k + 1)
-        ring_nf at a_3
-        ring_nf
-        linarith
-      . sorry
-        -- ⊢ ∑ k ∈ Finset.range (n + 1 + 2), a k ≤ ∑ k ∈ Finset.range (n + 1 + 1), a k
+        simp [parity] at n_eq
+        rw [n_eq]
+        specialize a_3 k
+        grind
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [add_le_iff_nonpos_left]
+        simp [parity] at n_eq; rw [n_eq]
+        specialize a_2 k
+        grind
     |.down a_1 a_2 a_3 a_4, true
-      => sorry
+      =>
+      simp only
+      constructor
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [le_add_iff_nonneg_left]
+        simp [parity] at n_eq; rw [n_eq]
+        specialize a_4 k
+        grind
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [add_le_add_iff_right, add_le_iff_nonpos_left]
+        simp [parity] at n_eq; rw [n_eq]
+        specialize a_1 (k + 1)
+        grind
     | .up a_1 a_2 a_3 a_4, true
-      => sorry
-    |.down a_1 a_2 a_3 a_4, false
-      => sorry
+      =>
+      simp only
+      constructor
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [add_le_iff_nonpos_left]
+        simp [parity] at n_eq; rw [n_eq]
+        specialize a_4 k
+        grind
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [ge_iff_le, add_le_add_iff_right, le_add_iff_nonneg_left]
+        simp [parity] at n_eq; rw [n_eq]
+        specialize a_1 (k + 1)
+        grind
+    | .down a_1 a_2 a_3 a_4, false
+      =>
+      simp only
+      constructor
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [add_le_iff_nonpos_left]
+        simp [parity] at n_eq
+        rw [n_eq]
+        specialize a_4 k
+        grind
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        simp only [<- add_assoc]
+        simp only [ge_iff_le, add_le_add_iff_right, le_add_iff_nonneg_left]
+        specialize a_4 k
+        grind
 
 
 theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
