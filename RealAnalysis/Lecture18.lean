@@ -123,7 +123,6 @@ abbrev AA := AlternatingAntitone
 --         | (true, m) => (false, m.succ))
 --       f
 
-
 theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
     match aa, n.bodd with
     | .up _ _ _ _, false | .down _ _ _ _, true
@@ -165,9 +164,11 @@ theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
         rw [<- add_assoc]
         simp only [ge_iff_le, le_add_iff_nonneg_left]
         simp [parity] at n_eq
-        rw [n_eq]
-        specialize a_3 k
-        grind
+        grind -- Claude suggests that I work a lot for nothing...
+        -- since grind is powerful enough to end right here.
+        -- rw [n_eq]
+        -- specialize a_3 k
+        -- grind
       . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
         simp only [add_le_iff_nonpos_left]
         simp [parity] at n_eq; rw [n_eq]
@@ -228,154 +229,80 @@ theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
         specialize a_4 k
         grind
 
-
 theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
     ∑ k ∈ Finset.range (n + 2), a k ∈
       Set.uIcc
         (∑ k ∈ Finset.range n, a k)
         (∑ k ∈ Finset.range (n + 1), a k)
     := by
-  admit
+  have c := core a aa n
+  match aa, parity : n.bodd with
+  | .up a_1 a_2 a_3 a_4, false | .down a_1 a_2 a_3 a_4, true  =>
+    simp only [parity] at c
+    simp only [Set.mem_uIcc]
+    left; grind
+  | .down a_1 a_2 a_3 a_4, false | .up a_1 a_2 a_3 a_4, true =>
+    simp only [parity] at c
+    simp only [Set.mem_uIcc]
+    right; grind
 
 
-inductive Alt (a : ℕ → ℝ) where
-| up : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
-| down : (∀ k, a (2 * k) ≥ 0 ∧  a (2 * k + 1) ≤ 0) → Alt a
+#check Set.uIcc_subset_uIcc
+-- Set.uIcc_subset_uIcc.{u_1} {α : Type u_1} [Lattice α] {a₁ a₂ b₁ b₂ : α}
+-- (h₁ : a₁ ∈ Set.uIcc a₂ b₂) (h₂ : b₁ ∈ Set.uIcc a₂ b₂) :
+-- Set.uIcc a₁ b₁ ⊆ Set.uIcc a₂ b₂
 
+#check Set.right_mem_uIcc
+-- Set.right_mem_uIcc.{u_1} {α : Type u_1} [Lattice α] {a b : α} :
+-- b ∈ Set.uIcc a b
 
+theorem core_coro' (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
+    (m ≤ n) →
+    Set.uIcc (∑ k ∈ Finset.range n, a k) (∑ k ∈ Finset.range (n + 1), a k) ⊆
+    Set.uIcc (∑ k ∈ Finset.range m, a k) (∑ k ∈ Finset.range (m + 1), a k) := by
+    intro m_le_n
+    let p := n - m
+    have : n = m + p := by grind
+    rw [this]
+    induction p with
+    | zero =>
+      intro _ x
+      exact x
+    | succ p ih =>
+      apply Set.uIcc_subset_uIcc
+      . have : (∑ k ∈ Finset.range (m + p + 1), a k) ∈ Set.uIcc (∑ k ∈ Finset.range (m + p), a k) (∑ k ∈ Finset.range (m + p + 1), a k) :=
+          Set.right_mem_uIcc
+        exact ih this
+      . have cc := core_coro a aa (m + p)
+        ring_nf at *
+        have := ih cc
+        exact this
 
-theorem alternating_neg_of_alternating (a : ℕ → ℝ) :
-    Alternating a → Alternating (-a) := by
-  intro alt
-  rw [Alternating] at *
-  cases alt with
-  | inl h =>
-    right
-    simp only [Pi.neg_apply]
-    intro k
-    let ⟨h1, h2⟩ := h k
-    constructor
-    . linarith
-    . linarith
-  | inr h =>
-    left
-    simp only [Pi.neg_apply]
-    intro k
-    let ⟨h1, h2⟩ := h k
-    constructor
-    . linarith
-    . linarith
+theorem almost_there (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
+    |∑ k ∈ Finset.range n, a k| ≤ |a 0| := by
+  have c := core_coro' a aa 0 n
+  specialize c (by norm_num)
+  have :
+      (∑ k ∈ Finset.range n, a k) ∈
+      Set.uIcc (∑ k ∈ Finset.range n, a k) (∑ k ∈ Finset.range (n + 1), a k) :=
+    Set.left_mem_uIcc
+  have l := c this
+  simp only [Nat.zero_add, Finset.range_zero, Finset.sum_empty,
+    Finset.range_one, Finset.sum_singleton] at l
+  -- l : ∑ k ∈ Finset.range n, a k ∈ Set.uIcc 0 (a 0)
+  simp only [Set.mem_uIcc] at l
+  rcases l with h1 | h2
+  . grind
+  . grind
 
-theorem antitone_neg_abs_of_antitone_abs (a : ℕ → ℝ) :
-    Antitone (|a ·|) → Antitone (|(-a) ·|) := by
-    intro anti
-    simp only [Pi.neg_apply]
-    simp only [abs_neg]
-    exact anti
-
--- TODO: prove that a shifted alteranting seq is alternating
--- and that a shifted convergent to ℓ converges to ℓ
-
-#print Set.uIcc
--- def Set.uIcc.{u_1} : {α : Type u_1} → [Lattice α] → α → α → Set α :=
---     fun {α} [Lattice α] a b => Set.Icc (a ⊓ b) (a ⊔ b)
-
-#check Finset.sum_pair
--- Finset.sum_pair.{u_1, u_4} {ι : Type u_1} {M : Type u_4} [AddCommMonoid M]
--- {f : ι → M} [DecidableEq ι] {a b : ι}
--- (h : a ≠ b) : ∑ x ∈ {a, b}, f x = f a + f b
-
-
-theorem core_even (a : ℕ → ℝ) (k : ℕ) : Alt a → Antitone (|a ·|) →
-    ∑ i ∈ Finset.range (2*k + 2), a i ∈
-      Set.Icc
-        (∑ i ∈ Finset.range (2*k), a i)
-        (∑ i ∈ Finset.range (2*k + 1), a i) := by
-  sorry
-
-theorem core_odd (a : ℕ → ℝ) (k : ℕ) : Alternating a → Antitone (|a ·|) →
-    ∑ i ∈ Finset.range (2*k + 3), a i ∈
-      Set.Icc
-        (∑ i ∈ Finset.range (2*k + 1), a i)
-        (∑ i ∈ Finset.range (2*k + 2), a i) := by
-  sorry
-
-theorem key (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ n,
-      ∑ k ∈ Finset.range (n + 2), a k ∈
-      Set.uIcc
-        (∑ k ∈ Finset.range n, a k)
-        (∑ k ∈ Finset.range (n + 1), a k) := by
-  intro alt anti n
-  induction n with
-  | zero =>
-    simp only [
-      Finset.range_zero,
-      Finset.sum_empty, zero_add,
-      Finset.range_one,
-      Finset.sum_singleton,
-      show Finset.range 2 = {0, 1} from by decide,
-      Finset.sum_pair (show 0 ≠ 1 from by norm_num)
-    ]
-    cases alt with
-    | inl h =>
-      have in1: 0 ≤ a 0 := (h 0).left
-      have in2: a 1 ≤ 0 := (h 0).right
-      have in3: - a 1 ≤ a 0 := by
-        rw [Antitone] at anti
-        specialize anti (show 0 ≤ 1 from by norm_num)
-        simp only [abs_of_nonneg in1] at anti
-        simp only [abs_of_nonpos in2] at anti
-        exact anti
-      rw [Set.uIcc_of_le in1, Set.mem_Icc]
-      constructor <;> linarith
-    | inr h =>
-      have in1: a 0 ≤ 0 := (h 0).left
-      have in2: 0 ≤ a 1  := (h 0).right
-      have in3: a 1 ≤ - a 0 := by
-        rw [Antitone] at anti
-        specialize anti (show 0 ≤ 1 from by norm_num)
-        simp only [abs_of_nonneg in2] at anti
-        simp only [abs_of_nonpos in1] at anti
-        exact anti
-      rw [Set.uIcc_of_ge in1, Set.mem_Icc]
-      constructor <;> linarith
-  | succ n ih =>
-
-    admit
-
--- This one should be ok (from key)
-theorem coro (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ n,
-      Set.uIcc
-        (∑ k ∈ Finset.range (n + 1), a k)
-        (∑ k ∈ Finset.range (n + 2), a k)
-      ⊆
-      Set.uIcc
-        (∑ k ∈ Finset.range n, a k)
-        (∑ k ∈ Finset.range (n + 1), a k) := by admit
-
--- This one is easy (from coro)
-theorem coro' (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ n,
-      Set.uIcc
-        0
-        (a 0)
-      ⊆
-      Set.uIcc
-        (∑ k ∈ Finset.range n, a k)
-        (∑ k ∈ Finset.range (n + 1), a k) := by admit
-
--- This should be some massaging of coro'
-theorem almost_there (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ n , |∑ k ∈ Finset.range n, a k| ≤ |a 0| := by
-
-  admit
-
--- TODO: use almost_there on the sequence a shifted by m
-theorem what_we_actually_need (a : ℕ → ℝ) : Alternating a → Antitone (|a ·|) →
-    ∀ (m n : ℕ), (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
-
+-- TODO
+theorem what_we_actually_need (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
+    (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
+  intro m_le_n
+  have c := core_coro' a aa m n m_le_n
+  -- TODO: extract the first bound from the ⊆, rewrite the stuff
+  -- as inequalities, then substract ∑ k ∈ Finset.range m from
+  -- everything and the result is almost there.
   admit
 
 theorem t2 (a : ℕ → ℝ) :
