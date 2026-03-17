@@ -128,12 +128,25 @@ theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
           not_false_eq_true, Finset.sum_insert, Finset.sum_singleton, le_add_iff_nonneg_left]
         linarith [a_2 0]
   | succ n ih =>
-    match aa, (n + 1).bodd with
+    match aa, parity: (n + 1).bodd with
     | .up a_1 a_2 a_3 a_4, false =>
+      simp only [Nat.bodd_succ, Bool.not_eq_eq_eq_not, Bool.not_false] at parity
+      rw [parity] at ih
+      have ⟨k, hk⟩ : ∃ k, n = 2 * k + 1 := by
+        grind
+      simp only at ih
       simp only
       constructor
-      . sorry
-        -- ⊢ ∑ k ∈ Finset.range (n + 1 + 2), a k ≥ ∑ k ∈ Finset.range (n + 1), a k
+      . rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+        rw [<- add_assoc]
+        simp only [ge_iff_le, le_add_iff_nonneg_left]
+        rw [hk]
+        simp [add_assoc]
+        specialize a_3 (k + 1)
+        ring_nf at a_3
+        ring_nf
+        linarith
       . sorry
         -- ⊢ ∑ k ∈ Finset.range (n + 1 + 2), a k ≤ ∑ k ∈ Finset.range (n + 1 + 1), a k
     |.down a_1 a_2 a_3 a_4, true
