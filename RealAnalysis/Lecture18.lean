@@ -85,18 +85,64 @@ abbrev AA := AlternatingAntitone
 #check Nat.bodd
 
 theorem core (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
-  match aa, Nat.bodd n with
-  | .up _ _ _ _, false | .down _ _ _ _, true
-    =>
-      (∑ k ∈ Finset.range (n + 1), a k) ≤ (∑ k ∈ Finset.range n, a k) ∧
-      (∑ k ∈ Finset.range n, a k) ≤ (∑ k ∈ Finset.range (n + 2), a k)
-  | .down _ _ _ _, false | .up _ _ _ _, true
-    =>
-      (∑ k ∈ Finset.range n, a k) ≤ (∑ k ∈ Finset.range (n + 1), a k) ∧
-      (∑ k ∈ Finset.range (n + 2), a k) ≤ (∑ k ∈ Finset.range n, a k)
-  := by
-  -- TODO: induction on n
-  admit
+    match aa, Nat.bodd n with
+    | .up _ _ _ _, false | .down _ _ _ _, true
+      =>
+        (∑ k ∈ Finset.range (n + 2), a k) ≥ (∑ k ∈ Finset.range n, a k)  ∧
+        (∑ k ∈ Finset.range (n + 2), a k) ≤ (∑ k ∈ Finset.range (n + 1), a k)
+    | .down _ _ _ _, false | .up _ _ _ _, true
+      =>
+        (∑ k ∈ Finset.range (n + 2), a k) ≤ (∑ k ∈ Finset.range n, a k)  ∧
+        (∑ k ∈ Finset.range (n + 2), a k) ≥ (∑ k ∈ Finset.range (n + 1), a k)
+    := by
+  induction n with
+  | zero =>
+    simp only [Nat.bodd_zero, zero_add, Finset.range_one, Finset.sum_singleton, Finset.range_zero,
+      Finset.sum_empty]
+    match aa with
+    | AlternatingAntitone.up a_1 a_2 a_3 a_4 =>
+      simp
+      constructor
+      . simp only [Finset.range_add_one]
+        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
+          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton]
+        linarith [a_3 0]
+      . rw [Finset.range_add_one]
+        simp only [
+          Finset.range_one,
+          Finset.mem_singleton,
+          one_ne_zero,
+          not_false_eq_true,
+          Finset.sum_insert,
+          Finset.sum_singleton]
+        linarith [a_2 0]
+    | AlternatingAntitone.down a_1 a_2 a_3 a_4 =>
+      simp
+      constructor
+      . simp only [Finset.range_add_one]
+        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
+          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton]
+        linarith [a_3 0]
+      . simp only [Finset.range_add_one]
+        simp only [Finset.range_zero, insert_empty_eq, Finset.mem_singleton, one_ne_zero,
+          not_false_eq_true, Finset.sum_insert, Finset.sum_singleton, le_add_iff_nonneg_left]
+        linarith [a_2 0]
+  | succ n ih =>
+    match aa, (n + 1).bodd with
+    | .up a_1 a_2 a_3 a_4, false =>
+      simp only
+      constructor
+      . sorry
+        -- ⊢ ∑ k ∈ Finset.range (n + 1 + 2), a k ≥ ∑ k ∈ Finset.range (n + 1), a k
+      . sorry
+        -- ⊢ ∑ k ∈ Finset.range (n + 1 + 2), a k ≤ ∑ k ∈ Finset.range (n + 1 + 1), a k
+    |.down a_1 a_2 a_3 a_4, true
+      => sorry
+    | .up a_1 a_2 a_3 a_4, true
+      => sorry
+    |.down a_1 a_2 a_3 a_4, false
+      => sorry
+
 
 theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
     ∑ k ∈ Finset.range (n + 2), a k ∈
