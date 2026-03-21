@@ -246,7 +246,6 @@ theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
     simp only [Set.mem_uIcc]
     right; grind
 
-
 #check Set.uIcc_subset_uIcc
 -- Set.uIcc_subset_uIcc.{u_1} {α : Type u_1} [Lattice α] {a₁ a₂ b₁ b₂ : α}
 -- (h₁ : a₁ ∈ Set.uIcc a₂ b₂) (h₂ : b₁ ∈ Set.uIcc a₂ b₂) :
@@ -255,6 +254,7 @@ theorem core_coro (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
 #check Set.right_mem_uIcc
 -- Set.right_mem_uIcc.{u_1} {α : Type u_1} [Lattice α] {a b : α} :
 -- b ∈ Set.uIcc a b
+
 
 theorem core_coro' (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
     (m ≤ n) →
@@ -277,6 +277,40 @@ theorem core_coro' (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
         ring_nf at *
         have := ih cc
         exact this
+
+-- Alternative route
+-- -----------------------------------------------------------------------------
+-- When I think of it, I now believe (after much murking around) that the
+-- "definition" of AA that is actually the proper compromise between
+-- understandability, conciseness and usefuleness is proof is AA_ultimate
+-- below.
+-- The def is not 100% intuitive but it's still easily understandable
+-- there is a single k ranking which is selectable and the Set.uIcc
+-- allows us to pack a bunch of inequalities alternatives at once.
+
+def AA_ultimate (a : ℕ → ℝ) :=
+    ∀ k, a (k + 1) + a (k + 2) ∈ Set.uIcc 0 (a (k + 1))
+
+-- Substitute for core_coro that uses the AA_ultimate def
+theorem nested_uIcc_induction (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k) ⊆
+      Set.uIcc
+        (∑ k ∈ Finset.range n, a k)
+        (∑ k ∈ Finset.range (n + 1), a k) := by
+    have lemma_add (a b c d : ℝ) :
+        a + b ∈ Set.uIcc (c + b) (d + b) → a ∈ Set.uIcc c d := by
+      simp only [Set.mem_uIcc]
+      grind
+    apply Set.uIcc_subset_uIcc
+    all_goals
+      apply lemma_add (b := - ∑ k ∈ Finset.range n, a k)
+      simp only [add_neg_cancel]
+    . simp only [Set.left_mem_uIcc]
+    . simp only [Set.right_mem_uIcc]
+
+-- -----------------------------------------------------------------------------
 
 theorem almost_there (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
     |∑ k ∈ Finset.range n, a k| ≤ |a 0| := by
