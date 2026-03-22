@@ -289,13 +289,19 @@ theorem core_coro' (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
 -- allows us to pack a bunch of inequalities alternatives at once.
 
 def AA_ultimate (a : ℕ → ℝ) :=
-    ∀ k, a (k + 1) + a (k + 2) ∈ Set.uIcc 0 (a (k + 1))
+    ∀ k, a k + a (k + 1) ∈ Set.uIcc 0 (a k)
+
+-- Note that AA_ultimate is a Prop, not a Type and still is exactly what we
+-- need!
+
+#check AA_ultimate
+-- AA_ultimate (a : ℕ → ℝ) : Prop
 
 -- Substitute for core_coro that uses the AA_ultimate def
 theorem nested_uIcc_induction (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
       Set.uIcc
-        (∑ k ∈ Finset.range n, a k)
-        (∑ k ∈ Finset.range (n + 1), a k) ⊆
+        (∑ k ∈ Finset.range (n + 1), a k)
+        (∑ k ∈ Finset.range (n + 2), a k) ⊆
       Set.uIcc
         (∑ k ∈ Finset.range n, a k)
         (∑ k ∈ Finset.range (n + 1), a k) := by
@@ -304,17 +310,47 @@ theorem nested_uIcc_induction (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
       simp only [Set.mem_uIcc]
       grind
     apply Set.uIcc_subset_uIcc
-    all_goals
-      apply lemma_add (b := - ∑ k ∈ Finset.range n, a k)
-      simp only [add_neg_cancel]
-    . simp only [Set.left_mem_uIcc]
-    . simp only [Set.right_mem_uIcc]
+    . apply Set.right_mem_uIcc
+    . apply lemma_add (b := - ∑ k ∈ Finset.range n, a k)
+      rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+      rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+      rw [Finset.range_add_one, Finset.sum_insert (by grind)]
+      ring_nf
+      have := aa n
+      ring_nf at this
+      exact this
+
+theorem nested_uIcc (a : ℕ → ℝ) (aa : AA_ultimate a) (m n : ℕ) :
+    (m ≤ n) →
+    Set.uIcc (∑ k ∈ Finset.range n, a k) (∑ k ∈ Finset.range (n + 1), a k) ⊆
+    Set.uIcc (∑ k ∈ Finset.range m, a k) (∑ k ∈ Finset.range (m + 1), a k) := by
+    intro m_le_n
+    let p := n - m
+    have : n = m + p := by grind
+    rw [this]
+    induction p with
+    | zero =>
+      intro _ x
+      exact x
+    | succ p ih =>
+      apply Set.uIcc_subset_uIcc
+      . have : (∑ k ∈ Finset.range (m + p + 1), a k) ∈ Set.uIcc (∑ k ∈ Finset.range (m + p), a k) (∑ k ∈ Finset.range (m + p + 1), a k) :=
+          Set.right_mem_uIcc
+        exact ih this
+      . have cc := nested_uIcc_induction a aa (m + p)
+        ring_nf at *
+        have : ∑ x ∈ Finset.range (2 + m + p), a x ∈
+            Set.uIcc
+              (∑ x ∈ Finset.range (1 + m + p), a x)
+              (∑ x ∈ Finset.range (2 + m + p), a x)
+          := by apply Set.right_mem_uIcc
+        exact ih (cc this)
 
 -- -----------------------------------------------------------------------------
 
-theorem almost_there (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
+theorem almost_there (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
     |∑ k ∈ Finset.range n, a k| ≤ |a 0| := by
-  have c := core_coro' a aa 0 n
+  have c := nested_uIcc a aa 0 n
   specialize c (by norm_num)
   have :
       (∑ k ∈ Finset.range n, a k) ∈
@@ -329,17 +365,29 @@ theorem almost_there (a : ℕ → ℝ) (aa : AA a) (n : ℕ) :
   . grind
   . grind
 
+theorem shifted_AA_is_AA (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
+    AA_ultimate (fun k => a (k + n)) := by
+  rw [AA_ultimate]
+  intro k
+  have := aa (k + n)
+  ring_nf at *
+  exact this
+
+
 -- TODO
-theorem what_we_actually_need (a : ℕ → ℝ) (aa : AA a) (m n : ℕ) :
+theorem what_we_actually_need (a : ℕ → ℝ) (aa : AA_ultimate a) (m n : ℕ) :
     (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
   intro m_le_n
-  have c := core_coro' a aa m n m_le_n
+  have what_i_know : |∑ k ∈ Finset.range (n - m), a (k + m)| ≤ |a (0 + m)| :=
+    almost_there (fun k => a (k + m)) (shifted_AA_is_AA a aa m) (n - m)
+  grind -- Probably not good enough to conclude?
+
   -- TODO: extract the first bound from the ⊆, rewrite the stuff
   -- as inequalities, then substract ∑ k ∈ Finset.range m from
   -- everything and the result is almost there.
-  admit
+  -- admit
 
 theorem t2 (a : ℕ → ℝ) :
-    Tendsto a atTop (nhds 0) → Alternating a → Antitone (|a ·|) →
+    Tendsto a atTop (nhds 0) → AA_ultimate a →
     ∃ ℓ, Tendsto (fun n => ∑ k ∈ Finset.range (n + 1), a k) atTop (nhds ℓ) := by
   admit
