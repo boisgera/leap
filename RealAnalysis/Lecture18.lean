@@ -380,7 +380,9 @@ theorem what_we_actually_need (a : ℕ → ℝ) (aa : AA_ultimate a) (m n : ℕ)
   intro m_le_n
   have what_i_know : |∑ k ∈ Finset.range (n - m), a (k + m)| ≤ |a (0 + m)| :=
     almost_there (fun k => a (k + m)) (shifted_AA_is_AA a aa m) (n - m)
+
   grind -- Probably not good enough to conclude?
+
 
   -- TODO: extract the first bound from the ⊆, rewrite the stuff
   -- as inequalities, then substract ∑ k ∈ Finset.range m from
