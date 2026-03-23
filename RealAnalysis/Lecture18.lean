@@ -297,6 +297,13 @@ def AA_ultimate (a : ℕ → ℝ) :=
 #check AA_ultimate
 -- AA_ultimate (a : ℕ → ℝ) : Prop
 
+lemma abs_aa_noninc (a : ℕ → ℝ) (aa : AA_ultimate a) : Antitone fun k => |a k| := by
+  apply antitone_nat_of_succ_le
+  intro k
+  have := aa k
+  simp only [Set.mem_uIcc] at this
+  grind
+
 -- Substitute for core_coro that uses the AA_ultimate def
 theorem nested_uIcc_induction (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
       Set.uIcc
@@ -374,22 +381,73 @@ theorem shifted_AA_is_AA (a : ℕ → ℝ) (aa : AA_ultimate a) (n : ℕ) :
   exact this
 
 
--- TODO
+-- The next result, "what we actually need" is essentially almost_there plus
+-- a change of variable in a ∑, provided by the general:
+#check Finset.sum_nbij
+-- Finset.sum_nbij.{u_1, u_2, u_3} {ι : Type u_1} {κ : Type u_2} {M : Type u_3}
+--   [AddCommMonoid M]
+--   {s : Finset ι} {t : Finset κ} {f : ι → M} {g : κ → M}
+--   (i : ι → κ) (hi : ∀ a ∈ s, i a ∈ t)
+--   (i_inj : Set.InjOn i ↑s) (i_surj : Set.SurjOn i ↑s ↑t)
+--   (h : ∀ a ∈ s, f a = g (i a)) : ∑ x ∈ s, f x = ∑ x ∈ t, g x
+
 theorem what_we_actually_need (a : ℕ → ℝ) (aa : AA_ultimate a) (m n : ℕ) :
     (m ≤ n) → |∑ k ∈ Finset.Ico m n, a k| ≤ |a m| := by
   intro m_le_n
   have what_i_know : |∑ k ∈ Finset.range (n - m), a (k + m)| ≤ |a (0 + m)| :=
     almost_there (fun k => a (k + m)) (shifted_AA_is_AA a aa m) (n - m)
+  rw [zero_add] at what_i_know
+  let i := fun k : ℕ => k + m
+  let s := Finset.range (n - m)
+  let t := Finset.Ico m n
+  have i_domain : ∀ a ∈ s, i a ∈ t := by
+    simp only [s, t]
+    intro a a_in_range
+    rw [Finset.mem_range] at a_in_range
+    rw [Finset.mem_Ico]
+    grind
+  have i_inj : Set.InjOn i s := by
+    rw [Set.InjOn]
+    intro k k_in_s l l_in_s
+    simp only [i, Nat.add_right_cancel_iff, imp_self]
+  have i_surj : Set.SurjOn i s t := by
+    rw [Set.SurjOn]
+    intro k k_in_t
+    simp only [i]
+    simp only [Set.mem_image, SetLike.mem_coe]
+    simp only [t, Finset.mem_coe, Finset.mem_Ico] at k_in_t
+    use k - m
+    grind
+  have sum_eq :
+      ∑ k ∈ Finset.range (n - m), a (k + m) = ∑ k ∈ Finset.Ico m n, a k := by
+    apply Finset.sum_nbij i i_domain
+    . exact i_inj
+    . exact i_surj
+    . simp only [i]
+      intro _ _
+      exact trivial
+  rw [sum_eq] at what_i_know
+  exact what_i_know
 
-  grind -- Probably not good enough to conclude?
-
-
-  -- TODO: extract the first bound from the ⊆, rewrite the stuff
-  -- as inequalities, then substract ∑ k ∈ Finset.range m from
-  -- everything and the result is almost there.
-  -- admit
-
-theorem t2 (a : ℕ → ℝ) :
+theorem terminator (a : ℕ → ℝ) :
     Tendsto a atTop (nhds 0) → AA_ultimate a →
-    ∃ ℓ, Tendsto (fun n => ∑ k ∈ Finset.range (n + 1), a k) atTop (nhds ℓ) := by
-  admit
+    ∃ ℓ, Tendsto (fun n => ∑ k ∈ Finset.range n, a k) atTop (nhds ℓ) := by
+  intro term_tendsTo_zero aa
+  have series_is_cauchy: CauchySeq (fun n => ∑ k ∈ Finset.range n, a k) := by
+    simp only [Metric.cauchySeq_iff', Real.dist_eq]
+    conv =>
+      intro _ _; right
+      ext N; intro n n_ge_N
+      lhs; arg 1
+      rw [<- Finset.sum_Ico_eq_sub a n_ge_N]
+    -- ⊢ ∀ ε > 0, ∃ N, ∀ n ≥ N, |∑ k ∈ Finset.Ico N n, a k| < ε
+    intro ε ε_pos
+    simp only [Metric.tendsto_atTop, Real.dist_eq, sub_zero] at term_tendsTo_zero
+    specialize term_tendsTo_zero ε ε_pos
+    have ⟨N, hN⟩ := term_tendsTo_zero
+    use N
+    intro n n_ge_N
+    specialize hN N (show N ≤ N from by rfl)
+    have := what_we_actually_need a aa N n n_ge_N
+    exact lt_of_le_of_lt this hN
+  exact CompleteSpace.complete series_is_cauchy
