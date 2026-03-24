@@ -404,9 +404,17 @@ example {ι} {α} (s : Set α) (t : ι → Set α) :
 -- def Set.image.{u, v} : {α : Type u} → {β : Type v} → (α → β) → Set α → Set β :=
 -- fun {α} {β} f s => {x | ∃ a ∈ s, f a = x}
 
+#check Set.mem_image
+-- Set.mem_image.{u, v} {α : Type u} {β : Type v} (f : α → β) (s : Set α) (y : β) :
+-- y ∈ f '' s ↔ ∃ x ∈ s, f x = y
+
 #print Set.preimage -- notation: ⁻¹'
 -- def Set.preimage.{u, v} : {α : Type u} → {β : Type v} → (α → β) → Set β → Set α :=
 -- fun {α} {β} f s => {x | f x ∈ s}
+
+#check Set.mem_preimage
+-- Set.mem_preimage.{u, v} {α : Type u} {β : Type v} {f : α → β} {s : Set β} {a : α} :
+-- a ∈ f ⁻¹' s ↔ f a ∈ s
 
 def evenNumbers : Set ℕ := { n : ℕ | 2 ∣ n }
 
@@ -414,7 +422,7 @@ example : (2 * ·) '' Set.univ = evenNumbers := by
   simp only [Set.image, Set.mem_univ, true_and]
   simp only [evenNumbers, dvd_def, eq_comm]
 
-example : {-1, 1} ⊆ (fun (x : ℝ) =>  x ^ 2) ⁻¹' {1} := by
+example : {-1, 1} ⊆ (fun (x : ℝ) => x ^ 2) ⁻¹' {1} := by
   simp only [Set.preimage, Set.mem_singleton_iff]
   intro x
   rw [Set.mem_setOf]
@@ -423,6 +431,15 @@ example : {-1, 1} ⊆ (fun (x : ℝ) =>  x ^ 2) ⁻¹' {1} := by
     norm_num
   . rw [h₂]
     norm_num
+
+example : Real.exp ⁻¹' { x | x > 0 } = Set.univ := by
+  ext x
+  constructor
+  . intro _
+    simp only [Set.mem_univ]
+  . intro x_real
+    simp only [Set.mem_preimage, Set.mem_setOf]
+    apply Real.exp_pos
 
 -- **TODO.** Image/Preimage and unions/intersections of families of sets.
 
