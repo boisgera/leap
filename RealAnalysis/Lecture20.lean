@@ -88,17 +88,35 @@ import Mathlib
 -- element by a function (or one level above): the collection of sets
 -- in Filter.map f l₁ is Set.preimage f ⁻¹' l₁.sets (ouch).
 
--- So the low-level, operational stuff about Filter.Tendsto is:
+-- So the low-level, operational stuff about Filter.Tendsto would be:
 
-theorem TT.{u_1, u_2} {α : Type u_1} {β : Type u_2}
-    (f : α → β) (l₁ : Filter α) (l₂ : Filter β) :
-        Filter.Tendsto f l₁ l₂ ↔ ∀ t ∈ l₂, ∃ s ∈ l₁, f '' s ⊆ t := by
-    admit
+def TT.{u_1, u_2} {α : Type u_1} {β : Type u_2}
+    (f : α → β) (l₁ : Filter α) (l₂ : Filter β) :=
+        Filter.Tendsto f l₁ l₂ ↔ ∀ t ∈ l₂, ∃ s ∈ l₁, f '' s ⊆ t
 
 -- Actually what already exists is a slightly higher-level version based on preimage:
 #check Filter.tendsto_def
 -- Filter.tendsto_def.{u_1, u_2} {α : Type u_1} {β : Type u_2} {f : α → β} {l₁ : Filter α} {l₂ : Filter β} :
 -- Filter.Tendsto f l₁ l₂ ↔ ∀ s ∈ l₂, f ⁻¹' s ∈ l₁
+
+theorem tendsto_def_alt.{u_1, u_2} {α : Type u_1} {β : Type u_2}
+    (f : α → β) (l₁ : Filter α) (l₂ : Filter β) :
+    (Filter.Tendsto f l₁ l₂) ↔ ∀ t ∈ l₂, ∃ s ∈ l₁, f '' s ⊆ t := by
+  rw [Filter.tendsto_def]
+  constructor
+  . intro h t t_in_l₂
+    specialize h t t_in_l₂
+    use f ⁻¹' t
+    constructor
+    . exact h
+    . -- ⊢ f '' (f ⁻¹' t) ⊆ t
+      apply Set.image_preimage_subset
+  . intro h s s_in_l₂
+    have ⟨s_1, s_1_in_l₁, k⟩ := h s s_in_l₂
+    have k' := Set.preimage_mono (f := f) k
+    have k'' := Set.subset_preimage_image f s_1
+    have := subset_trans k'' k'
+    exact l₁.sets_of_superset s_1_in_l₁ this
 
 
 #print Filter.map
@@ -107,11 +125,32 @@ namespace Ex_00
 
 
 theorem sum_zeros : Filter.Tendsto
-    (fun (s : Finset ℕ) => (∑ k ∈ s, 0 : ℝ))
+    (fun (s : Finset ℕ) => (∑ _ ∈ s, 0 : ℝ))
     Filter.atTop
     (nhds 0) := by
-  admit
+  rw [Filter.tendsto_def]
+  intro t t_in_nhds_zero
+  have zero_in_t := mem_of_mem_nhds t_in_nhds_zero
+  simp only [Finset.sum_const_zero]
+  have : (fun s => 0) ⁻¹' t = Set.univ (α := Finset ℕ) := by
+    ext x
+    constructor
+    . grind
+    . intro _
+      rw [Set.mem_preimage]
+      exact zero_in_t
+  rw [this]
+  exact Filter.atTop.univ_sets
 
 
 
 end Ex_00
+
+-- -----------------------------------------------------------------------------
+
+-- Q: what is the equivalent of Cauchyness for summability?
+
+-- TODO: prove that :
+-- - absolute convergence -> summability
+-- - summability -> convergence
+-- - summability -> convergence of any reordering
