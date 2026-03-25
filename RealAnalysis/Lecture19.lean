@@ -154,3 +154,30 @@ end Ex_00
 -- - absolute convergence -> summability
 -- - summability -> convergence
 -- - summability -> convergence of any reordering
+
+#check Finset.sum_nbij
+-- Finset.sum_nbij.{u_1, u_2, u_3} {ι : Type u_1} {κ : Type u_2} {M : Type u_3} [AddCommMonoid M] {s : Finset ι}
+--   {t : Finset κ} {f : ι → M} {g : κ → M} (i : ι → κ) (hi : ∀ a ∈ s, i a ∈ t) (i_inj : Set.InjOn i ↑s)
+--   (i_surj : Set.SurjOn i ↑s ↑t) (h : ∀ a ∈ s, f a = g (i a)) : ∑ x ∈ s, f x = ∑ x ∈ t, g x
+
+#check mem_nhds_iff
+-- mem_nhds_iff.{u} {X : Type u} [TopologicalSpace X] {x : X} {s : Set X} : s ∈ nhds x ↔ ∃ t ⊆ s, IsOpen t ∧ x ∈ t
+
+-- OK, now I'd like to tackle the proof of:
+def TO_PROVE.reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) {_ : Function.Bijective i} : Prop :=
+  (HasSum f ℓ ↔ HasSum (f ∘ i) ℓ)
+
+-- Out of nowhere, I'd think that it could be useful to characterize `HasSum f ℓ`
+-- by the elementary statement below. After that, it's "just" a matter of
+-- performing the suitable change of variables in finite sums
+-- to prove the reordering theorem.
+
+theorem hasSum_iff (f : ℕ → ℝ) (ℓ : ℝ) : -- 🚧 TODO!
+    HasSum f ℓ ↔
+    ∀ ε > 0, ∃ (s : Finset ℕ),
+      |∑ k ∈ s, f k - ℓ| < ε ∧
+      ∀ t : Finset ℕ, Disjoint t s → |∑ k ∈ t, f k| < ε  := by admit
+
+theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
+    HasSum f ℓ ↔
+    HasSum (f ∘ i) ℓ := by admit
