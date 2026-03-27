@@ -194,6 +194,13 @@ theorem hasSum_iff (f : ℕ → ℝ) (ℓ : ℝ) : -- 🚧 TODO!
 -- Filter.mem_atTop_sets.{u_3} {α : Type u_3} [Preorder α] [IsDirectedOrder α] [Nonempty α] {s : Set α} :
 --  s ∈ Filter.atTop ↔ ∃ a, ∀ b ≥ a, b ∈ s
 
+#check Finset.sum_nbij
+-- Finset.sum_nbij.{u_1, u_2, u_3} {ι : Type u_1} {κ : Type u_2} {M : Type u_3} [AddCommMonoid M]
+--   {s : Finset ι} {t : Finset κ} {f : ι → M} {g : κ → M}
+--   (i : ι → κ) (hi : ∀ a ∈ s, i a ∈ t) (i_inj : Set.InjOn i ↑s)
+--   (i_surj : Set.SurjOn i ↑s ↑t)
+--   (h : ∀ a ∈ s, f a = g (i a)) : ∑ x ∈ s, f x = ∑ x ∈ t, g x
+
 theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
     HasSum f ℓ ↔
     HasSum (f ∘ i) ℓ := by
@@ -216,19 +223,40 @@ theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Functi
   -- filters.
   -- TODO: have a more detailled look at Filter.mem_iInf
   simp only [Filter.mem_atTop_sets]
-  -- ⊢ (∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, b ∈ (fun s => ∑ b ∈ s, f b) ⁻¹' x) ↔
-  -- ∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, b ∈ (fun s => ∑ b ∈ s, (f ∘ i) b) ⁻¹' x
+  simp only [Set.mem_preimage]
+  -- simp only [Function.comp_apply]
+  -- ⊢ (∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ b ∈ b, f b ∈ x) ↔
+  --   ∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ x ∈ b, f (i x) ∈ x
+  --
+  -- TODO : use Finset.sum_nbij to turn `∑ x ∈ b, (f ∘ i) x` into
+  -- `∑ y ∈ (Finset.image i b), f y` (here `i`) is a bijection.
+  have change_of_variables (b : Finset ℕ) :
+      ∑ x ∈ b, (f ∘ i) x = ∑ y ∈ (Finset.image i b), f y := by
+    exact Finset.sum_nbij (f := f ∘ i) (g := f)
+      i
+      (show ∀ a ∈ b, i a ∈ Finset.image i b from sorry)
+      (show Set.InjOn i ↑b from by
+        apply bij.injective.injOn
+      )
+      (show Set.SurjOn i b (Finset.image i b) from by
+        simp only [Set.SurjOn]
+        simp only [Finset.coe_image, Set.image_subset_iff]
+        intro x x_in_b
+        simp only [Set.mem_preimage, Set.mem_image]
+        use x
+      )
+      (show ∀ a ∈ b, (f ∘ i) a = f (i a) from by
+        intro a _
+        apply Function.comp_apply
+      )
+  simp only [change_of_variables]
+  -- ⊢ (∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ b ∈ b, f b ∈ x) ↔
+  --    ∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ b ∈ Finset.image i b, f b ∈ x
   constructor
   . intro h x x_in_nhds_ℓ
-    have ⟨a, ha⟩ := h x x_in_nhds_ℓ
-    let a' := Finset.image i.invFun a
-    use a'
-    intro b' b'_ge_a'
-    have : ∃ (b : Finset ℕ), b' = Finset.image i.invFun a := by admit
-    have ⟨b, hb⟩ := this
-
-
+    let ⟨a, ha⟩ := h x x_in_nhds_ℓ
+    -- use (Finset.image i.invFun a)
 
     admit
-  . intro h
+  . -- TODO
     admit
