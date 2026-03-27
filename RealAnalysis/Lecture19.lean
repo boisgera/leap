@@ -201,9 +201,8 @@ theorem hasSum_iff (f : ℕ → ℝ) (ℓ : ℝ) : -- 🚧 TODO!
 --   (i_surj : Set.SurjOn i ↑s ↑t)
 --   (h : ∀ a ∈ s, f a = g (i a)) : ∑ x ∈ s, f x = ∑ x ∈ t, g x
 
-theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
-    HasSum f ℓ ↔
-    HasSum (f ∘ i) ℓ := by
+lemma reordering_lemma (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
+    HasSum f ℓ → HasSum (f ∘ i) ℓ := by
   simp only [HasSum, Filter.Tendsto, Filter.le_def, Filter.mem_map]
   simp only [SummationFilter.unconditional]
   -- ⊢ (∀ x ∈ nhds ℓ, (fun s => ∑ b ∈ s, f b) ⁻¹' x ∈ Filter.atTop) ↔
@@ -234,8 +233,12 @@ theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Functi
       ∑ x ∈ b, (f ∘ i) x = ∑ y ∈ (Finset.image i b), f y := by
     exact Finset.sum_nbij (f := f ∘ i) (g := f)
       i
-      (show ∀ a ∈ b, i a ∈ Finset.image i b from sorry)
-      (show Set.InjOn i ↑b from by
+      (show ∀ a ∈ b, i a ∈ Finset.image i b from by
+        simp only [Finset.mem_image]
+        intro a a_in_b
+        use a
+      )
+      (show Set.InjOn i b from by
         apply bij.injective.injOn
       )
       (show Set.SurjOn i b (Finset.image i b) from by
@@ -250,13 +253,50 @@ theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Functi
         apply Function.comp_apply
       )
   simp only [change_of_variables]
-  -- ⊢ (∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ b ∈ b, f b ∈ x) ↔
-  --    ∀ x ∈ nhds ℓ, ∃ a, ∀ b ≥ a, ∑ b ∈ Finset.image i b, f b ∈ x
-  constructor
-  . intro h x x_in_nhds_ℓ
-    let ⟨a, ha⟩ := h x x_in_nhds_ℓ
-    -- use (Finset.image i.invFun a)
+  intro h x x_in_nhds_ℓ
+  let ⟨a, ha⟩ := h x x_in_nhds_ℓ
+  have i_inj : Set.InjOn i (i ⁻¹' a) := bij.injective.injOn
+  use Finset.preimage a i i_inj
+  have image_ge_of_preimage_ge (b : Finset ℕ) : b ≥ a.preimage i i_inj -> b.image i ≥ a := by
+    intro h x x_in_a
+    have : i.invFun x ∈ a.preimage i i_inj := by
+      simp only [Finset.mem_preimage]
+      simp only [i.invFun_eq (bij.surjective x)]
+      exact x_in_a
+    specialize h this
+    simp only [Finset.mem_image]
+    use Function.invFun i x
+    constructor
+    exact h
+    simp only [i.invFun_eq (bij.surjective x)]
+  intro b b_ge_preimage_a
+  specialize image_ge_of_preimage_ge b b_ge_preimage_a
+  specialize ha (Finset.image i b) image_ge_of_preimage_ge
+  exact ha
 
+-- TODO: finish that then use it to end the reorderin theorem
+lemma inv_bijective_ {i : ℕ → ℕ} (i_bij : i.Bijective) : (i.invFun).Bijective := by
+  constructor
+  . simp only [Function.Injective, Function.invFun]
+    intro a₁ a₂
+    have h₁ : ∃ x, i x = a₁ := by admit
+    have h₂ : ∃ x, i x = a₂ := by admit
+    simp [dif_pos h₁, dif_pos h₂]
     admit
-  . -- TODO
-    admit
+  . apply i.invFun_surjective
+    exact i_bij.1
+
+theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
+    HasSum f ℓ ↔ HasSum (f ∘ i) ℓ := by
+  constructor
+  . apply reordering_lemma
+    assumption
+  . have : (f ∘ i) ∘ i.invFun = f := by
+      admit
+    nth_rw 2 [<- this]
+    apply reordering_lemma
+    constructor
+    . simp only [Function.Injective]
+      admit
+    .
+      admit
