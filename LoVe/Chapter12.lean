@@ -4,54 +4,95 @@ import Mathlib
 
 ## 12.3 The Axiom of Choice
 
-
 ### The Axiom of Choice in Set Theory
 
-⚠️ Warning: Large digression
+⚠️ **Warning.** Here we massage the formulation of the axiom of choice in ZFC,
+until we end up with an equivalent formulation which is very similar to the
+statement of the axiom of choice in a type-theoretic context.
+This section is an anti-wtf for the readers who know about set theory;
+skip it if you are not familiar with set theory!
 
-Here we try to "massage" the classical formulation of the axiom of choice in
-ZFC, until we end up with a formulation and understanding that will make
-the transition to the type-theoretic version much smoother.
-
-The classic:
+The classic axiom of choice in ZFC is:
 
 $$
 \forall c,
 \left(
-\emptyset \notin c
+\varnothing \notin c
 \rightarrow
-\exists f: c \rightarrow \cup c \; \forall s \in c \; f(s) \in s
+\exists f: c \rightarrow \cup c, \; \forall s \in c, \; f(s) \in s
 \right)
 $$
 
-What lacks IMHO: the function $f$ depends on the collection of non-empty sets
-$c$ but if two collections share some sets we don't know if both associated
-choices are the same. That would be nice! More generally what it hints to
-is that we'd like to get a single *global* choice function, defined on
-the class of sets which are not empty (which is not a set, this is why
-we can't state that axiom in ZFC). All the "classic" choice functions
-would then be restrictions of this global choice to a specific family.
+What bugs me in this formulation: the function $f$ depends on the collection
+of non-empty sets $c$ but if two collections share some sets we don't know if
+both associated choices are the same. That would be nice right?
+So can we require this consistency in ZFC "for free"?
+The answer is yes! (see below why).
 
-This idea works perfectly in NBG and since NBG is a conservative extension of
-ZFC, and the consistency between our choice functions can be stated in ZFC,
-it actually works! This new, augmented version of the axiom of choice in ZFC
-make it appear as simply a bounded version of the global choice.
+So what? Now consider any increasing
+"collection"[^cl] of sets that do no contain the empty sets
+and spans the universe of all sets, minus the empty set.
+With our strengthened axiom of choice we have just defined a
+global choice "function"[^fcl] whose value if defined for any non-empty set of
+our universe!
 
-Note that without the reference to NBG, we could work out the same result
-by a definition of the choice function in a consistent manner
-in the cumulative hierarchy. And since every collection is included at some
-stage in the cumulative hierarchy, the general result is obtained by
-restriction. Anyway, this stuff reads something like:
+[^cl]: this collection is not a set technically, but a [class].
 
-For every ordinal $α$, there is a choice function
-$f: V_{α} \setminus {\varnothing} \to \cup V_{\alpha}$ such that
-for any $s \in V_{α} \setminus {\varnothing}$, $f(s) \in s$.
+[^fcl]: technically, a [class] function.
 
-This is *very* similar to what we're going to introduce as our axiom of choice
-in the type-theoretic context (except that the hierarchy is not cumulative
-and we don't have the equivalent of limit universes, only successors).
+[class]: https://en.wikipedia.org/wiki/Class_(set_theory)
+
+Why does it work? Two possible answers:
+
+- This work trivially in [NBG] (with global choice) and since NBG is a
+  conservative extension of ZFC, and the consistency between our choice
+  functions can be stated in ZFC, it actually works!
+
+- Without the reference to NBG, we could construct the choice function in a
+  consistent manner in the [Von Neumann hierarchy]. And since every collection is
+  included at some stage in the cumulative hierarchy (the "union" of all
+  V_α is the universe), we get the general result by restriction.
+  Anyway, this stuff reads something like: for every ordinal $α$, there is a
+  choice function $f: V_{α} \setminus {\varnothing} \to \cup V_{\alpha}$
+  such that for any $s \in V_{α} \setminus {\varnothing}$, $f(s) \in s$.
+  This is *very* similar to what we're going to introduce as our axiom of
+  choice in the type-theoretic context (except that the hierarchy is not
+  cumulative and we don't have the equivalent of limit universes,
+  only successors).
+
+[NBG]: https://en.wikipedia.org/wiki/Von_Neumann%E2%80%93Bernays%E2%80%93G%C3%B6del_set_theory
+
+[Von Neumann hierarchy]: https://en.wikipedia.org/wiki/Von_Neumann_universe
 
 -/
+
+/-
+
+### The Axiom of Choice in Type Theory
+
+In type theory the axiom of choice states that their is a function,
+named `choice` (in the namespace `Classical`) which associate to any
+non-empty sorts (proposition or type) a term of this sort:
+
+-/
+
+#check Classical.choice
+-- Classical.choice.{u} {α : Sort u} : Nonempty α → α
+
+/-
+More explicitly maybe, the type of `choice` is:
+
+```
+⊢ {α : Sort u} → Nonempty α → α
+```
+
+-/
+
+/-
+Here, "non-empty" means:
+-/
+
+
 
 #print Nonempty
 -- inductive Nonempty.{u} : Sort u → Prop
@@ -107,16 +148,6 @@ example {α} : Inhabited α → Nonempty α := by
 -- not a rule in Lean's kernel; you can perfectly work "choice-free"
 -- if you are willing to audit all your dependencies.
 
-#check Classical.choice
--- Classical.choice.{u} {α : Sort u} : Nonempty α → α
-
--- TODO: this is also more explicitly : {α : Type u} → Nonempty α → α
--- Or: the existence of a function defined on all types that are not empty
--- and which creates an element of the type. This is VERY close to what the
--- global choice function is doing in NBG and could somehow helps us explain
--- why this is not so different from the set-theoretic version after all.
--- (At first sight, it looks VERY different)
--- But there is some explaining work to do ...
 
 noncomputable example {α} : Nonempty α → Inhabited α := by
   intro nonempty
@@ -252,3 +283,28 @@ example {α} {ι} (s : ι → Set α) (h : ∀ i, (s i).Nonempty) :
 
 -- Can I produce a FULL set-theoretic versions, without indexed families
 -- but with set of sets instead?
+
+
+
+/-
+### Application : Inverse Function
+
+
+
+Note: if `f : α → β`, `g : β → α := Function.invFun f ` is always defined.
+
+TODO: prove as an example than the `invFun` of a bijective function
+is bijective, with the usual inverse equations.
+-/
+
+
+#check Function.invFun
+-- Function.invFun.{u, u_3} {α : Sort u} {β : Sort u_3} [Nonempty α] (f : α → β) : β → α
+
+#print Function.invFun
+-- def Function.invFun.{u, u_3} : {α : Sort u} → {β : Sort u_3} → [Nonempty α] → (α → β) → β → α :=
+-- fun {α} {β} [Nonempty α] f y => if h : ∃ x, f x = y then h.choose else Classical.arbitrary α
+
+#print Classical.arbitrary
+-- @[reducible] protected def Classical.arbitrary.{u_3} : (α : Sort u_3) → [h : Nonempty α] → α :=
+-- fun α [h : Nonempty α] => Classical.choice h
