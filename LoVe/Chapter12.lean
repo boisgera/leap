@@ -1,6 +1,6 @@
 import Mathlib
 
-/-
+/-!
 
 ## 12.3 The Axiom of Choice
 
@@ -66,7 +66,7 @@ Why does it work? Two possible answers:
 
 -/
 
-/-
+/-!
 
 ### The Axiom of Choice in Type Theory
 
@@ -79,7 +79,7 @@ non-empty sorts (proposition or type) a term of this sort:
 #check Classical.choice
 -- Classical.choice.{u} {α : Sort u} : Nonempty α → α
 
-/-
+/-!
 More explicitly maybe, the type of `choice` is:
 
 ```
@@ -88,7 +88,7 @@ More explicitly maybe, the type of `choice` is:
 
 -/
 
-/-
+/-!
 Here, "non-empty" means:
 -/
 
@@ -100,7 +100,7 @@ Here, "non-empty" means:
 -- constructors:
 -- Nonempty.intro : ∀ {α : Sort u} (val : α), Nonempty α
 
-/-
+/-!
 `Nonempty α` captures that there is an element in `α`.
 In set theory we would state something like $\exists a, a \in \alpha$,
 but here, there is no extra "in α", since we only consider `a` in $α$ to
@@ -116,12 +116,10 @@ example {α} : Nonempty α ↔ ∃ (_a : α), True := by
     let ⟨a, _⟩ := exists_a
     exact Nonempty.intro a
 
-/-
+/-!
 We can probably agree that having a custom prop is nicer than dealing
 with this existential statement with a dummy prop attached...
--/
 
-/-
 Note the difference between `Nonempty` and `Inhabited`: `Inhabited α`
 provides a default value of `α` that we can use in computations.
 `Nonempty α` provides merely the proof that such a value exist.
@@ -138,61 +136,74 @@ in a program).
 -- constructor:
 --   Inhabited.mk.{u} {α : Sort u} (default : α) : Inhabited α
 
--- Obviously, we have:
+/-!
+Obviously, we have:
+-/
 
 example {α} : Inhabited α → Nonempty α := by
   intro inhabited
   exact Nonempty.intro inhabited.default
 
--- The axiom of choice bridges the gap. Note that it's an axiom,
--- not a rule in Lean's kernel; you can perfectly work "choice-free"
--- if you are willing to audit all your dependencies.
-
+/-!
+The axiom of choice bridges the gap. Note that it's an axiom,
+not a rule in Lean's kernel; you can perfectly work "choice-free"
+if you are willing to audit all your dependencies.
+-/
 
 noncomputable example {α} : Nonempty α → Inhabited α := by
   intro nonempty
   exact Classical.choice nonempty |> Inhabited.mk
 
--- Note that the LSP asked me to mark the example as noncomputable
--- since choice is not supported by the code generator. Fair enough!
+/-!
+Note that the LSP asked me to mark the example as noncomputable
+since choice is not supported by the code generator. Fair enough!
 
--- There is an alternative notation to invoke `Classical.choice`,
--- that is meant to be used in the UFCS style.
+There is an alternative notation to invoke `Classical.choice`,
+that is meant to be used in the UFCS style.
+-/
 
 #print Nonempty.some
 -- @[reducible] protected def Nonempty.some.{u_3} :
 --     {α : Sort u_3} → Nonempty α → α :=
 --   fun {α} h => Classical.choice h
 
--- So for example:
+/-!
+So for example:
+-/
 noncomputable example {α} : Nonempty α → Inhabited α :=
   fun nonempty => nonempty.some |> Inhabited.mk
 
--- Type-theoretic (actually sort-theoretic) version of the axiom of choice
--- I'm familiar with:
+/-!
+Type-theoretic (actually sort-theoretic) version of the axiom of choice
+I'm familiar with:
+-/
 example {ι : Sort u} (c : ι → Sort v) (h : (i : ι) → Nonempty (c i)) :
     Nonempty ((i : ι) → c i) :=
   Nonempty.intro fun i => (h i).some
 
--- ... but this version of choice would be *weaker* than the original one
--- since I get a term in `Prop`, of which I cannot get something as a type.
--- Can I avoid that and return an object instead of a proof of existence?
--- Yes, trivially actually!
-
+/-!
+... but this version of choice would be *weaker* than the original one
+since I get a term in `Prop`, of which I cannot get something as a type.
+Can I avoid that and return an object instead of a proof of existence?
+Yes, trivially actually!
+-/
 noncomputable def choice' {ι : Sort u} (c : ι → Sort v)
     (h : (i : ι) → Nonempty (c i)) : (i : ι) → c i :=
   fun i => (h i).some
 
--- and this version is of course powerful enough to get the original choice
--- axiom back:
+/-!
+and this version is of course powerful enough to get the original choice
+axiom back:
+-/
 noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
   fun nonempty =>
     let f := choice' (ι := Unit) (h := fun _ => nonempty)
     f () |> Inhabited.mk
 
--- TODO: work the way up from `choice` to `choose` and `choose_spec`
--- before dealing with the set-theoretic version of the axiom of choice.
-
+/-!
+**TODO:** work the way up from `choice` to `choose` and `choose_spec`
+before dealing with the set-theoretic version of the axiom of choice.
+-/
 #check Classical.choose
 -- Classical.choose.{u} {α : Sort u} {p : α → Prop} (h : ∃ x, p x) : α
 
@@ -200,7 +211,9 @@ noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
 -- Classical.choose_spec.{u} {α : Sort u} {p : α → Prop}
 --     (h : ∃ x, p x) : p (Classical.choose h)
 
--- The construct that actually encapsulate both `choose` and `choose_spec`
+/-!
+The construct that actually encapsulate both `choose` and `choose_spec`
+-/
 #print Classical.indefiniteDescription
 -- Classical.indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
 --   (h : ∃ x, p x) : { x // p x }
@@ -215,22 +228,29 @@ noncomputable def indefiniteDescription.{u} {α : Sort u} (p : α → Prop)
     ) |> Classical.choice
 
 
+/-!
+--------------------------------------------------------------------------------
+-/
 
--- -----------------------------------------------------------------------------
-
--- The set-theoretic version would use the `Nonempty` method defined
--- for sets, not the type-theoretic version:
+/-!
+The set-theoretic version would use the `Nonempty` method defined
+for sets, not the type-theoretic version:
+-/
 #print Set.Nonempty
 -- protected def Set.Nonempty.{u} : {α : Type u} → Set α → Prop :=
 -- fun {α} s => ∃ x, x ∈ s
 
--- Note that we have the "obvious"
+/-!
+Note that we have the "obvious"
+-/
 #print Set.nonempty_iff_ne_empty
 -- Set.nonempty_iff_ne_empty.{u} {α : Type u} {s : Set α} : s.Nonempty ↔ s ≠ ∅
 
--- whose proof does not explicitly requires the axiom of choice ...
--- but it needs contradiction which relies on em ... which is actually
--- a consequence of choice by Diaconescu's theorem!
+/-!
+whose proof does not explicitly requires the axiom of choice ...
+but it needs contradiction which relies on em ... which is actually
+a consequence of choice by Diaconescu's theorem!
+-/
 example {α} {s : Set α} : s.Nonempty ↔ s ≠ ∅ := by
   constructor
   . rintro ⟨x, hx⟩ s_eq_empty
@@ -245,7 +265,9 @@ example {α} {s : Set α} : s.Nonempty ↔ s ≠ ∅ := by
     specialize s_eq_empty x
     contradiction
 
--- The variant of choice applied to sets in Lean would be something like:
+/-!
+The variant of choice applied to sets in Lean would be something like:
+-/
 
 #check Exists.choose
 -- Exists.choose.{u_1} {α : Sort u_1} {p : α → Prop} (P : ∃ a, p a) : α
@@ -281,12 +303,13 @@ example {α} {ι} (s : ι → Set α) (h : ∀ i, (s i).Nonempty) :
   -- TODO
   admit
 
--- Can I produce a FULL set-theoretic versions, without indexed families
--- but with set of sets instead?
+/-!
+Can I produce a FULL set-theoretic versions, without indexed families
+but with set of sets instead?
+-/
 
 
-
-/-
+/-!
 ### Application : Inverse Function
 
 
@@ -308,3 +331,7 @@ is bijective, with the usual inverse equations.
 #print Classical.arbitrary
 -- @[reducible] protected def Classical.arbitrary.{u_3} : (α : Sort u_3) → [h : Nonempty α] → α :=
 -- fun α [h : Nonempty α] => Classical.choice h
+
+#print Function.Bijective
+-- def Function.Bijective.{u₁, u₂} : {α : Sort u₁} → {β : Sort u₂} → (α → β) → Prop :=
+-- fun {α} {β} f => Function.Injective f ∧ Function.Surjective f

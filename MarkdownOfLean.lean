@@ -3,7 +3,7 @@ inductive Block where
 | code (string : String)
 deriving Repr
 
-def openMarkdown := "/-"
+def openMarkdown := "/-!"
 def closeMarkdown := "-/"
 
 def flush (as : String -> Block) (blocks : List Block) (buffer: List String) :
@@ -35,7 +35,7 @@ def cleanUp (blocks : List Block) : List Block :=
   | [] => []
   | (.text string) :: rest => (.text string) :: (cleanUp rest)
   | (.code string) :: rest =>
-    let string := string.trim
+    let string := string.trimAscii.toString
     if string.isEmpty then
       cleanUp rest
     else
@@ -46,7 +46,7 @@ def toMarkdown (blocks : List Block) : String := Id.run do
   for block in blocks do
     match block with
     | .text string => markdown := markdown ++ "\n" ++ string ++ "\n"
-    | .code string => markdown := markdown ++ "\n```lean\n" ++ string ++ "\n```\n"
+    | .code string => markdown := markdown ++ "\n```lean4\n" ++ string ++ "\n```\n"
   return markdown
 
 def main (args : List String) : IO Unit := do
