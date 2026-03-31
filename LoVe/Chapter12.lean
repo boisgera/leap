@@ -9,9 +9,9 @@ author:
 -/
 
 /-!
-## 12.3 The Axiom of Choice
+# 12.3 The Axiom of Choice
 
-### The Axiom of Choice in Set Theory
+## The Axiom of Choice in Set Theory
 
 ⚠️ **Warning.** Here we massage the formulation of the axiom of choice in ZFC,
 until we end up with an equivalent formulation which is very similar to the
@@ -75,7 +75,7 @@ Why does it work? Two possible answers:
 
 /-!
 
-### The Axiom of Choice in Type Theory
+## The Axiom of Choice in Type Theory
 
 In type theory the axiom of choice states that their is a function,
 named `choice` (in the namespace `Classical`) which associate to any
@@ -92,14 +92,14 @@ More explicitly maybe, the type of `choice` is:
 ```
 ⊢ {α : Sort u} → Nonempty α → α
 ```
-
 -/
 
 /-!
-Here, "non-empty" means:
+## `Nonempty`
+
+`Nonempty` is an inductive type with a single constructor:
+
 -/
-
-
 
 #print Nonempty
 -- inductive Nonempty.{u} : Sort u → Prop
@@ -108,8 +108,9 @@ Here, "non-empty" means:
 -- Nonempty.intro : ∀ {α : Sort u} (val : α), Nonempty α
 
 /-!
-`Nonempty α` captures that there is an element in `α`.
-In set theory we would state something like $\exists a, a \in \alpha$,
+`Nonempty α` is a proposition that states that there is an element in `α`.
+
+In set theory we would state something like $\exists \, a, \, a \in \alpha$,
 but here, there is no extra "in α", since we only consider `a` in $α$ to
 begin with. So what we have is actually:
 -/
@@ -124,16 +125,44 @@ example {α} : Nonempty α ↔ ∃ (_a : α), True := by
     exact Nonempty.intro a
 
 /-!
+If you look at the definition of `Exists`, you can see how it is pretty
+similar to `NonEmpty`, with the extra property that needs to be fulfilled.
+-/
+
+#print Exists
+-- inductive Exists.{u} : {α : Sort u} → (α → Prop) → Prop
+-- number of parameters: 2
+-- constructors:
+-- Exists.intro : ∀ {α : Sort u} {p : α → Prop} (w : α), p w → Exists p
+
+/-!
 We can probably agree that having a custom prop is nicer than dealing
 with this existential statement with a dummy prop attached...
-
-Note the difference between `Nonempty` and `Inhabited`: `Inhabited α`
-provides a default value of `α` that we can use in computations.
-`Nonempty α` provides merely the proof that such a value exist.
-This is different because there is no large elimination for props
-(you generally cannot extract information from a proof and use it
-in a program).
 -/
+
+/-!
+
+## `Inhabited`
+
+Some types have a default value:
+
+-/
+
+#eval (Inhabited.default : ℕ)
+-- 0
+
+#eval (Inhabited.default : String)
+-- ""
+
+/-!
+That works because they have declared an instance of the type class
+`Inhabited`.
+-/
+
+
+#check (inferInstance : Inhabited ℕ)
+
+#check (inferInstance : Inhabited String)
 
 #print Inhabited
 -- class Inhabited.{u} (α : Sort u) : Sort (max 1 u)
@@ -143,8 +172,36 @@ in a program).
 -- constructor:
 --   Inhabited.mk.{u} {α : Sort u} (default : α) : Inhabited α
 
+
 /-!
-Obviously, we have:
+For any inductive type with no constructor,
+there is no way we can declare such an instance;
+for example:
+-/
+
+#print Empty
+-- inductive Empty : Type
+-- number of parameters: 0
+-- constructors:
+
+/-- error: failed to synthesize instance of type class
+  Inhabited Empty
+
+Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean to derive the missing instance.
+-/
+#guard_msgs in
+#check (inferInstance : Inhabited Empty)
+
+/-- error: failed to synthesize instance of type class
+  Inhabited Empty
+
+Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean to derive the missing instance.
+-/
+#guard_msgs in
+#eval (Inhabited.default : Empty)
+
+/-!
+`Inhabited` and `Nonempty` are related but not identical. Obviously, we have:
 -/
 
 example {α} : Inhabited α → Nonempty α := by
@@ -152,18 +209,65 @@ example {α} : Inhabited α → Nonempty α := by
   exact Nonempty.intro inhabited.default
 
 /-!
-The axiom of choice bridges the gap. Note that it's an axiom,
-not a rule in Lean's kernel; you can perfectly work "choice-free"
-if you are willing to audit all your dependencies.
+But the converse is not true in general: an instance of `Inhabited α` provides
+a designated value of type `α` that we can use in our programs
+while `Nonempty α` merely provides the proof that (at least)
+one value of type `α` exists.
+
+This is different because
+
+> `Prop` does not allow large elimination:
+> It is generally impossible to extract information from a proof of a
+> proposition and use it in a program
+> (i.e., a value of a type belonging to `Type`).
+>
+> [@LoVe, section 12.2.3]
+
+So basically, we can't use an instance of `Nonempty α` to provide a value
+of type α in our programs.
+
+-/
+
+/-!
+However, the axiom of choice bridges the gap *non-constructively*.
+If you flag your values or functions as `noncomputable`, you can use
+a value of an non-empty type α inside your programs:
+-/
+
+noncomputable def a {α} [nonEmpty : Nonempty α] : α :=
+  Classical.choice nonEmpty
+
+/-!
+Since this is non-constructive, don't expect to be able to evaluate such a
+value!
+-/
+
+/-- error: failed to compile definition, consider marking it as 'noncomputable' because it depends on 'a', which is 'noncomputable'
+-/
+#guard_msgs in
+#eval a (α := ℕ)
+
+/-!
+Note that the axiom of choice is an axiom, not a rule in Lean's kernel;
+you can perfectly work "choice-free" if you are willing to audit all your
+dependencies to avoid any use of the axiom fo choice.
+-/
+
+/-!
+Anyway, if you are ok with being non-constructive, you can now derive
+`Inhabited α` from `Nonempty α`:
 -/
 
 noncomputable example {α} : Nonempty α → Inhabited α := by
-  intro nonempty
-  exact Classical.choice nonempty |> Inhabited.mk
+  intro nonEmpty
+  exact Classical.choice nonEmpty |> Inhabited.mk
+
+
 
 /-!
-Note that the LSP asked me to mark the example as noncomputable
-since choice is not supported by the code generator. Fair enough!
+
+## Syntaxic sugar
+
 
 There is an alternative notation to invoke `Classical.choice`,
 that is meant to be used in the UFCS style.
@@ -317,7 +421,7 @@ but with set of sets instead?
 
 
 /-!
-### Application : Inverse Function
+## Application : Inverse Function
 
 
 
@@ -342,3 +446,7 @@ is bijective, with the usual inverse equations.
 #print Function.Bijective
 -- def Function.Bijective.{u₁, u₂} : {α : Sort u₁} → {β : Sort u₂} → (α → β) → Prop :=
 -- fun {α} {β} f => Function.Injective f ∧ Function.Surjective f
+
+/-!
+## References
+-/
