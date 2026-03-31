@@ -274,25 +274,16 @@ lemma reordering_lemma (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Fu
   specialize ha (Finset.image i b) image_ge_of_preimage_ge
   exact ha
 
--- TODO: finish that then use it to end the reorderin theorem
-lemma inv_bijective_ {i : ℕ → ℕ} (i_bij : i.Bijective) : (i.invFun).Bijective := by
-  constructor
-  . simp only [Function.Injective, Function.invFun]
-    intro a₁ a₂
-    have h₁ : ∃ x, i x = a₁ := by admit
-    have h₂ : ∃ x, i x = a₂ := by admit
-    simp [dif_pos h₁, dif_pos h₂]
-    admit
-  . apply i.invFun_surjective
-    exact i_bij.1
-
 theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Function.Bijective i) :
     HasSum f ℓ ↔ HasSum (f ∘ i) ℓ := by
   constructor
   . apply reordering_lemma
     assumption
   . have : (f ∘ i) ∘ i.invFun = f := by
-      admit
+      simp only [Function.comp_assoc]
+      have right_inverse := Function.rightInverse_invFun bij.2
+      ext x
+      simp only [Function.comp, right_inverse x]
     nth_rw 2 [<- this]
     apply reordering_lemma
     constructor
