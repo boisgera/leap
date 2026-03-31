@@ -2,9 +2,10 @@ import Mathlib
 
 /-!
 ---
-title: "LoVe Notes – Chapter 12"
+title: "❤️ LoVe Notes – Chapter 12"
 author:
 - Sébastien Boisgérault
+lang: en
 ---
 -/
 

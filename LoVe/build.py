@@ -39,11 +39,17 @@ def build(lean_file: str) -> None:
         ]
     )
 
-    # Post-processing
+    # Post-processing: remove default inline style
     with html.open("rb") as f:
         tree = etree.parse(f, etree.HTMLParser())
 
     root = tree.getroot()
+    head = root.find(".//head")
+    style = head.find("style")  # first <style> only
+    if style is not None:
+        head.remove(style)
+    tree.write(html, method="html", encoding="utf-8")
+    
 
 
 if __name__ == "__main__":
