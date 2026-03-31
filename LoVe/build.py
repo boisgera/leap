@@ -39,7 +39,10 @@ def build(lean_file: str) -> None:
         ]
     )
 
-    # Post-processing: remove default inline style
+    # Post-processing
+    # ---------------
+
+    # Remove default inline style
     with html.open("rb") as f:
         tree = etree.parse(f, etree.HTMLParser())
 
@@ -48,12 +51,22 @@ def build(lean_file: str) -> None:
     style = head.find("style")  # first <style> only
     if style is not None:
         head.remove(style)
+
+    # Enable anchors
+    head.append(
+        etree.fromstring("""
+          <script type="module">
+            import 'https://cdn.jsdelivr.net/npm/anchor-js/anchor.min.js';
+            anchors.add("h1, h2, h3");
+          </script>
+        """)
+    )
+
+    # Write the change
     tree.write(html, method="html", encoding="utf-8")
-    
 
 
 if __name__ == "__main__":
     build(
         lean_file=sys.argv[1] if len(sys.argv) > 1 else "Chapter12.lean",
-        # title=sys.argv[2] if len(sys.argv) > 2 else "LoVe – Chapter 12",
     )
