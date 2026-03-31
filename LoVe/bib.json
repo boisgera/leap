@@ -1,0 +1,25 @@
+[
+  {
+    "id": "LoVe",
+    "type": "book",
+    "title": "The Hitchhiker's Guide to Logical Verification",
+    "edition": "2025",
+    "author": [
+      { "family": "Baanen", "given": "Anne" },
+      { "family": "Bentkamp", "given": "Alexander" },
+      { "family": "Blanchette", "given": "Jasmin" },
+      { "family": "Hölzl", "given": "Johannes" },
+      { "family": "Limperg", "given": "Jannis" }
+    ],
+    "publisher": "lean-forward",
+    "URL": "https://github.com/lean-forward/logical_verification_2025",
+    "abstract": "An open textbook introducing logical verification, theorem proving, and formal methods, with a focus on the Lean proof assistant.",
+    "issued": {
+      "date-parts": [[2025]]
+    },
+    "accessed": {
+      "date-parts": [[2026, 3, 31]]
+    },
+    "language": "en"
+  }
+]

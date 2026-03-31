@@ -1,9 +1,12 @@
-#!/usr/bin/env python3
-"""
-Build pipeline: .lean -> .lean.md -> .lean.html
-"""
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = [
+#   "lxml",
+# ]
+# ///
 
 # Python Standard Library
+from lxml import etree
 import subprocess
 import sys
 from pathlib import Path
@@ -23,14 +26,24 @@ def build(lean_file: str) -> None:
     run(
         [
             "pandoc",
-            "-s",
+            "--standalone",
+            "--toc",
+            "--css=index.css",
             "--syntax-definition=lean4.xml",
             "--mathjax=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js",
+            "--bibliography=bib.json",
+            "--citeproc",
             "-o",
             str(html),
             str(md),
         ]
     )
+
+    # Post-processing
+    with html.open("rb") as f:
+        tree = etree.parse(f, etree.HTMLParser())
+
+    root = tree.getroot()
 
 
 if __name__ == "__main__":
