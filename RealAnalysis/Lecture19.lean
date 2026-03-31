@@ -281,9 +281,8 @@ theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Functi
     assumption
   . have : (f ∘ i) ∘ i.invFun = f := by
       simp only [Function.comp_assoc]
-      have right_inverse := Function.rightInverse_invFun bij.2
       ext x
-      simp only [Function.comp, right_inverse x]
+      simp only [Function.comp, Function.rightInverse_invFun bij.2 x]
     nth_rw 2 [<- this]
     apply reordering_lemma
     constructor
