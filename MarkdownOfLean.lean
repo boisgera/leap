@@ -3,7 +3,12 @@ inductive Block where
 | code (string : String)
 deriving Repr
 
-def openMarkdown := "/-!"
+inductive State where
+| text
+| code
+deriving BEq
+
+def openMarkdown := "/-!" -- Convert only module docstrings to Markdown
 def closeMarkdown := "-/"
 
 def flush (as : String -> Block) (blocks : List Block) (buffer: List String) :
@@ -20,11 +25,19 @@ def parse (source : String) : List Block := Id.run do
   let lines := source.splitOn "\n"
   let mut blocks : List Block := []
   let mut buffer : List String := []
+  let mut state := State.code
   for line in lines do
     if line == openMarkdown then
       (blocks, buffer) := flush (as := Block.code) blocks buffer
+      state <- State.text
     else if line == closeMarkdown then
-      (blocks, buffer) := flush (as := Block.text) blocks buffer
+      -- 🐉 Wrap up only if you know that you are parsing a module docstring.
+      -- (The end marker could close a declaration docstring or a comment)
+      if state == .text then
+        (blocks, buffer) := flush (as := Block.text) blocks buffer
+        state <- State.code
+      else
+        buffer := line :: buffer
     else
       buffer := line :: buffer
   (blocks, _) := flush (as := Block.code) blocks buffer
