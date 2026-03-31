@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<!--
+  Lean 4 syntax highlighting for Kate / KSyntaxHighlighting / pandoc (skylighting)
+  Translated from the official VSCode TextMate grammar:
+    https://github.com/leanprover/vscode-lean4/blob/master/vscode-lean4/syntaxes/lean4.json
+  License: Apache-2.0
+-->
+<language name="Lean 4" section="Sources"
+          version="1" kateversion="5.0"
+          extensions="*.lean"
+          mimetype="text/x-lean"
+          indentationsensitive="false"
+          casesensitive="true"
+          author="Translated from leanprover/vscode-lean4"
+          license="Apache-2.0">
+
+  <highlighting>
+
+    <!-- ============================================================ -->
+    <!-- Keyword lists                                                  -->
+    <!-- ============================================================ -->
+
+    <!-- storage.type -->
+    <list name="Types">
+      <item>Prop</item>
+      <item>Type</item>
+      <item>Sort</item>
+    </list>
+
+    <!-- invalid.illegal -->
+    <list name="Illegal">
+      <item>sorry</item>
+      <item>admit</item>
+      <item>#exit</item>
+    </list>
+
+    <!-- constant.language -->
+    <list name="Constants">
+      <item>true</item>
+      <item>false</item>
+    </list>
+
+    <!-- storage.modifier (bare word forms; attribute[…] and @[…] handled by regex) -->
+    <list name="Modifiers">
+      <item>local</item>
+      <item>scoped</item>
+      <item>partial</item>
+      <item>unsafe</item>
+      <item>nonrec</item>
+      <item>public</item>
+      <item>private</item>
+      <item>protected</item>
+      <item>noncomputable</item>
+      <item>meta</item>
+    </list>
+
+    <!-- Definition-introducing keywords (trigger function-name highlighting) -->
+    <list name="DefKeywords">
+      <item>inductive</item>
+      <item>coinductive</item>
+      <item>structure</item>
+      <item>theorem</item>
+      <item>axiom</item>
+      <item>abbrev</item>
+      <item>lemma</item>
+      <item>def</item>
+      <item>instance</item>
+      <item>class</item>
+    </list>
+
+    <!-- keyword.other (the large flat list from the grammar) -->
+    <list name="Keywords">
+      <item>show</item>
+      <item>have</item>
+      <item>using</item>
+      <item>haveI</item>
+      <item>from</item>
+      <item>suffices</item>
+      <item>nomatch</item>
+      <item>nofun</item>
+      <item>no_index</item>
+      <item>elab</item>
+      <item>set_option</item>
+      <item>initialize</item>
+      <item>builtin_initialize</item>
+      <item>example</item>
+      <item>inductive_fixpoint</item>
+      <item>coinductive_fixpoint</item>
+      <item>termination_by</item>
+      <item>decreasing_by</item>
+      <item>partial_fixpoint</item>
+      <item>universe</item>
+      <item>variable</item>
+      <item>module</item>
+      <item>import</item>
+      <item>open</item>
+      <item>export</item>
+      <item>prelude</item>
+      <item>renaming</item>
+      <item>hiding</item>
+      <item>do</item>
+      <item>by</item>
+      <item>let</item>
+      <item>letI</item>
+      <item>let_expr</item>
+      <item>extends</item>
+      <item>mutual</item>
+      <item>mut</item>
+      <item>where</item>
+      <item>rec</item>
+      <item>declare_syntax_cat</item>
+      <item>syntax</item>
+      <item>macro_rules</item>
+      <item>macro</item>
+      <item>max_prec</item>
+      <item>leading_parser</item>
+      <item>elab_rules</item>
+      <item>deriving</item>
+      <item>fun</item>
+      <item>section</item>
+      <item>namespace</item>
+      <item>end</item>
+      <item>prefix</item>
+      <item>postfix</item>
+      <item>infixl</item>
+      <item>infixr</item>
+      <item>infix</item>
+      <item>notation</item>
+      <item>if</item>
+      <item>bif</item>
+      <item>then</item>
+      <item>else</item>
+      <item>calc</item>
+      <item>matches</item>
+      <item>match</item>
+      <item>match_expr</item>
+      <item>with</item>
+      <item>forall</item>
+      <item>for</item>
+      <item>while</item>
+      <item>repeat</item>
+      <item>unless</item>
+      <item>until</item>
+      <item>try</item>
+      <item>catch</item>
+      <item>finally</item>
+      <item>return</item>
+      <item>continue</item>
+      <item>break</item>
+      <item>exists</item>
+      <item>include</item>
+      <item>in</item>
+      <item>trailing_parser</item>
+      <item>tactic_tag</item>
+      <item>tactic_alt</item>
+      <item>tactic_extension</item>
+      <item>register_tactic_tag</item>
+      <item>grind_propagator</item>
+      <item>builtin_grind_propagator</item>
+      <item>grind_pattern</item>
+      <item>simproc</item>
+      <item>builtin_simproc</item>
+      <item>simproc_decl</item>
+      <item>builtin_simproc_decl</item>
+      <item>dsimproc</item>
+      <item>builtin_dsimproc</item>
+      <item>dsimproc_decl</item>
+      <item>builtin_dsimproc_decl</item>
+      <item>show_panel_widgets</item>
+      <item>show_term</item>
+      <item>seal</item>
+      <item>unseal</item>
+      <item>norm_cast_add_elim</item>
+      <item>declare_config_elab</item>
+      <item>register_error_explanation</item>
+      <item>register_builtin_option</item>
+      <item>register_option</item>
+      <item>register_parser_alias</item>
+      <item>register_simp_attr</item>
+      <item>register_linter_set</item>
+      <item>register_label_attr</item>
+      <item>recommended_spelling</item>
+      <item>reprove</item>
+      <item>run_elab</item>
+      <item>run_cmd</item>
+      <item>run_meta</item>
+      <item>add_decl_doc</item>
+      <item>omit</item>
+      <item>opaque</item>
+      <item>dbg_trace</item>
+      <item>throwErrorAt</item>
+      <item>throwError</item>
+      <item>throwNamedErrorAt</item>
+      <item>throwNamedError</item>
+      <item>logNamedWarningAt</item>
+      <item>logNamedWarning</item>
+      <item>logNamedErrorAt</item>
+      <item>logNamedError</item>
+      <!-- macro/elaboration %-suffixed forms are handled by regex below
+           because they contain % which KDE keyword lists don't support  -->
+    </list>
+
+    <!-- ============================================================ -->
+    <!-- Contexts                                                       -->
+    <!-- ============================================================ -->
+    <contexts>
+
+      <!-- Root context -->
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+
+        <!-- ── Comments: most-specific first ── -->
+        <StringDetect String="/--" attribute="Documentation Comment" context="DocComment"    lookAhead="false"/>
+        <StringDetect String="/-!" attribute="Documentation Comment" context="ModDocComment" lookAhead="false"/>
+        <StringDetect String="/-"  attribute="Block Comment"         context="BlockComment"  lookAhead="false"/>
+        <StringDetect String="--"  attribute="Line Comment"          context="LineComment"/>
+
+        <!-- ── Guillemet names  «…» ── -->
+        <DetectChar char="«" attribute="Entity Name" context="GuillemeName"/>
+
+        <!-- ── Interpolated strings: keyword prefix immediately before " ── -->
+        <!-- Handles: s!  m!  throwError  dbg_trace  panic!  reportIssue!
+             trace_goal[tag]  trace[tag]                                     -->
+        <RegExpr String="(?:s!|m!|throwError|dbg_trace|panic!|reportIssue!|(?:trace_goal|trace)\[[^\]\s]*\])\s*&quot;"
+                 attribute="Keyword" context="InterpolatedString"/>
+
+        <!-- ── Regular strings ── -->
+        <DetectChar char="&quot;" attribute="String" context="String"/>
+
+        <!-- ── Character literals  'x'  '\n'  '\xNN'  '\uNNNN' ── -->
+        <RegExpr String="(?&lt;![_\]\w])'\\(?:x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|[\\&quot;ntr'])'"
+                 attribute="Escape" context="#stay"/>
+        <RegExpr String="(?&lt;![_\]\w])'[^\\']'"
+                 attribute="Char" context="#stay"/>
+
+        <!-- ── Numbers: hex, float, int ── -->
+        <RegExpr String="\b0[xX][0-9a-fA-F]+\b"
+                 attribute="Hex" context="#stay"/>
+        <RegExpr String="\b(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b"
+                 attribute="Decimal" context="#stay"/>
+
+        <!-- ── #commands ── -->
+        <RegExpr String="#(?:print|eval!?|reduce|synth|widget|where|version|with_exporting|check|check_tactic|check_tactic_failure|check_failure|check_simp|discr_tree_key|discr_tree_simp_key|guard|guard_expr|guard_msgs)\b"
+                 attribute="Keyword" context="#stay"/>
+
+        <!-- ── deriving instance (two-word keyword) ── -->
+        <RegExpr String="\bderiving\s+instance\b" attribute="Keyword" context="#stay"/>
+
+        <!-- ── %-suffixed macro elaboration keywords ── -->
+        <RegExpr String="\b(?:binop_lazy|binop|unop|binrel_no_prop|binrel|leftact|rightact|binder_predicate|simproc_pattern|builtin_simproc_pattern|private_decl|type_of|value_of|json|nat_lit|decl_name|exact\?|termination_by\?|by\?|reportIssue)%?\b"
+                 attribute="Keyword" context="#stay"/>
+
+        <!-- ── trace/trace_goal with bracket tag ── -->
+        <RegExpr String="\b(?:trace_goal|trace)\[[^\]\s]*\]" attribute="Keyword" context="#stay"/>
+
+        <!-- ── attribute[…] and @[…] ── -->
+        <RegExpr String="\battribute\b\s*(?:\[[^\]\s]*\]|\[[^\]\s]*)"
+                 attribute="Modifier" context="#stay"/>
+        <RegExpr String="@(?:\[[^\]\s]*\]|\[[^\]\s]*)"
+                 attribute="Modifier" context="#stay"/>
+
+        <!-- ── Boolean constants ── -->
+        <keyword String="Constants"  attribute="Constant" context="#stay"/>
+
+        <!-- ── Illegal ── -->
+        <keyword String="Illegal"    attribute="Illegal"  context="#stay"/>
+
+        <!-- ── Types ── -->
+        <keyword String="Types"      attribute="Type"     context="#stay"/>
+
+        <!-- ── Modifiers ── -->
+        <keyword String="Modifiers"  attribute="Modifier" context="#stay"/>
+
+        <!-- ── Definition-introducing keywords → highlight next name ── -->
+        <keyword String="DefKeywords" attribute="Definition Keyword" context="AfterDefKeyword"/>
+
+        <!-- ── All other keywords ── -->
+        <keyword String="Keywords"   attribute="Keyword"  context="#stay"/>
+
+      </context>
+
+      <!-- ── Line comment ─────────────────────────────────────────── -->
+      <context name="LineComment" attribute="Line Comment" lineEndContext="#pop">
+      </context>
+
+      <!-- ── Block comment  /- … -/  (nestable) ──────────────────── -->
+      <context name="BlockComment" attribute="Block Comment" lineEndContext="#stay">
+        <StringDetect String="/-" attribute="Block Comment" context="BlockComment"/>
+        <StringDetect String="-/" attribute="Block Comment" context="#pop"/>
+      </context>
+
+      <!-- Doc comment  /- - … -/ (documentation) -->
+      <context name="DocComment" attribute="Documentation Comment" lineEndContext="#stay">
+        <StringDetect String="/-" attribute="Documentation Comment" context="BlockComment"/>
+        <StringDetect String="-/" attribute="Documentation Comment" context="#pop"/>
+      </context>
+
+      <!-- ── Module doc comment  /-! … -/ ─────────────────────────── -->
+      <context name="ModDocComment" attribute="Documentation Comment" lineEndContext="#stay">
+        <StringDetect String="/-" attribute="Documentation Comment" context="BlockComment"/>
+        <StringDetect String="-/" attribute="Documentation Comment" context="#pop"/>
+      </context>
+
+      <!-- ── Guillemet name  «…» ──────────────────────────────────── -->
+      <context name="GuillemeName" attribute="Entity Name" lineEndContext="#stay">
+        <DetectChar char="»" attribute="Entity Name" context="#pop"/>
+      </context>
+
+      <!-- ── Regular double-quoted string ─────────────────────────── -->
+      <context name="String" attribute="String" lineEndContext="#stay">
+        <RegExpr String="\\[\\&quot;ntr']"     attribute="Escape" context="#stay"/>
+        <RegExpr String="\\x[0-9A-Fa-f]{2}"   attribute="Escape" context="#stay"/>
+        <RegExpr String="\\u[0-9A-Fa-f]{4}"   attribute="Escape" context="#stay"/>
+        <DetectChar char="&quot;" attribute="String" context="#pop"/>
+      </context>
+
+      <!-- ── Interpolated string  s!"…{expr}…" ────────────────────── -->
+      <!-- We enter here after the opening quote has been consumed      -->
+      <context name="InterpolatedString" attribute="String" lineEndContext="#stay">
+        <DetectChar char="{" attribute="Keyword" context="Interpolation"/>
+        <RegExpr String="\\[\\&quot;ntr']"     attribute="Escape" context="#stay"/>
+        <RegExpr String="\\x[0-9A-Fa-f]{2}"   attribute="Escape" context="#stay"/>
+        <RegExpr String="\\u[0-9A-Fa-f]{4}"   attribute="Escape" context="#stay"/>
+        <DetectChar char="&quot;" attribute="String" context="#pop"/>
+      </context>
+
+      <!-- ── Interpolation hole  { … } ─────────────────────────────── -->
+      <context name="Interpolation" attribute="Normal Text" lineEndContext="#stay">
+        <StringDetect String="/--" attribute="Documentation Comment" context="DocComment"/>
+        <StringDetect String="/-!" attribute="Documentation Comment" context="ModDocComment"/>
+        <StringDetect String="/-"  attribute="Block Comment"         context="BlockComment"/>
+        <StringDetect String="--"  attribute="Line Comment"          context="LineComment"/>
+        <DetectChar char="&quot;"  attribute="String"                context="String"/>
+        <keyword String="Keywords"    attribute="Keyword"            context="#stay"/>
+        <keyword String="DefKeywords" attribute="Definition Keyword" context="#stay"/>
+        <keyword String="Types"       attribute="Type"               context="#stay"/>
+        <keyword String="Constants"   attribute="Constant"           context="#stay"/>
+        <DetectChar char="}" attribute="Keyword" context="#pop"/>
+      </context>
+
+      <!-- ── After a definition keyword ───────────────────────────── -->
+      <!-- Skip optional whitespace, comments, and a {binder} block,
+           then highlight the declared name as Function Name.          -->
+      <context name="AfterDefKeyword" attribute="Normal Text" lineEndContext="#pop">
+        <RegExpr String="\s+"     attribute="Normal Text"           context="#stay"/>
+        <RegExpr String="\{[^}]*\}" attribute="Normal Text"         context="#stay"/>
+        <StringDetect String="/--" attribute="Documentation Comment" context="DocComment"/>
+        <StringDetect String="/-!" attribute="Documentation Comment" context="ModDocComment"/>
+        <StringDetect String="/-"  attribute="Block Comment"         context="BlockComment"/>
+        <StringDetect String="--"  attribute="Line Comment"          context="LineComment"/>
+        <!-- Guillemet-quoted name -->
+        <DetectChar char="«" attribute="Function Name" context="GuillemeFuncName"/>
+        <!-- Plain identifier (first char not in the stop-set) -->
+        <RegExpr String="[^:«»(){}\[\]\s=→λ∀?][^:«»(){}\[\]\s]*"
+                 attribute="Function Name" context="#pop"/>
+        <!-- Anything else: bail back to Normal -->
+        <RegExpr String="(?=.)" attribute="Normal Text" context="#pop"/>
+      </context>
+
+      <!-- ── Guillemet name in definition position ─────────────────── -->
+      <context name="GuillemeFuncName" attribute="Function Name" lineEndContext="#stay">
+        <DetectChar char="»" attribute="Function Name" context="#pop #pop"/>
+      </context>
+
+    </contexts>
+
+    <!-- ============================================================ -->
+    <!-- Item data (logical token → default style)                     -->
+    <!-- ============================================================ -->
+    <itemDatas>
+      <itemData name="Normal Text"           defStyleNum="dsNormal"/>
+      <itemData name="Line Comment"          defStyleNum="dsLineComment"   italic="true"/>
+      <itemData name="Block Comment"         defStyleNum="dsComment"       italic="true"/>
+      <itemData name="Documentation Comment" defStyleNum="dsDocumentation" italic="true"/>
+      <itemData name="String"                defStyleNum="dsString"/>
+      <itemData name="Char"                  defStyleNum="dsChar"/>
+      <itemData name="Escape"                defStyleNum="dsSpecialChar"/>
+      <itemData name="Decimal"               defStyleNum="dsDecVal"/>
+      <itemData name="Hex"                   defStyleNum="dsBaseN"/>
+      <itemData name="Constant"              defStyleNum="dsBuiltIn"       bold="false"/>
+      <itemData name="Illegal"               defStyleNum="dsError"         bold="true" underline="true"/>
+      <itemData name="Type"                  defStyleNum="dsDataType"/>
+      <itemData name="Modifier"              defStyleNum="dsAttribute"/>
+      <itemData name="Definition Keyword"    defStyleNum="dsKeyword"       bold="true"/>
+      <itemData name="Keyword"               defStyleNum="dsKeyword"/>
+      <itemData name="Entity Name"           defStyleNum="dsVariable"      italic="true"/>
+      <itemData name="Function Name"         defStyleNum="dsFunction"      bold="true"/>
+    </itemDatas>
+
+  </highlighting>
+
+  <!-- ============================================================ -->
+  <!-- General settings                                              -->
+  <!-- ============================================================ -->
+  <general>
+    <keywords casesensitive="true" weakDeliminator="!?"/>
+    <comments>
+      <comment name="singleLine" start="--"/>
+      <comment name="multiLine"  start="/-" end="-/" region="BlockComment"/>
+    </comments>
+    <indentation mode="normal"/>
+  </general>
+
+</language>

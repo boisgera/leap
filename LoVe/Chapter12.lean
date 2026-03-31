@@ -1,7 +1,14 @@
 import Mathlib
 
 /-!
+---
+title: "LoVe Notes – Chapter 12"
+author:
+- Sébastien Boisgérault
+---
+-/
 
+/-!
 ## 12.3 The Axiom of Choice
 
 ### The Axiom of Choice in Set Theory
