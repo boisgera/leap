@@ -286,7 +286,5 @@ theorem reordering (f : ℕ → ℝ) (ℓ : ℝ) (i : ℕ → ℕ) (bij : Functi
     nth_rw 2 [<- this]
     apply reordering_lemma
     constructor
-    . simp only [Function.Injective]
-      admit
-    .
-      admit
+    . exact (Function.rightInverse_invFun bij.2).injective
+    . exact (Function.leftInverse_invFun bij.1).surjective
