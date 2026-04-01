@@ -116,7 +116,7 @@ but here, there is no extra "in α", since we only consider `a` in $α$ to
 begin with. So what we have is actually:
 -/
 
-example {α} : Nonempty α ↔ ∃ (_a : α), True := by
+example {α} : Nonempty α ↔ ∃ (_ : α), True := by
   constructor
   . intro nonempty
     let ⟨a⟩ := nonempty
@@ -156,8 +156,7 @@ Some types have a default value:
 -- ""
 
 /-!
-That works because they have declared an instance of the type class
-`Inhabited`.
+That feature is available for types with an `Inhabited` instance.
 -/
 
 
@@ -185,6 +184,9 @@ for example:
 -- number of parameters: 0
 -- constructors:
 
+/-!
+-/
+
 /-- error: failed to synthesize instance of type class
   Inhabited Empty
 
@@ -192,6 +194,9 @@ Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean 
 -/
 #guard_msgs in
 #check (inferInstance : Inhabited Empty)
+
+/-!
+-/
 
 /-- error: failed to synthesize instance of type class
   Inhabited Empty
@@ -263,7 +268,18 @@ noncomputable example {α} : Nonempty α → Inhabited α := by
   intro nonEmpty
   exact Classical.choice nonEmpty |> Inhabited.mk
 
+/-!
+**TODO.** Explain/show that `Inhabited` types are automatically `Nonempty`,
+thanks to:
 
+```lean4
+instance (priority := 100) instNonemptyOfInhabited [Inhabited α] : Nonempty α :=
+  ⟨default⟩
+```
+
+Show the construction of an `Inhabited` type? (and demonstrate that it's nonempty)
+
+-/
 
 /-!
 
@@ -318,7 +334,10 @@ before dealing with the set-theoretic version of the axiom of choice.
 -/
 
 /-!
-## `chose` and `chose_spec`
+## To be or not to be
+
+Use the functions `chose` and `chose_spec` to apply the axiom of choice to
+existential statements.
 -/
 
 #check Classical.choose
@@ -330,31 +349,47 @@ before dealing with the set-theoretic version of the axiom of choice.
 --     (h : ∃ x, p x) : p (Classical.choose h)
 
 /-!
-A construct actually encapsulates both `choose` and `choose_spec`:
+Alternatively, use `indefiniteDescription`[^id],
+which encapsulates the return values of `choose` and `choose_spec`
+in a subtype:
+
+[^id]: The terminology originates in Bertrand Russel's [Theory of descriptions].
+
+[Theory of descriptions]: https://en.wikipedia.org/wiki/Theory_of_descriptions
 -/
 #check Classical.indefiniteDescription
 -- Classical.indefiniteDescription.{u} {α : Sort u}
 -- (p : α → Prop) (h : ∃ x, p x) : { x // p x }
 
 /-!
-It's actually educational to derive it ourselves from `Classical.choice`.
+It's educational to derive these three functions from `choice` ourselves:
 -/
 
 noncomputable def indefiniteDescription.{u} {α : Sort u}
     (p : α → Prop) (h : ∃ x, p x) : { x // p x } :=
-  ( -- This destructuring needs to be confined to a Prop context.
+  have nonempty : Nonempty { x // p x } :=
+    -- This unpacking is confined to a Prop context 👍
     let ⟨x, px⟩ : ∃ x, p x := h;
-    -- we destructure only to restructure in a different type
+    -- Repack as a subtype
     let x_px : { x // p x } := ⟨x, px⟩
-    x_px |> Nonempty.intro -- OK, this is a Prop
-  ) |> Classical.choice
-
+    -- Return as a Nonempty prop.
+    x_px |> Nonempty.intro
+  Classical.choice nonempty
 
 /-!
---------------------------------------------------------------------------------
 -/
 
+noncomputable def choose.{u} {α : Sort u} {p : α → Prop}
+    (h : ∃ x, p x) : α :=
+  indefiniteDescription p h |>.val
+
+noncomputable def choose_spec.{u} {α : Sort u} {p : α → Prop}
+    (h : ∃ x, p x) : p (choose h) :=
+  indefiniteDescription p h |>.property
+
 /-!
+## Back to sets
+
 The set-theoretic version would use the `Nonempty` method defined
 for sets, not the type-theoretic version:
 -/
@@ -389,15 +424,6 @@ example {α} {s : Set α} : s.Nonempty ↔ s ≠ ∅ := by
 
 /-!
 The variant of choice applied to sets in Lean would be something like:
--/
-
-#check Exists.choose
--- Exists.choose.{u_1} {α : Sort u_1} {p : α → Prop} (P : ∃ a, p a) : α
-
-#check Exists.choose_spec
--- Exists.choose_spec.{u_1} {α : Sort u_1} {p : α → Prop} (P : ∃ a, p a) : p P.choose
-
-/-!
 -/
 
 noncomputable def choice_set {α} (s : Set α) : s.Nonempty → { x : α // x ∈ s } :=
