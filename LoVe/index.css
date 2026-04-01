@@ -2,10 +2,8 @@
 
 html {
     color: #1a1a1a;
-    background-color: #fdfdfd;
+    background-color: white; /*color-mix(in srgb, #fdfdfd 0%, white);*/
 }
-
-
 
 body {
     margin: 0 auto;
@@ -228,6 +226,13 @@ ul.task-list li input[type="checkbox"] {
     vertical-align: middle;
 }
 
+div.sourceCode {
+    background-color: color-mix(in srgb, #ECEFF1 50%, white);
+    border-radius: 0.5em;
+    padding: 1em 1.5em;
+    margin: 1em -1.5em
+}
+
 /* CSS for syntax highlighting */
 pre>code.sourceCode {
     white-space: pre;
@@ -249,10 +254,6 @@ pre>code.sourceCode>span:empty {
 code.sourceCode>span {
     color: inherit;
     text-decoration: inherit;
-}
-
-div.sourceCode {
-    margin: 1em 0;
 }
 
 pre.sourceCode {
