@@ -3,6 +3,8 @@ import Mathlib
 open Filter   -- convenience
 open Topology -- needed for the neighbourhood fancy syntax
 
+set_option pp.showLetValues true
+
 /-!
 - Translate from abstract tendsto def limits to the usual δ-ε
   statements when considering functions ℝ → ℝ.
@@ -226,11 +228,21 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
   let a (n : ℕ) : ℝ := h (1 / 2^n) (by positivity) |>.choose
   specialize sequential_limit a
   -- simp only [a] at sequential_limit
+  have prop (n : ℕ) := (h (1 / 2^n) (by positivity)) |>.choose_spec
   specialize sequential_limit (
-    fun n => (h (1 / 2^n) (by positivity)) |>.choose_spec.1
+    fun n => prop n |>.1
   )
-  specialize sequential_limit (by admit) -- **TODO**
+  -- sequential_limit : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) →
+  --     ∀ ε > 0, ∃ N, ∀ n ≥ N, |(f ∘ a) n - ℓ| < ε
+  have : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) := by
+    intro ε' ε'_pos
+    let N := ⌈Real.logb 2 (1 / ε')⌉₊
 
+    have (n : ℕ) : n ≥ N -> (1 / 2 ^ n) < ε' := by
+      admit
+    use N
+
+    admit
   admit
 
 end Ex3
