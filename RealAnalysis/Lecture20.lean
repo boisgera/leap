@@ -108,21 +108,35 @@ def f (x : ℝ) := x^2 - 1
 
 lemma f_continousAt_two_delta_eps (ε : ℝ) (ε_pos : ε > 0) :
     ∃ δ > 0, ∀ x, |x - 2| < δ → |f x - f 2| < ε := by
-  let δ := min 1 (ε / 8)
+  let δ := min 1 (ε / 5)
+  have δ_pos : 0 < δ := by grind
+  have δ_le_one : δ ≤ 1 := by grind
+  have δ_le_ε_div_five : δ ≤ ε / 5 := by grind
   use δ
   constructor; positivity
   intro x hx
   simp only [f]
   ring_nf at *
-  simp only [show -4 + x^2 = (-2 + x) * (2 + x) from by ring_nf]
-  simp only [abs_mul]
-  -- ε : ℝ
-  -- ε_pos : ε > 0
-  -- δ : ℝ := min 1 (ε / 8)
-  -- x : ℝ
-  -- hx : |-2 + x| < δ
-  -- ⊢ |-2 + x| * |2 + x| < ε
-  admit
+
+  have bound_1 : |-4 + x^2| < δ * (δ + 4) := by
+    calc |-4 + x^2|
+      _ = |(x - 2) * (x + 2)| := by ring_nf
+      _ = |x - 2| * |x + 2| := by apply abs_mul
+      _ = |x - 2| * |x - 2 + 4| := by ring_nf
+      _ ≤ |x - 2| * (|x - 2| + |4|) := by
+        apply mul_le_mul
+        rfl
+        apply abs_add_le
+        repeat apply abs_nonneg
+      _ ≤ |x - 2| * (|x - 2| + 4) := by norm_num
+      _ < δ * (δ + 4) := by admit
+
+  have bound_2 : δ * (δ + 4) ≤ ε := by
+    calc δ * (δ + 4)
+      _ ≤ (ε / 5) * (1 + 4) := by apply mul_le_mul <;> linarith
+      _ = ε := by grind
+
+  exact lt_of_lt_of_le bound_1 bound_2
 
 theorem f_continousAt_two : ContinuousAt f 2 := by
   rw [ContinuousAt]
@@ -147,10 +161,66 @@ end Ex1
 
 
 /-!
-- Relate those limits with ContinousAt statements.
-
 - Prove that the sum of continuous functions at x is continuous at x
-
-- Prove the sequential criteron for limits of functions.
-
 -/
+
+namespace Ex2
+
+example (f g : ℝ → ℝ) (x : ℝ) :
+    ContinuousAt f x → ContinuousAt g x → ContinuousAt (f + g) x := by
+  intro continuousAt_f_x continuousAt_g_x
+  simp only [
+    ContinuousAt,
+    Metric.tendsto_nhds,
+    Real.dist_eq,
+    Filter.Eventually,
+    mem_nhds_iff_exists_Ioo_subset
+  ] at *
+  simp only [Pi.add_apply]
+  intro ε ε_pos
+  specialize continuousAt_f_x (ε / 2) (by positivity)
+  specialize continuousAt_g_x (ε / 2) (by positivity)
+  have ⟨l₁, u₁, h₁, k₁⟩ := continuousAt_f_x; clear continuousAt_f_x
+  have ⟨l₂, u₂, h₂, k₂⟩ := continuousAt_g_x; clear continuousAt_g_x
+  let l := max l₁ l₂
+  let u := min u₁ u₂
+  use l, u
+  simp only [Set.mem_Ioo] at *
+  constructor
+  . grind
+  . intro y y_in_Ioo_l_u
+    simp only [Set.mem_Ioo] at *
+    have y_in_ioo₁ : y ∈ Set.Ioo l₁ u₁ := by grind
+    have y_in_ioo₂ : y ∈ Set.Ioo l₂ u₂ := by grind
+    specialize k₁ y_in_ioo₁
+    specialize k₂ y_in_ioo₂
+    simp only [Set.mem_setOf] at *
+    grind
+
+end Ex2
+
+/-!
+- Prove the sequential criteron for limits of functions.
+-/
+
+namespace Ex3
+
+example (f : ℝ → ℝ) (x ℓ : ℝ) (a : ℕ → ℝ) :
+  (
+    (∀ n, a n ≠ x) → (Tendsto a atTop (𝓝 x)) →
+    (Tendsto (f ∘ a) atTop (𝓝 ℓ))
+  ) →
+  (Tendsto f (𝓝[≠] x) (𝓝 ℓ)) := by
+  intro sequential_limit
+  simp only [
+    Metric.tendsto_nhdsWithin_nhds,
+    Metric.tendsto_atTop,
+    Real.dist_eq,
+    Set.mem_compl_singleton_iff,
+  ] at *
+  intro ε ε_pos
+
+  -- **TODO**
+  admit
+
+end Ex3
