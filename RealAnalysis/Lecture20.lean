@@ -1,5 +1,6 @@
 import Mathlib
 
+open Filter   -- convenience
 open Topology -- needed for the neighbourhood fancy syntax
 
 /-!
@@ -54,20 +55,98 @@ itself. Yeah, ok, that checks out.
 theorem limAt_eq (f : ℝ → ℝ) (x ℓ : ℝ) :
     Filter.Tendsto f (𝓝[≠] x) (𝓝 ℓ) ↔
     (
-      ∀ ε > 0, ∃ δ > 0, ∀ ⦃y : ℝ⦄, y ∈ ({x}ᶜ : Set ℝ) →
+      ∀ ε > 0, ∃ δ > 0, ∀ ⦃y : ℝ⦄, y ≠ x →
       |y - x| < δ → |f y - ℓ| < ε
     ) := by
-  simp only [Metric.tendsto_nhdsWithin_nhds, Real.dist_eq]
-
+  simp only [
+    Metric.tendsto_nhdsWithin_nhds,
+    Real.dist_eq,
+    Set.mem_compl_singleton_iff
+  ]
 
 
 /-!
 - Show that lim when x -> 1 of (x^2 - 1) / (x - 1) = 1
+-/
 
-- δ-ε def of continuity at.
+namespace Ex0
 
+noncomputable def f (x : ℝ) := (x^2 - 1) / (x - 1)
+
+lemma f_eq (x : ℝ) (x_ne_1 : x ≠ 1) : f x = x + 1 := by
+  rw [f]
+  grind
+
+theorem lim_f_one : Tendsto f (𝓝[≠] 1) (𝓝 2) := by
+  rw [limAt_eq]
+  intro ε ε_pos
+  use ε
+  constructor
+  exact ε_pos
+  intro y y_ne_one
+  simp only [f_eq y y_ne_one]
+  ring_nf
+  simp only [imp_self]
+
+end Ex0
+
+
+
+/-!
 - Prove that x ↦ x^2 - 1 is continous at x = 2
+-/
 
+#print ContinuousAt
+-- def ContinuousAt.{u_1, u_2} : {X : Type u_1} → {Y : Type u_2} →
+--     [TopologicalSpace X] → [TopologicalSpace Y] → (X → Y) → X → Prop :=
+--   fun {X} {Y} [TopologicalSpace X] [TopologicalSpace Y] f x =>
+--   Tendsto f (𝓝 x) (𝓝 (f x))
+
+namespace Ex1
+
+def f (x : ℝ) := x^2 - 1
+
+lemma f_continousAt_two_delta_eps (ε : ℝ) (ε_pos : ε > 0) :
+    ∃ δ > 0, ∀ x, |x - 2| < δ → |f x - f 2| < ε := by
+  let δ := min 1 (ε / 8)
+  use δ
+  constructor; positivity
+  intro x hx
+  simp only [f]
+  ring_nf at *
+  simp only [show -4 + x^2 = (-2 + x) * (2 + x) from by ring_nf]
+  simp only [abs_mul]
+  -- ε : ℝ
+  -- ε_pos : ε > 0
+  -- δ : ℝ := min 1 (ε / 8)
+  -- x : ℝ
+  -- hx : |-2 + x| < δ
+  -- ⊢ |-2 + x| * |2 + x| < ε
+  admit
+
+theorem f_continousAt_two : ContinuousAt f 2 := by
+  rw [ContinuousAt]
+  simp only [Metric.tendsto_nhds, Real.dist_eq]
+  -- ⊢ ∀ ε > 0, ∀ᶠ (x : ℝ) in 𝓝 2, |f x - f 2| < ε
+  simp only [Filter.Eventually]
+  simp only [mem_nhds_iff_exists_Ioo_subset]
+  -- ∀ ε > 0, ∃ l u, 2 ∈ Set.Ioo l u ∧ Set.Ioo l u ⊆ {x | |f x - f 2| < ε}
+  intro ε ε_pos
+  have ⟨δ, δ_pos, hδ⟩ := f_continousAt_two_delta_eps ε ε_pos
+  use (2 - δ), (2 + δ)
+  constructor
+  grind
+  intro x
+  specialize hδ x
+  simp only [Set.mem_Ioo]
+  intro h
+  simp only [Set.mem_setOf]
+  exact hδ (show |x - 2| < δ from by grind)
+
+end Ex1
+
+
+/-!
 - Relate those limits with ContinousAt statements.
 
 - Prove that the sum of continuous functions at x is continuous at x
