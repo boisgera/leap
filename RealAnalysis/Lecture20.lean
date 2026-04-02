@@ -221,8 +221,16 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
     Set.mem_compl_singleton_iff,
   ] at *
   intro ε ε_pos
+  by_contra h -- 💡 Eureka!
+  push_neg at h
+  let a (n : ℕ) : ℝ := h (1 / 2^n) (by positivity) |>.choose
+  specialize sequential_limit a
+  -- simp only [a] at sequential_limit
+  specialize sequential_limit (
+    fun n => (h (1 / 2^n) (by positivity)) |>.choose_spec.1
+  )
+  specialize sequential_limit (by admit) -- **TODO**
 
-  -- **TODO**
   admit
 
 end Ex3
