@@ -205,12 +205,14 @@ end Ex2
 
 namespace Ex3
 
-example (f : ℝ → ℝ) (x ℓ : ℝ) (a : ℕ → ℝ) :
+example (f : ℝ → ℝ) (x ℓ : ℝ) :
   (
-    (∀ n, a n ≠ x) → (Tendsto a atTop (𝓝 x)) →
-    (Tendsto (f ∘ a) atTop (𝓝 ℓ))
+    ∀ (a : ℕ → ℝ),
+    (∀ n, a n ≠ x) →
+    (Tendsto a atTop (𝓝 x)) →
+    Tendsto (f ∘ a) atTop (𝓝 ℓ)
   ) →
-  (Tendsto f (𝓝[≠] x) (𝓝 ℓ)) := by
+  Tendsto f (𝓝[≠] x) (𝓝 ℓ) := by
   intro sequential_limit
   simp only [
     Metric.tendsto_nhdsWithin_nhds,
