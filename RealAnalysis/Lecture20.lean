@@ -219,7 +219,7 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
     ) →
     Tendsto f (𝓝[≠] x) (𝓝 ℓ) := by
 
-  -- The usual boilerplate to get elementary statements
+  -- Turn abstract defs into elementary statements:
   intro sequential_limit
   simp only [
     Metric.tendsto_nhdsWithin_nhds,
@@ -227,30 +227,22 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
     Real.dist_eq,
     Set.mem_compl_singleton_iff,
   ] at *
+
   intro ε ε_pos
-  -- State of the proof at this stage:
-  --
-  -- f : ℝ → ℝ
-  -- x ℓ : ℝ
-  -- sequential_limit : ∀ (a : ℕ → ℝ),
-  --   (∀ (n : ℕ), a n ≠ x) → (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) →
-  --   ∀ ε > 0, ∃ N, ∀ n ≥ N, |(f ∘ a) n - ℓ| < ε
-  -- ε : ℝ
-  -- ε_pos : ε > 0
-  -- ⊢ ∃ δ > 0, ∀ ⦃x_1 : ℝ⦄, x_1 ≠ x → |x_1 - x| < δ →
-  -- |f x_1 - ℓ| < ε
 
-
--- 💡 The eureka moment! Prove by contradiction.
-  by_contra h
+  -- 💡 The eureka moment! Prove by contradiction.
+  by_contra h -- intro the absurd statement
   push_neg at h
-  have h' (n : ℕ) := h (1 / 2 ^ n) (by positivity)
+  have h' (n : ℕ) := h (δ := 1 / 2 ^ n) (by positivity)
+  -- The sequence `a` is our counter-example
   let a (n : ℕ) : ℝ := h' n |>.choose
   have ha (n : ℕ) := h' n |>.choose_spec
+  -- 😔 I don't like how the def of `a` is "inlined" in `ha`
+  -- No big deal, but still...
+  -- The terseness is why I introduce the notation `a` to begin with!
   specialize sequential_limit a (ha · |>.1)
   -- sequential_limit : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) →
   --     ∀ ε > 0, ∃ N, ∀ n ≥ N, |(f ∘ a) n - ℓ| < ε
-
   have : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) := by
     intro ε' ε'_pos
     let N := ⌈Real.logb 2 (1 / ε')⌉₊
@@ -258,6 +250,12 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
       admit
     use N
     admit
-  admit
+  have ⟨N, hN⟩ := sequential_limit this ε ε_pos
+  specialize hN N (by linarith)
+  simp only [a] at hN
+  simp only [Function.comp_apply] at hN
+  have ha' := ha N |>.2.2
+  have := lt_of_le_of_lt ha' hN
+  exact lt_irrefl ε this
 
 end Ex3
