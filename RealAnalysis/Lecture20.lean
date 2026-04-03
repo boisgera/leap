@@ -202,19 +202,24 @@ example (f g : ℝ → ℝ) (x : ℝ) :
 end Ex2
 
 /-!
-- Prove the sequential criteron for limits of functions.
+Prove the sequential criteron for limits of functions:
+if for every sequence a that avoids x but tends to x,
+the sequence f ∘ a tends to ℓ,
+then the limit of f at x exists and is ℓ
 -/
 
 namespace Ex3
 
 example (f : ℝ → ℝ) (x ℓ : ℝ) :
-  (
-    ∀ (a : ℕ → ℝ),
-    (∀ n, a n ≠ x) →
-    (Tendsto a atTop (𝓝 x)) →
-    Tendsto (f ∘ a) atTop (𝓝 ℓ)
-  ) →
-  Tendsto f (𝓝[≠] x) (𝓝 ℓ) := by
+    (
+      ∀ (a : ℕ → ℝ),
+      (∀ n, a n ≠ x) →
+      (Tendsto a atTop (𝓝 x)) →
+      Tendsto (f ∘ a) atTop (𝓝 ℓ)
+    ) →
+    Tendsto f (𝓝[≠] x) (𝓝 ℓ) := by
+
+  -- The usual boilerplate to get elementary statements
   intro sequential_limit
   simp only [
     Metric.tendsto_nhdsWithin_nhds,
@@ -223,25 +228,35 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
     Set.mem_compl_singleton_iff,
   ] at *
   intro ε ε_pos
-  by_contra h -- 💡 Eureka!
+  -- State of the proof at this stage:
+  --
+  -- f : ℝ → ℝ
+  -- x ℓ : ℝ
+  -- sequential_limit : ∀ (a : ℕ → ℝ),
+  --   (∀ (n : ℕ), a n ≠ x) → (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) →
+  --   ∀ ε > 0, ∃ N, ∀ n ≥ N, |(f ∘ a) n - ℓ| < ε
+  -- ε : ℝ
+  -- ε_pos : ε > 0
+  -- ⊢ ∃ δ > 0, ∀ ⦃x_1 : ℝ⦄, x_1 ≠ x → |x_1 - x| < δ →
+  -- |f x_1 - ℓ| < ε
+
+
+-- 💡 The eureka moment! Prove by contradiction.
+  by_contra h
   push_neg at h
-  let a (n : ℕ) : ℝ := h (1 / 2^n) (by positivity) |>.choose
-  specialize sequential_limit a
-  -- simp only [a] at sequential_limit
-  have prop (n : ℕ) := (h (1 / 2^n) (by positivity)) |>.choose_spec
-  specialize sequential_limit (
-    fun n => prop n |>.1
-  )
+  have h' (n : ℕ) := h (1 / 2 ^ n) (by positivity)
+  let a (n : ℕ) : ℝ := h' n |>.choose
+  have ha (n : ℕ) := h' n |>.choose_spec
+  specialize sequential_limit a (ha · |>.1)
   -- sequential_limit : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) →
   --     ∀ ε > 0, ∃ N, ∀ n ≥ N, |(f ∘ a) n - ℓ| < ε
+
   have : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) := by
     intro ε' ε'_pos
     let N := ⌈Real.logb 2 (1 / ε')⌉₊
-
     have (n : ℕ) : n ≥ N -> (1 / 2 ^ n) < ε' := by
       admit
     use N
-
     admit
   admit
 
