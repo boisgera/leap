@@ -256,10 +256,8 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
   have hδ (n : ℕ) := h (δ := δ n) (δ_pos n)
   -- The sequence `a` is our counter-example
   let a (n : ℕ) : ℝ := hδ n |>.choose
-  have ha (n : ℕ) := hδ n |>.choose_spec
-  -- 😔 I don't like how the def of `a` is "inlined" in `ha`
-  -- No big deal, but still...
-  -- The terseness is why we introduce the notation to begin with!
+  have ha (n : ℕ) : a n ≠ x ∧ |a n - x| < δ n ∧ ε ≤ |f (a n) - ℓ| :=
+    hδ n |>.choose_spec
   specialize sequential_limit a (ha · |>.1)
   have : (∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - x| < ε) := by
     intro ε ε_pos
