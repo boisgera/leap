@@ -80,8 +80,76 @@ end Ex_0
 
 namespace Ex_1
 
+#check deriv
+-- deriv.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜] {F : Type v}
+-- [AddCommGroup F] [Module 𝕜 F] [TopologicalSpace F]
+-- (f : 𝕜 → F) (x : 𝕜) : F
+
+#check HasDerivAt
+-- HasDerivAt.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- {F : Type v} [AddCommGroup F] [Module 𝕜 F]
+-- [TopologicalSpace F] [ContinuousSMul 𝕜 F]
+-- (f : 𝕜 → F) (f' : F) (x : 𝕜) : Prop
+
+#check HasDerivAt.deriv
+-- HasDerivAt.deriv.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜] {F : Type v} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+--   {f : 𝕜 → F} {f' : F} {x : 𝕜} (h : HasDerivAt f f' x) : deriv f x = f'
+
+#check hasDerivAt_iff_tendsto_slope
+-- hasDerivAt_iff_tendsto_slope.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- {F : Type v} [NormedAddCommGroup F]
+-- [NormedSpace 𝕜 F] {f : 𝕜 → F} {f' : F} {x : 𝕜} :
+-- HasDerivAt f f' x ↔ Filter.Tendsto (slope f x) (nhdsWithin x {x}ᶜ) (nhds f')
+
+#check slope
+-- slope.{u_1, u_2, u_3} {k : Type u_1} {E : Type u_2} {PE : Type u_3} [Field k]
+-- [AddCommGroup E] [Module k E] [AddTorsor E PE]
+-- (f : k → PE) (a b : k) : E
+
+#check slope_def_field
+-- slope_def_field.{u_1} {k : Type u_1} [Field k]
+-- (f : k → k) (a b : k) :
+-- slope f a b = (f b - f a) / (b - a)
+
 /-!
 TODO: Compute the derivative of f at x = 2
+-/
+
+lemma slope_f_at_2 (x : ℝ) : x ∈ ({2}ᶜ : Set ℝ) →
+  (f x - f 2) / (x - 2) - 4 = x - 2 := by
+  intro h
+  simp only [Set.mem_compl_iff, Set.mem_singleton_iff] at h
+  push Not at h
+  have h' : x - 2 ≠ 0 := by grind
+  simp only [f]
+  simp only [sub_sub_sub_cancel_right]
+  norm_num
+  have : x ^ 2 - 4 = (x + 2) * (x - 2) := by ring_nf
+  simp only [this]
+  have : (x + 2) * (x - 2) / (x - 2) = x + 2 := by
+    simp only [mul_div_assoc, div_self h']
+    ring_nf
+  simp only [this]
+  ring_nf
+
+theorem hasDerivAt_f_4_2 : HasDerivAt f 4 2 := by
+  -- Reduce the general concepts to the elementary formulation
+  simp only [hasDerivAt_iff_tendsto_slope]
+  simp only [Metric.tendsto_nhdsWithin_nhds, Real.dist_eq]
+  simp only [slope_def_field]
+  -- ∀ ε > 0, ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ {2}ᶜ →
+  -- |x - 2| < δ → |(f x - f 2) / (x - 2) - 4| < ε
+  intro ε ε_pos
+  use ε
+  constructor
+  exact ε_pos
+  intro x x_ne_2
+  simp only [slope_f_at_2 x x_ne_2]
+  intro k
+  exact k
+
+/-!
+TODO: same proof with general theorems (derivative of sums, products, etc.)
 -/
 
 end Ex_1
