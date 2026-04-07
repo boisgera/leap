@@ -264,3 +264,76 @@ theorem hasDerivAt_f (x : ℝ) : HasDerivAt f (2 * x) x := by
   . apply hasDerivAt_const
 
 end Ex_2
+
+namespace Ex_3
+
+/-!
+Show that gaussian function is differentiable and compute its derivative
+-/
+
+noncomputable def g (x : ℝ) := Real.exp (-x ^ 2)
+
+#check HasDerivAt.comp
+-- HasDerivAt.comp.{u, u_1} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- (x : 𝕜)
+-- {𝕜' : Type u_1} [NontriviallyNormedField 𝕜'] [NormedAlgebra 𝕜 𝕜']
+-- {h : 𝕜 → 𝕜'} {h₂ : 𝕜' → 𝕜'} {h' h₂' : 𝕜'}
+-- (hh₂ : HasDerivAt h₂ h₂' (h x)) (hh : HasDerivAt h h' x) :
+-- HasDerivAt (h₂ ∘ h) (h₂' * h') x
+
+-- We won't use this (too easy!) but that would be what we need
+#check HasDerivAt.exp
+-- HasDerivAt (fun x => Real.exp (f x)) (Real.exp (f x) * f') x
+
+-- The minimal version
+#check Real.hasDerivAt_exp
+-- Real.hasDerivAt_exp (x : ℝ) : HasDerivAt Real.exp (Real.exp x) x
+
+#check HasDerivAt.pow
+-- HasDerivAt.pow.{u_1, u_2} {𝕜 : Type u_1} {𝔸 : Type u_2}
+-- [NontriviallyNormedField 𝕜] [NormedCommRing 𝔸]
+--   [NormedAlgebra 𝕜 𝔸] {f : 𝕜 → 𝔸} {f' : 𝔸} {x : 𝕜}
+--   (h : HasDerivAt f f' x) (n : ℕ) :
+--   HasDerivAt (f ^ n) (↑n * f x ^ (n - 1) * f') x
+
+#check HasDerivAt.neg
+-- HasDerivAt.neg.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜] {F : Type v}
+-- [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- {f : 𝕜 → F} {f' : F} {x : 𝕜} (h : HasDerivAt f f' x) :
+-- HasDerivAt (-f) (-f') x
+
+#print g
+-- def Ex_3.g : ℝ → ℝ := fun x => Real.exp (-x ^ 2)
+
+theorem g' (x : ℝ) : HasDerivAt g (- 2 * x * g x) x := by
+  -- Massage the goal to make it match the result of HasDerivAt.comp
+  have g_eq : g = Real.exp ∘ (fun (x : ℝ) => -x ^ 2) := by
+    ext x; simp only [g, Function.comp]
+  nth_rewrite 1 [g_eq]
+  have g'_eq : (-2 * x * g x) = (g * (fun y : ℝ => -2 * y)) x := by
+    simp only [Pi.mul_apply] ; ring_nf
+  rw [g'_eq]
+
+  -- Apply HasDerivAt.comp and fill in the subgoal
+  apply HasDerivAt.comp x (h₂ := Real.exp) (h := fun x => -x ^ 2)
+  . apply Real.hasDerivAt_exp
+  . simp only
+    -- massage the target to apply HasDerivAt.neg
+    simp only [show -2 * x = -(2 * x) from by ring_nf]
+    simp only [show (fun (x : ℝ) => -x^2) = - fun (x : ℝ) => x^2 from by
+      ext x ; simp only [Pi.neg_apply]
+    ]
+    apply HasDerivAt.neg
+    -- New goal: ⊢ HasDerivAt (fun x => x ^ 2) (2 * x) x
+    -- Massage the goal for the applicatoin of HasDerivAt.pow
+    -- Need something like: ⊢  HasDerivAt (f ^ n) (↑n * f x ^ (n - 1) * f') x
+    simp only [show (fun (x : ℝ) => x ^ 2) = id ^ 2 from by
+      ext x; simp only [Pi.pow_apply, id]
+    ]
+    have h : HasDerivAt id 1 x := by apply hasDerivAt_id
+    simp only [show (2 * x) = (2 * id x ^ (2 - 1) * 1) from by
+      simp only [id]; ring_nf
+    ]
+    apply HasDerivAt.pow (f := id) (h := h) (n := 2) (x := x)
+
+end Ex_3
