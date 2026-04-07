@@ -152,12 +152,115 @@ theorem hasDerivAt_f_4_2 : HasDerivAt f 4 2 := by
 TODO: same proof with general theorems (derivative of sums, products, etc.)
 -/
 
+#check hasDerivAt_const
+-- hasDerivAt_const.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- {F : Type v} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- (x : 𝕜) (c : F) :
+-- HasDerivAt (fun x => c) 0 x
+
+#check hasDerivAt_id
+-- hasDerivAt_id.{u} {𝕜 : Type u} [NontriviallyNormedField 𝕜] (x : 𝕜) :
+-- HasDerivAt id 1 x
+
+#check HasDerivAt.add
+-- HasDerivAt.add.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- {F : Type v} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- {f g : 𝕜 → F} {f' g' : F} {x : 𝕜}
+-- (hf : HasDerivAt f f' x) (hg : HasDerivAt g g' x) :
+-- HasDerivAt (f + g) (f' + g') x
+
+#check HasDerivAt.sub
+-- HasDerivAt.sub.{u, v} {𝕜 : Type u} [NontriviallyNormedField 𝕜]
+-- {F : Type v} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+-- {f g : 𝕜 → F} {f' g' : F} {x : 𝕜}
+-- (hf : HasDerivAt f f' x) (hg : HasDerivAt g g' x) :
+-- HasDerivAt (f - g) (f' - g') x
+
+#check HasDerivAt.mul
+-- HasDerivAt.mul.{u, u_3} {𝕜 : Type u} [NontriviallyNormedField 𝕜] {x : 𝕜} {𝔸 : Type u_3} [NormedRing 𝔸]
+-- [NormedAlgebra 𝕜 𝔸] {c d : 𝕜 → 𝔸} {c' d' : 𝔸}
+-- (hc : HasDerivAt c c' x) (hd : HasDerivAt d d' x) :
+-- HasDerivAt (c * d) (c' * d x + c x * d') x
+
+theorem decompo_f : f = id * id - 1 := by
+  ext x
+  rw [f]
+  simp only [Pi.sub_apply, Pi.mul_apply, id, Pi.one_apply]
+  ring_nf
+
+theorem hasDerivAt_f_4_2' : HasDerivAt f 4 2 := by
+  -- Here we massage the result we want to make its origin/structure "obvious"
+  -- (top-down approach). We could also keep the top-down approach and exhibit
+  -- the value/function structure one step at a time. But the bottom-up
+  -- approach is probably more intuitive TBH.
+  rw [decompo_f]
+  simp only [show (4 : ℝ) = 1 * id 2 + (id 2) * 1 - 0 from by norm_num]
+  -- ⊢ HasDerivAt (id * id - 1) (1 * id 2 + id 2 * 1 - 0) 2
+  apply HasDerivAt.sub
+  . apply HasDerivAt.mul
+    . apply hasDerivAt_id
+    . apply hasDerivAt_id
+  . apply hasDerivAt_const
+
+lemma f_eq : f = fun x => x * x - 1 := by
+  ext x; rw [f]
+  ring_nf
+
+theorem hasDerivAt_f_4_2'' : HasDerivAt f 4 2 := by
+  -- Bottom-up proof. I don't like it either, this is messy.
+  -- I bet there is a better way. Anyway ATM I'd rather have the top-down
+  -- approach. I guess that a progressive top-down approach is what is
+  -- more intuitive.
+  rw [f_eq]
+  have one' : HasDerivAt (fun (x : ℝ) => (1 : ℝ)) 0 2 := by
+    apply hasDerivAt_const
+  have : HasDerivAt (fun (x : ℝ) => x) 1 2 := by
+    apply hasDerivAt_id
+  have : HasDerivAt (fun (x : ℝ) => x * x) 4 2 := by
+    simp only [show (fun (x : ℝ) => x * x) = (id * id) from by ext x; simp]
+    have : HasDerivAt (id * id) (1 * id 2 + (id 2) * 1 : ℝ) 2 := by
+      apply HasDerivAt.mul
+      repeat exact this
+    norm_num at this
+    exact this
+  simp [show (fun (x : ℝ) => x * x - 1) = (fun x => x * x) - (fun x => 1) from by
+    ext x; simp only [Pi.sub_apply]
+  ]
+  have : HasDerivAt ((fun x : ℝ => x * x) - (fun x => 1)) (4 - 0) 2 := by
+    apply HasDerivAt.sub
+    exact this
+    exact one'
+  norm_num at this
+  exact this
+
+
 end Ex_1
 
 namespace Ex_2
 
 /-!
-TODO: Compute the derivative function of f
+Compute the derivative function of f
 -/
+
+lemma f_eq : f = fun (x : ℝ) => x * x - 1 := by
+  ext x
+  rw [f]
+  ring_nf
+
+theorem hasDerivAt_f (x : ℝ) : HasDerivAt f (2 * x) x := by
+  -- Progressive top-down style; not bad (the best so far imho)
+  rw [f_eq]
+  rw [show (fun x : ℝ => x * x - 1) = (fun x => x * x) - (fun x => 1) from by
+    ext x ; simp [Pi.sub_apply]
+  ]
+  rw [show 2 * x = 2 * x - 0 from by ring_nf]
+  apply HasDerivAt.sub
+  . rw [show (fun x : ℝ => x * x) = (id * id) from by
+      ext x; rw [Pi.mul_apply, id]
+    ]
+    rw [show 2 * x = 1 * x + x * 1 from by ring_nf]
+    apply HasDerivAt.mul
+    repeat apply hasDerivAt_id
+  . apply hasDerivAt_const
 
 end Ex_2
