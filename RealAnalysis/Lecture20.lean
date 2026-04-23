@@ -92,8 +92,6 @@ theorem lim_f_one : Tendsto f (𝓝[≠] 1) (𝓝 2) := by
 
 end Ex0
 
-
-
 /-!
 - Prove that x ↦ x^2 - 1 is continous at x = 2
 -/
