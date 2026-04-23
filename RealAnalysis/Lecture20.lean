@@ -106,7 +106,7 @@ end Ex0
 
 namespace Ex1
 
-def f (x : ℝ) := x^2 - 1
+def f (x : ℝ) := x ^ 2 - 1
 
 lemma f_continousAt_two_delta_eps (ε : ℝ) (ε_pos : ε > 0) :
     ∃ δ > 0, ∀ x, |x - 2| < δ → |f x - f 2| < ε := by
@@ -118,7 +118,7 @@ lemma f_continousAt_two_delta_eps (ε : ℝ) (ε_pos : ε > 0) :
   constructor; positivity
   intro x hx
   simp only [f]
-  ring_nf at *
+  ring_nf
 
   have bound_1 : |-4 + x^2| < δ * (δ + 4) := by
     calc |-4 + x^2|
@@ -131,7 +131,8 @@ lemma f_continousAt_two_delta_eps (ε : ℝ) (ε_pos : ε > 0) :
         apply abs_add_le
         repeat apply abs_nonneg
       _ ≤ |x - 2| * (|x - 2| + 4) := by norm_num
-      _ < δ * (δ + 4) := by admit
+      _ < δ * (δ + 4) := by
+        nlinarith [abs_nonneg (x - 2)]
 
   have bound_2 : δ * (δ + 4) ≤ ε := by
     calc δ * (δ + 4)
@@ -251,7 +252,7 @@ example (f : ℝ → ℝ) (x ℓ : ℝ) :
 
   -- 💡 The eureka moment! Prove by contradiction.
   by_contra h -- intro the absurd statement (in the context)
-  push_neg at h
+  push Not at h
   let ⟨δ, δ_pos, δ_tendsto_zero⟩ := exists_δ
   have hδ (n : ℕ) := h (δ := δ n) (δ_pos n)
   -- The sequence `a` is our counter-example
