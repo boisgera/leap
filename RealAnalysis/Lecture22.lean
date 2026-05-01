@@ -145,17 +145,15 @@ Main parameter breakdown:
   It takes a point in the box and returns a value in the normed space `E`.
 
 - `vol : BoxIntegral.BoxAdditiveMap ι (E →L[ℝ] F) ⊤`. The volume measure.
-
   A function which associate to any box in the integration space a
-  (linear, continuous) function from `E` to `F` and is box-additive
+  (linear continuous) function from `E` to `F` and is box-additive
   It is a box-additive map: given a box `J` and a partition `π` of it,
-  `∑ Ji ∈ π.boxes, vol Ji = vol J`. Note that in the usual case where
-  `E = F = ℝ`, this equality holds in `(ℝ →L[ℝ] ℝ)` which is isomorphic
-  to `ℝ`.
-
-  Given a tagged partition `π` of `I`, the integral sum of `f` over `π` w.r.t.
-  `vol` is the sum of `vol J (f (π.tag J))` over all boxes `J` of `π`,
-  where `π.tag J` is the tag (sample point) associated with box `J`.
+  `∑ Ji ∈ π.boxes, vol Ji = vol J`. Remember here that `E` is the space of
+  the values of `f` and `F` the space of values of the integral, so even
+  if in the simplest case, we deal with `ℝ →L[ℝ] ℝ`, i.e. vol J is a simpler
+  multiplier, identifiable with a scalar, in general we can deal with
+  Banach space-valued function, "matrix-like" volumes (think matrix-valued
+  measures), etc.
 
 - `y : F`. The value of the integral.
   `HasIntegral I l f vol y` is a asserting that `y` is the limit of Riemann-style
@@ -171,12 +169,19 @@ Main parameter breakdown:
 -- { bRiemann := true, bHenstock := true, bDistortion := false }
 
 
-def HasRiemannIntegral (f : ℝ → ℝ) (a b : ℝ) (hab : a < b) (y : ℝ) :=
+def Has1DRiemannIntegral (f : ℝ → ℝ) (a b : ℝ) (hab : a < b) (y : ℝ) :=
   BoxIntegral.HasIntegral (ι := Fin 1)
     (I := BoxIntegral.Box.mk (fun _ => a) (fun _ => b) (fun _ => hab))
     (l := BoxIntegral.IntegrationParams.Riemann)
     (f := fun x => f (x 0))
     (vol := BoxIntegral.BoxAdditiveMap.volume)
     (y := y)
+
+example (a b : ℝ) (hab : a < b) :
+    Has1DRiemannIntegral (f := fun x => x) a b hab (y := b - a) := by
+  rw [Has1DRiemannIntegral]
+  simp only [BoxIntegral.hasIntegral_iff]
+  -- TODO!
+  admit
 
 end Ex3
