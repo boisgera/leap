@@ -61,6 +61,27 @@ Our simplified parity layer
 def Even (n : ℕ) := ∃ (k : ℕ), n = 2 * k
 def Odd (n : ℕ) := ∃ (k : ℕ), n = 2 * k + 1
 
+#check congrArg
+-- congrArg.{u, v} {α : Sort u} {β : Sort v} {a₁ a₂ : α}
+--     (f : α → β) (h : a₁ = a₂) :
+--     f a₁ = f a₂
+
+lemma not_twice_eq_one {k : ℤ} : ¬ (2 * k = 1) := by
+  intro h
+  have eq_mod_two : (2 * k) % 2 = 1 % 2 := congrArg (· % 2) h
+  have twice_mod_two : (2 * k) % 2 = 0 := by
+    simp only [EuclideanDomain.mod_eq_zero]
+    -- ⊢ 2 ∣ 2 * k
+    simp only [Dvd.dvd]
+    -- ⊢ ∃ c, 2 * k = 2 * c
+    use k
+  have one_mod_two : (1 % 2) = (1 : ℤ) := by norm_num
+  rw [twice_mod_two, one_mod_two] at eq_mod_two
+  -- eq_mod_two : 0 = 1
+  norm_num at eq_mod_two
+
+lemma mod_two (k : ℤ) : k % 2 = 0 ∨ k % 2 = 1 := by grind
+
 theorem even_iff_not_odd (n : ℕ) : Even n ↔ ¬ Odd n := by
   apply Iff.intro
   . intro even_n
@@ -70,10 +91,21 @@ theorem even_iff_not_odd (n : ℕ) : Even n ↔ ¬ Odd n := by
     rw [Odd] at odd_n
     let ⟨k1, h1⟩ := even_n
     let ⟨k2, h2⟩ := odd_n
-    -- Fuck, we need to cast that in ℤ or to match wrt k1 <= k2 ...
-    admit
-  . admit
+    have : 2 * k1 = 2 * k2 + 1 := by grind
+    have : 2 * (k1 : ℤ) = 2 * (k2 : ℤ) + 1 := by grind
+    have : 2 * ((k1 : ℤ) - (k2 : ℤ)) = 1 := by grind
+    let k := (k1 : ℤ) - (k2 : ℤ)
+    have : 2 * k = 1 := by grind
+    exact not_twice_eq_one this
+  . intro not_odd_n
+    rw [Even, Odd] at *
+    by_contra
+    cases mod_two n with
+    | inl h => admit
+    | inr h => admit
 
+
+-- and then a recursion is necessary...
 theorem fib_parity (n : ℕ) : (n ≥ 4) →
   (Even n → Odd (fib n)) ∧ (Odd n → Even (fib n)) := by admit
 
