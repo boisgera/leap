@@ -1,7 +1,10 @@
 import Mathlib
 
+
+namespace Sandbox
+
 -- TODO: make a "one-step reduction" and integrate in the def the proof of the
--- invariant? (Instead of splitting code and proof afterwards)
+-- invariant? (Instead of splitting code and proof afterwards)?
 
 -- Returns divisor, remainder, quotient
 def divModAux (b r q : ℕ) (h : b ≠ 0 := by grind) : ℕ × ℕ × ℕ :=
@@ -35,7 +38,7 @@ lemma divModAux_lt (b r q : ℕ) (h : b ≠ 0) : (divModAux b r q h).2.1 < b := 
     exact hr
   . exact divModAux_lt b (r - b) (q + 1) h
 
-theorem remainder_lt (a b : ℕ) (h: b ≠ 0) : mod a b < b := by
+theorem mod_lt (a b : ℕ) (h : b ≠ 0) : mod a b < b := by
   rw [mod, divMod]
   simp only [dif_neg h]
   exact divModAux_lt b a 0 h
@@ -55,7 +58,7 @@ lemma divModAux_eq (b r q : ℕ) (h : b ≠ 0):
 
 -- Note: since we have defined divMod a 0 to be (0, a),
 -- we don't need to assume that b ≠ 0 here.
-theorem divMod_eq (a b : ℕ) : b * (div a b) + (mod a b) = a := by
+theorem mul_div_add_mod (a b : ℕ) : b * (div a b) + (mod a b) = a := by
   rw [div, mod, divMod]
   cases em (b = 0) with
   | inl h =>
@@ -66,6 +69,33 @@ theorem divMod_eq (a b : ℕ) : b * (div a b) + (mod a b) = a := by
     rw [t]
     grind
 
+-- TODO: define "divides"? Yes
 
--- TODO: proof that the remainder of a divMod with b = 2 is either
--- 0 or 1.
+def divides (b a : ℕ) : Prop := mod a b = 0
+
+-- TODO: this is decidable, use it? We'll make dite and dif conditions out of
+-- this...
+
+theorem div_mod (a b q r : ℕ) (h_lt : r < b) (h_eq : b * q + r = a) :
+    (q = div a b) ∧ (r = mod a b) := by
+  -- TODO: show that b ≠ 0
+  -- TODO: show that q' = div a b and r' = mod a b satisfy the assumptions.
+  -- TODO: get b * q + r = b * q' + r'
+  -- TODO: embed this stuff into ℤ to conclude based divisibility by b? Urk.
+  -- Find the sign of stuff, then rw as b * (q - q') = r' - r and apply some
+  -- divmod to both sides?
+  admit
+
+def Even (n : ℕ) : Prop := mod n 2 = 0
+def Odd (n : ℕ) : Prop := mod n 2 = 1
+
+-- TODO: alt version with `2 * k` or `2 * k + 1` shape.
+
+theorem even_or_odd (n : ℕ) : Even n ∨ Odd n := by
+  rw [Even, Odd]
+  have := mod_lt n 2 (show 2 ≠ 0 from by norm_num)
+  grind
+
+
+
+end Sandbox
