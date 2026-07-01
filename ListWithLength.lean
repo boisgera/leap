@@ -20,3 +20,8 @@ inductive ListWithLength (α : Type u) where
 --   ⟨a :: l.data, l.len + 1, by simp [l.len_eq]⟩
 
 -- def LenList.nil : LenList α := ⟨[], 0, rfl⟩
+
+
+-- Alternative (simpler?) : list of chained "nodes" that store the
+-- length and pointer to next at each level? But then dhow do we prove
+-- that it's the length?
