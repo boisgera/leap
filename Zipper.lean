@@ -72,3 +72,63 @@ end Zipper
   |>.insertBefore 4
   |>.insertAfter 5
 -- [0, 1, 4] [2] [5, 3]
+
+-- A Zipper that can be empty
+structure AltZipper (α : Type u) where
+  before : List α
+  after : List α
+deriving Inhabited
+
+instance {α} [Inhabited α] : Inhabited (AltZipper α) where
+  default := ⟨[], []⟩
+
+namespace AltZipper
+
+def next {α} (z : AltZipper α) : AltZipper α :=
+  match z.after with
+  | [] => z
+  | head :: tail => AltZipper.mk (head :: z.before) tail
+
+def prev {α} (z : AltZipper α) : AltZipper α :=
+  match z.before with
+  | [] => z
+  | head :: tail => AltZipper.mk (tail) (head :: z.after)
+
+-- insert "on the right".
+def insert {α} (z : AltZipper α) (a : α) : AltZipper α :=
+  AltZipper.mk z.before (a :: z.after)
+
+-- set "on the right" if that makes sense
+def set? {α} (z : AltZipper α) (a : α) : Option (AltZipper α) :=
+  match z.after with
+  | [] => none
+  | _ :: tail => AltZipper.mk z.before (a :: tail)
+
+-- get "on the right", if that makes sense
+def get? {α} (z : AltZipper α) : Option α :=
+  match z.after with
+  | [] => none
+  | head :: _ => some head
+
+instance {α} [ToString α] : ToString (AltZipper α) where
+  toString := fun (z : AltZipper α) =>
+    let before := toString z.before.reverse
+    let after := toString z.after
+    s!"{before} | {after}"
+
+end AltZipper
+
+def testAltZipper : Option (AltZipper Nat) :=
+  let z := AltZipper.mk [] []
+  let z := z |>.insert 0 |>.insert 42 |>.insert 3 -- | [3, 42, 0]
+  let z := z.next                                 -- [3] | [42, 0]
+  match z.set? 2 with
+  | none => none
+  | some z =>            -- [3] | [2, 0]
+    let z := z.next      -- [3, 2] | [0]
+    let z := z.insert 1  -- [3, 2] | [1, 0]
+    let z := z.prev.prev -- [] | [3, 2, 1, 0]
+    some z
+
+#eval testAltZipper
+-- (some [] | [3, 2, 1, 0])
