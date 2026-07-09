@@ -28,6 +28,10 @@ name = "slider"
 root = "Slider"
 
 [[lean_exe]]
+name = "mesh"
+root = "Mesh"
+
+[[lean_exe]]
 name = "tasks"
 root = "Tasks"
 
