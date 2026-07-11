@@ -240,9 +240,133 @@ def test_cube := do
 -- active) edges in memory at the same time? Try a first version where we don't
 -- care? The iterator API is frightening ...
 
-def meshOfSdf
-  (f : Float → Float → Float → Float)
-  (min max : Point) (step : Float) : Mesh :=
+
+structure Grid where
+  min : Point
+  max : Point
+  step : Float
+deriving Repr
+
+structure Index where
+  i : Int
+  j : Int
+  k : Int
+deriving Repr
+
+def Grid.imin (g : Grid) : Index :=
+  let q := fun (x : Float) => (x / g.step).floor.toInt64.toInt
+  Index.mk (q g.min.1) (q g.min.2) (q g.min.3)
+
+def Grid.imax (g : Grid) : Index :=
+  let q := fun (x : Float) => (x / g.step).ceil.toInt64.toInt
+  Index.mk (q g.max.1) (q g.max.2) (q g.max.3)
+
+def Grid.nextIndex? (g : Grid) (ijk : Index) : Option Index :=
+  let i := ijk.1
+  let j := ijk.2
+  let k := ijk.3
+  if k < g.imax.3 then
+    some (Index.mk i j (k + 1))
+  else
+    if j < g.imax.2 then
+      some (Index.mk i (j + 1) g.imin.3)
+    else
+      if i < g.imax.1 then
+        some (Index.mk (i + 1) g.imin.2 g.imin.3)
+      else
+        none
+
+partial def Grid.foldl {α} (f : α → Index → α) (init : α) (g : Grid) : α :=
+  let rec foldAux (index? : Option Index) (current : α) : α :=
+    match index? with
+    | none => current
+    | some index => foldAux (g.nextIndex? index) (f current index)
+  foldAux (some g.imin) init
+
+end STL
+
+def Float.sign (f : Float) : Float :=
+  if f ≥ 0 then 1.0 else -1.0
+
+namespace STL
+
+structure Edge where
+  ijk1 : Index
+  ijk2 : Index
+  grid : Grid
+deriving Repr
+
+end STL
+
+def Int.toFloat (i : Int) : Float :=
+  if i < 0 then -(i.natAbs.toFloat) else i.natAbs.toFloat
+
+namespace STL
+
+def Grid.getElem (g : Grid) (ijk : Index) : Point :=
+  let i := ijk.1
+  let j := ijk.2
+  let k := ijk.3
+  Point.mk (g.step * i.toFloat) (g.step * j.toFloat) (g.step * k.toFloat)
+
+instance : GetElem? Grid Index Point (fun _grid _index => True) where
+  getElem (g : Grid) (ijk : Index) _ := g.getElem ijk
+  getElem? (g : Grid) (ijk : Index)  := some (g.getElem ijk)
+
+-- φ is a level-set function. Probably not the smartest test ATM (consider, 0+, 0-, etc)
+def Edge.active (edge : Edge) (φ : Point → Float) : Bool :=
+  (φ edge.grid[edge.ijk1]!).sign != (φ edge.grid[edge.ijk2]!).sign
+
+-- TODO: probably should replace φ arg here by a general predicate and implement
+-- filter on top of Grid.
+
+def Grid.accActiveEdges (grid : Grid) (φ : Point → Float) (edges : List Edge) (ijk : Index) : List Edge :=
+  let i := ijk.1
+  let j := ijk.2
+  let k := ijk.3
+  let newEdges := [
+    Edge.mk ijk (Index.mk i j (k+1)) grid,
+    Edge.mk ijk (Index.mk i (j+1) k) grid,
+    Edge.mk ijk (Index.mk (i+1) j k) grid,
+  ]
+  let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
+  newActiveEdges ++ edges
+
+def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
+  grid.foldl (grid.accActiveEdges φ) []
+
+#eval (
+  let grid := Grid.mk (Point.mk (-2) (-2) (-2)) (Point.mk 2 2 2) (step := 0.5)
+  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1
+  (grid.activeEdges φ).length
+
+)
+
+def Edge.outerNormal (edge : Edge) (φ : Point → Float) : Vector :=
+  let ijk1 := edge.ijk1
+  let ijk2 := edge.ijk2
+  let point_1 := edge.grid[ijk1]!
+  let point_2 := edge.grid[ijk2]!
+  let Δφ := φ point_2 - φ point_1
+  if ijk1.1 ≠ ijk2.1 then
+    if (ijk1.1 < ijk2.1 && Δφ > 0) || (ijk1.1 > ijk2.1 && Δφ < 0) then
+      Vector.mk 1 0 0
+    else
+      Vector.mk (-1) 0 0
+  else if ijk1.2 ≠ ijk2.2 then
+    if (ijk1.2 < ijk2.2 && Δφ > 0) || (ijk1.2 > ijk2.2 && Δφ < 0) then
+      Vector.mk 0 1 0
+    else
+      Vector.mk 0 (-1) 0
+  else
+    if (ijk1.3 < ijk2.3 && Δφ > 0) || (ijk1.3 > ijk2.3 && Δφ < 0) then
+      Vector.mk 0 0 1
+    else
+      Vector.mk 0 0 (-1)
+
+def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
+  -- TODO: get all activeEdges, map to the normals, map to quads,
+  -- maps to facets, collect in a mesh.
   sorry
 
 
