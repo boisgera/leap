@@ -1,5 +1,5 @@
 import Lean
-import Batteries.Lean.Float
+import Batteries -- provides Float.toStringFull
 
 namespace STL
 
@@ -7,13 +7,13 @@ structure Point where
   x : Float
   y : Float
   z : Float
-deriving Repr
+deriving BEq, Repr
 
 structure Vector where
   x : Float
   y : Float
   z : Float
-deriving Repr
+deriving BEq, Repr
 
 #eval Vector.mk 1.0 2.0 3.0
 -- { x := 1.000000, y := 2.000000, z := 3.000000 }
@@ -144,6 +144,7 @@ structure Quad where
   vertex_2 : Point
   vertex_3 : Point
   vertex_4 : Point
+deriving Inhabited
 
 def Quad.toList (q : Quad) : List Point :=
   [q.vertex_1, q.vertex_2, q.vertex_3, q.vertex_4]
@@ -241,6 +242,8 @@ def test_cube := do
 -- care? The iterator API is frightening ...
 
 
+-- TODO: replace min and max by custom bbox type? There could be a funny
+-- custom algebra of bbox when we do CSG stuff (union, inter, etc.).
 structure Grid where
   min : Point
   max : Point
@@ -342,6 +345,10 @@ def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
 
 )
 
+
+-- TODO: do not output a vector, this is much more spefic here,
+-- use an enum ("cardinalDirection ?") that can be converted to a
+-- unit vector.
 def Edge.outerNormal (edge : Edge) (φ : Point → Float) : Vector :=
   let ijk1 := edge.ijk1
   let ijk2 := edge.ijk2
@@ -364,16 +371,78 @@ def Edge.outerNormal (edge : Edge) (φ : Point → Float) : Vector :=
     else
       Vector.mk 0 0 (-1)
 
+-- Same stuff here, φ is "too much" info, that could be better
+def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
+  let normal := edge.outerNormal φ
+  let p1 := grid[edge.1]
+  let p2 := grid[edge.2]
+  let h := 0.5 * grid.step
+  let p := weightedSum [(0.5, p1), (0.5, p2)]
+  if normal == Vector.mk 0.0 0.0 1.0 then
+    Quad.mk
+      (p + (Vector.mk (-h) (-h) 0))
+      (p + (Vector.mk ( h) (-h) 0))
+      (p + (Vector.mk ( h) ( h) 0))
+      (p + (Vector.mk (-h) ( h) 0))
+  else if normal == Vector.mk 0 0 (-1) then
+    Quad.mk
+      (p + (Vector.mk (-h) ( h) 0))
+      (p + (Vector.mk ( h) ( h) 0))
+      (p + (Vector.mk ( h) (-h) 0))
+      (p + (Vector.mk (-h) (-h) 0))
+  else if normal == Vector.mk 0 1 0 then
+    Quad.mk
+      (p + (Vector.mk (-h) 0 (-h)))
+      (p + (Vector.mk ( h) 0 (-h)))
+      (p + (Vector.mk ( h) 0 ( h)))
+      (p + (Vector.mk (-h) 0 ( h)))
+  else if normal == Vector.mk 0 (-1) 0 then
+    Quad.mk
+      (p + (Vector.mk (-h) 0 ( h)))
+      (p + (Vector.mk ( h) 0 ( h)))
+      (p + (Vector.mk ( h) 0 (-h)))
+      (p + (Vector.mk (-h) 0 (-h)))
+  else if normal == Vector.mk 1 0 0 then
+    Quad.mk
+      (p + (Vector.mk (0) (-h) (-h)))
+      (p + (Vector.mk (0) ( h) (-h)))
+      (p + (Vector.mk (0) ( h) ( h)))
+      (p + (Vector.mk (0) (-h) ( h)))
+  else if normal == Vector.mk (-1) 0 0 then
+    Quad.mk
+      (p + (Vector.mk (0) (-h) ( h)))
+      (p + (Vector.mk (0) ( h) ( h)))
+      (p + (Vector.mk (0) ( h) (-h)))
+      (p + (Vector.mk (0) (-h) (-h)))
+  else
+    panic! "unreachable"
+
 def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
   -- TODO: get all activeEdges, map to the normals, map to quads,
   -- maps to facets, collect in a mesh.
-  sorry
+  let edges := grid.activeEdges φ
+  let quads := edges.map (grid.quadOfEdge (φ := φ))
+  let facets := quads.foldl
+    (init := [])
+    (fun facets quad => quad.split ++ facets)
+  Mesh.mk facets
 
+
+def test_sphere (step : Float): Mesh :=
+  let grid := Grid.mk (Point.mk (-2) (-2) (-2)) (Point.mk 2 2 2) (step := step)
+  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
+  let mesh := grid.mesh φ
+  mesh
 
 end STL
 
 
 def main := do
+  let mesh := STL.test_sphere 0.1
+  let stl := mesh.toSTL
+  IO.FS.writeFile "sphere.stl" stl
+
+def _main := do
   STL.test_cube
 -- solid cube
 -- facet normal 0 0 -1
