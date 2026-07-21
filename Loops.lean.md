@@ -1,25 +1,12 @@
 
 ```lean4
 import Batteries.Lean.Float
-
-namespace Sandbox
 ```
 
 # Loops
 
-Loops are everywhere in imperative programs but they don't exist in pure FP.
-(partially a lie but a useful one).
-Recursion is used (directly or indirectly) to achieve the same goals.
-
-What are loops used for? If you exclude loops that produce some side-effect,
-for loops that iterate over a collection read some initial state,
-the **accumulator**, **combine** it with a freshly read value from the
-collection and repeat the action until the collection has been fully traversed.
-
-Note: for loops over a collection *terminate*. While/repeat loops, that's unclear...
-
-
-Consider the typical computation of a sum of floating-point numbers:
+Let's get something out of the way: Lean does support the kind of loops that
+you find in imperative languages such as Python. In Python you can define
 
 ```python
 def sum(xs : list[float]) -> float:
@@ -29,27 +16,157 @@ def sum(xs : list[float]) -> float:
   return s
 ```
 
+and get
+
 ```pycon
 >>> sum([0.1, 0.2, 0.3])
 0.6000000000000001
-
-We can't do that in Lean because with cannot mutate the variable `sum`.
-Instead let's do what's natural and use pattern matching;
-that naturally lead us to recursion.
+```
+In Lean there is a very similar construct:
 
 ```lean4
+namespace Imperative
+
+def sum (xs : List Float) : Float := Id.run do
+  let mut acc := 0.0
+  for x in xs do
+    acc := acc + x
+  return acc
+
+#eval sum [0.1, 0.2, 0.3]
+-- 0.600000
+
+#eval sum [0.1, 0.2, 0.3] == 0.1 + 0.2 + 0.3
+-- true
+
+end Imperative
+```
+
+However, this is not a fundamental construct, merely a syntactic layer that
+gets reinterpreted as a pure functional construction without a for loop
+and mutable variables. We will drop that kind of constructs until we have
+a better grasp of what functional programming can do and how monads can
+restore a semblance of imperative code in a functional world.
+
+In Lean, given that we expect our `sum` function to have the type
+`List Float → Float`, it's very natural to try and pattern
+match on the list to compute the sum. The rest of the code almost writes
+itself! We end up with:
+
+```lean4
+namespace V0
+
 def sum (xs : List Float) : Float :=
   match xs with
   | [] => 0.0
   | x :: xs => x + sum xs
 
+#check sum
+
 #eval sum [0.1, 0.2, 0.3]
+-- 0.600000
+
+end V0
+```
+
+Success! Well, not quite, since the result of our functional sum may not
+agree with the output of the imperative one. Despite the same display of
+digits,
+
+```lean4
+#eval 0.1 + 0.2 + 0.3
+-- 0.600000
+
+#eval V0.sum [0.1, 0.2, 0.3]
 -- 0.600000
 ```
 
-Note: Lean does not display "enough" precision by default to know for sure
-what float has been produced. We'll get back to that in a moment, we let
-it slide atm.
+we actually have
+
+```lean4
+#eval V0.sum [0.1, 0.2, 0.3] == 0.1 + 0.2 + 0.3
+-- false
+```
+
+How come? To begin with, Lean calls the `Float.toString` method to display a
+string representation of a float and this method does not provide enough digits
+to characterize a float uniquely.
+
+To overcome this issue, we can import `Batteries.Lean.Float`, which gives
+use a new `Float.toStringFull` method that will provide all the digits of
+a float.
+
+```lean4
+#eval IO.println (0.1 + 0.2 + 0.3).toStringFull
+-- 0.600000000000000088817841970012523233890533447265625
+```
+
+This results matches what Python produces:
+
+```python
+>>> x = 0.0 + 0.1 + 0.2 + 0.3
+>>> print(f"{x:.100g}")
+0.600000000000000088817841970012523233890533447265625
+```
+
+On the other hand
+
+```lean4
+#eval IO.println  (V0.sum [0.1, 0.2, 0.3]).toStringFull
+-- 0.59999999999999997779553950749686919152736663818359375
+```
+
+OK, now we understand that our computations have different results, but we
+still need to understand why!
+
+TODO:
+  - default `+` is left-assoc (hint : over the +)
+  - repeated use of referential transparency to see what `V0.sum` computes.
+
+
+V0.sum [0.1, 0.2, 0.3]
+-> V0.sum (0.1 :: [0.2, 0.3])
+-> 0.1 + V0.sum [0.2, 0.3]
+-> 0.1 + V0.sum (0.2 :: [0.3])
+-> 0.1 + (0.2 + V0.sum [0.3])
+-> 0.1 + (0.2 + V0.sum (0.3 :: []))
+-> 0.1 + (0.2 + (0.3 + V0.sum []))
+-> 0.1 + (0.2 + (0.3 + 0.0))
+
+```mermaid
+graph TD
+    A["+"] --> B["0.1"]
+    A --> C["+"]
+    C --> D["0.2"]
+    C --> E["+"]
+    E --> F["0.3"]
+    E --> G["0.0"]
+```
+
+OTOH, it's pretty clear that our pseudo-imperative version computes
+
+((0.0 + 0.1) + 0.2) + 0.3
+
+```mermaid
+graph TD
+    A["+"] --> B["+"]
+    A --> C["0.3"]
+    B --> D["+"]
+    B --> E["0.2"]
+    D --> F["0.0"]
+    D --> G["0.1"]
+
+What are loops used actually for? If you exclude loops that produce some
+side-effect, for loops at there core typically:
+- read some initial state,
+- iterate over a collection, and at each step use the new element from the
+collection and the current state to update the state until the collection is
+fully traversed.
+
+The product of the loop is the final value of the state.
+
+
+Note: for loops over a collection *terminate*. While/repeat loops, that's unclear...
 
 TODO: easier to delay tail-recursive concept to the left-associative version
 of the sum since
@@ -167,6 +284,4 @@ But our computation of the sum says something different:
 
 #eval sum' [0.1, 0.2, 0.3] |>.toStringFull |> IO.println
 -- 0.59999999999999997779553950749686919152736663818359375
-
-end Sandbox
 ```
