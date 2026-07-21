@@ -124,6 +124,7 @@ TODO:
   - repeated use of referential transparency to see what `V0.sum` computes.
 
 
+```lean
 V0.sum [0.1, 0.2, 0.3]
 -> V0.sum (0.1 :: [0.2, 0.3])
 -> 0.1 + V0.sum [0.2, 0.3]
@@ -132,6 +133,7 @@ V0.sum [0.1, 0.2, 0.3]
 -> 0.1 + (0.2 + V0.sum (0.3 :: []))
 -> 0.1 + (0.2 + (0.3 + V0.sum []))
 -> 0.1 + (0.2 + (0.3 + 0.0))
+```
 
 ```mermaid
 graph TD
@@ -155,6 +157,7 @@ graph TD
     B --> E["0.2"]
     D --> F["0.0"]
     D --> G["0.1"]
+```
 
 What are loops used actually for? If you exclude loops that produce some
 side-effect, for loops at there core typically:
