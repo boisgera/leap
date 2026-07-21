@@ -161,7 +161,9 @@ graph TD
 /-!
 OTOH, it's pretty clear that our pseudo-imperative version computes
 
+```lean
 ((0.0 + 0.1) + 0.2) + 0.3
+```
 -/
 
 /-!
