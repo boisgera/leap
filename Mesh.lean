@@ -1,5 +1,5 @@
 import Lean
-import Batteries -- provides Float.toStringFull
+import Batteries.Lean.Float -- provides Float.toStringFull
 
 namespace STL
 
