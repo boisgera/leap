@@ -214,6 +214,8 @@ Note: for loops over a collection *terminate*. While/repeat loops, that's unclea
 TODO: easier to delay tail-recursive concept to the left-associative version
 of the sum since
 
+## Tail recursion, stack overflow, etc.
+
 Note that when we do that kind of recursion, the multiple calls to `sum`
 that occurs are still "alive" on the call stack until we reach the empty
 list, since we have to keep the function variable `x` to make a sum with
@@ -227,21 +229,21 @@ This will ultimately lead us to a stack overflow for large lists of floats.
 #eval List.range 3
 -- [0, 1, 2]
 
-#eval 3 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> sum
+#eval 3 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> V0.sum
 -- 0.600000
 
-#eval 100 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> sum
+#eval 100 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> V0.sum
 -- 505.000000
 
-#eval 100_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> sum
+#eval 100_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> V0.sum
 -- 500005000.000000
 
-#eval 1_000_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> sum
+#eval 1_000_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> V0.sum
 -- 50000050000.000000
 ```
 
 ```lean
-#eval 10_000_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> sum
+#eval 10_000_000 |> List.range |>.map (fun i => Float.ofNat (i + 1) / 10.0) |> V0.sum
 -- Server process crashed, likely due to a stack overflow or a bug.
 ```
 
@@ -322,9 +324,209 @@ we get:
 But our computation of the sum says something different:
 
 ```lean4
-#eval sum [0.1, 0.2, 0.3] |>.toStringFull |> IO.println
+#eval V0.sum [0.1, 0.2, 0.3] |>.toStringFull |> IO.println
 -- 0.59999999999999997779553950749686919152736663818359375
 
 #eval sum' [0.1, 0.2, 0.3] |>.toStringFull |> IO.println
 -- 0.59999999999999997779553950749686919152736663818359375
+```
+
+TODO: monadic fold
+--------------------------------------------------------------------------------
+
+TODO: classic fold as a special case.
+
+Pseudo-imperative for loops
+--------------------------------------------------------------------------------
+
+Very similar to monadic folds
+
+```lean4
+#print ForIn
+-- class ForIn.{u, v, u₁, u₂} (m : Type u₁ → Type u₂) (ρ : Type u) (α : outParam (Type v)) :
+--   Type (max (max (max u (u₁ + 1)) u₂) v)
+-- number of parameters: 3
+-- fields:
+--   ForIn.forIn : {β : Type u₁} → ρ → β → (α → β → m (ForInStep β)) → m β
+-- constructor:
+--   ForIn.mk.{u, v, u₁, u₂} {m : Type u₁ → Type u₂} {ρ : Type u} {α : outParam (Type v)}
+--     (forIn : {β : Type u₁} → ρ → β → (α → β → m (ForInStep β)) → m β) : ForIn m ρ α
+
+#print ForInStep
+-- inductive ForInStep.{u} : Type u → Type u
+-- number of parameters: 1
+-- constructors:
+-- ForInStep.done : {α : Type u} → α → ForInStep α
+-- ForInStep.yield : {α : Type u} → α → ForInStep α
+
+structure ToInfinityAndBeyond where
+  n : Nat
+
+namespace ToInfinityAndBeyond
+
+partial def forIn
+    {α} {m} [Monad m]
+    (t : ToInfinityAndBeyond) (init : α) (f : Nat → α → m (ForInStep α)) :
+    m α := do
+  let a <- f t.n init
+  match a with
+  | ForInStep.done a => return a
+  | ForInStep.yield a => forIn (ToInfinityAndBeyond.mk (t.n + 1)) a f
+
+instance {m} [Monad m]: ForIn m ToInfinityAndBeyond Nat where
+  forIn := forIn
+
+def test : IO String := do
+  for n in (ToInfinityAndBeyond.mk 1) do
+    IO.println s!"{n}"
+    if n == 3 then
+      break
+  return "Done!"
+
+#eval test
+-- 1
+-- 2
+-- 3
+-- "Done!"
+
+end ToInfinityAndBeyond
+```
+
+TODO:
+  - ForIn from Stream (for free)
+  - How the interface of Stream is similar to Python's iterator.
+
+Q: **START** with Stream, discussion ForIn as an ulterior step (nah,
+we are already deep in fold and monadic fold afaict)
+
+
+```lean4
+inductive TrafficLight where
+| green : TrafficLight
+| yellow : TrafficLight
+| red : TrafficLight
+
+instance : ToString TrafficLight where
+  toString (tl : TrafficLight) := match tl with
+  | .green => "green"
+  | .yellow => "yellow"
+  | .red => "red"
+
+
+namespace V0
+
+structure TrafficLightSequence where
+  current : Option TrafficLight
+
+namespace TrafficLightSequence
+
+instance : Inhabited TrafficLightSequence where
+  default := {current := some TrafficLight.green}
+
+def next? (tls : TrafficLightSequence) : Option (TrafficLight × TrafficLightSequence) :=
+  match tls.current with
+  | some .green => some (.green, {current := some .yellow})
+  | some .yellow => some (.yellow, {current := some .red})
+  | some .red => some (.red, {current := none})
+  | none => none
+
+instance : Std.Stream TrafficLightSequence TrafficLight where
+  next? := next?
+
+def test : IO Unit := do
+  let tls : TrafficLightSequence := default
+  for tl in tls do
+    IO.println tl
+
+#eval test
+-- green
+-- yellow
+-- red
+
+end TrafficLightSequence
+
+end V0
+
+
+namespace V1
+
+abbrev TrafficLightSequence := Fin 4 -- 0, 1, 2, 3
+-- or define a new type definitionally equal, or wrap a Fin 4 in a struct, etc.
+-- all these solutions have their quirks.
+
+namespace TrafficLightSequence
+
+instance : Inhabited TrafficLightSequence where
+  default := 0
+
+def next? (tls : TrafficLightSequence) : Option (TrafficLight × TrafficLightSequence) :=
+  match tls with
+  | 0 => some (.green, 1)
+  | 1 => some (.yellow, 2)
+  | 2 => some (.red, 3)
+  | 3 => none
+
+instance : Std.Stream TrafficLightSequence TrafficLight where
+  next? := next?
+
+def test : IO Unit := do
+  let tls : TrafficLightSequence := default
+  for tl in tls do
+    IO.println tl
+
+#eval test
+-- green
+-- yellow
+-- red
+
+end TrafficLightSequence
+
+end V1
+
+structure ZigZag where
+  x : Nat
+  y : Nat
+
+namespace ZigZag
+
+#print Std.Stream
+-- class Std.Stream.{u, v} (stream : Type u) (value : outParam (Type v)) : Type (max u v)
+-- number of parameters: 2
+-- fields:
+--   Std.Stream.next? : stream → Option (value × stream)
+-- constructor:
+--   Std.Stream.mk.{u, v} {stream : Type u} {value : outParam (Type v)} (next? : stream → Option (value × stream)) :
+--     Std.Stream stream value
+
+def next? (zz : ZigZag) : Option ((Nat × Nat) × ZigZag) :=
+  let zz_next := match zz.x, zz.y with
+  | 0, y => {x := y + 1, y := 0}
+  | x, y => {x := x - 1, y := y + 1}
+  some ((zz.x, zz.y), zz_next)
+
+instance : Std.Stream ZigZag (Nat × Nat) where
+  next? := next?
+
+def test : IO Unit := do
+  let zigzag : ZigZag := {x := 0, y := 0}
+  for (x, y) in zigzag do
+    IO.println s!"{(x, y)}"
+    if x == 4 then
+      break
+  return ()
+
+#eval test
+-- (0, 0)
+-- (1, 0)
+-- (0, 1)
+-- (2, 0)
+-- (1, 1)
+-- (0, 2)
+-- (3, 0)
+-- (2, 1)
+-- (1, 2)
+-- (0, 3)
+-- (4, 0)
+
+end ZigZag
 ```
