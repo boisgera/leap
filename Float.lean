@@ -427,19 +427,75 @@ theorem two_divides_ten : 2 ∣ 10 := by
 
 def RadixRat.coerce
     {m n : Nat} (m_divides_n : m ∣  n) (r : RadixRat m) : RadixRat n :=
+  let _ := m_divides_n
   let k := n / m
   if r.exponent >= 0 then
     {
-      mantissa := r.mantissa * (k ^ r.exponent.natAbs),
+      mantissa := r.mantissa * m ^ r.exponent.natAbs,
+      exponent := 0,
+    }
+  else
+      {
+      mantissa := r.mantissa * k ^ r.exponent.natAbs,
       exponent := r.exponent
       : RadixRat n
-    }.canonicalize
-  else
-    {
-      mantissa := sorry,
-      exponent := sorry,
     }
 
+#print BEq
+-- class BEq.{u} (α : Type u) : Type u
+-- number of parameters: 1
+-- fields:
+--   BEq.beq : α → α → Bool
+-- constructor:
+--   BEq.mk.{u} {α : Type u} (beq : α → α → Bool) : BEq α
+
+def RadixRat.beq {m} (r s : RadixRat m) : Bool :=
+  let cr := r.canonicalize
+  let cs := s.canonicalize
+  cr.mantissa == cs.mantissa && cr.exponent == cs.exponent
+
+instance {m} : BEq (RadixRat m) where
+  beq := RadixRat.beq
+
+def RadixRat.toString {b} (r : RadixRat b) : String :=
+  r
+    |>.canonicalize
+    |> fun r => s!"{r.mantissa} × {b} ^ {r.exponent}"
+
+instance {b} : ToString (RadixRat b) where
+  toString := RadixRat.toString
+
+#eval ({ mantissa := 100, exponent := -2} : DyadicRat)
+-- 25 × 2 ^ 0
+
+#eval ({ mantissa := 314, exponent := -2} : DecimalRat)
+
+#eval 1 + 1
+
+-- TODO: coerce to Rat (properly, with a typeclass!). We *could* define binary
+-- equality by decidable equality of the Rats?
+
+-- TODO : expose the design of Rat which containes two proposition, but who
+-- mostly "get out of the way" since we can coerce integers without any proof
+-- and operations such as '/' that are already implemented carry the burden
+-- of the proofs. We *could* do something similar for RadixRat
+
+-- TODO : get a float, coerce it to DyadicRat (manage special cases),
+-- then to DecimalRat, canonicalize, then truncate to 17 digits and
+-- display appropriately.
+
+def Float.toSciString (f : Float) (precision : Nat := 17) : String :=
+  -- TODO: handle special cases : ± inf, nan, -0.0 (?)
+  let df :=
+    f
+    |> DyadicRat.ofFloat
+    |>.coerce (n := 10) (show 2 | 10 by grind)
+  let mantissaToString := df.mantissa.toString
+  let numDigits := mantissaToString.length
+  let e := df.exponent - (numDigits - 1)
+  let m := mantissaToString.front ++ "." ++ (mantissaToString.drop 1)
+  let m_trunc := m.take (precision + 1)
+  s!"{m_trunc}e{e}"
 
 
 
