@@ -1,5 +1,5 @@
 import Mathlib
-import Batteries.Lean.Float
+import Batteries
 
 def pi := 4 * Float.atan 1
 
@@ -85,8 +85,7 @@ TODO: get ALL the decimal digits associated to the mantissa (/significand).
 How? Easy multiply by 5^52 so that we get mantissa * 10^52
 -/
 
-#eval (shift pi) * 5^52
--#eval pi
+#eval pi
 -- 3.141593
 
 #eval exponent pi
@@ -406,20 +405,29 @@ def DyadicRat.ofFloat (f : Float) : DyadicRat :=
     |> (· &&& 2^63 - 1) -- zero the sign bit
     |> (· >>> 52)       -- shift the exponent down and trash the mantissa
     |> Int.ofNat
-    |> (· - 1023)       -- debias
+    |> (· - 1023 - 52)  -- debias & compensate for mantissa shift
+
+  dbg_trace (bits &&& (2^52 - 1)) -- should be 0 for f := 1.0
+
   let unsigned_mantissa :=
     if f == 0 then
       0
     else
-      (bits &&& 2^53 - 1) -- b0...b52, the fractional part f of the mantissa
-        |> (· + 2^53)     -- 1b0...b52 aka 1.f × 2^52
-        |> (· <<< 1023)   -- compensate for the bias in the exponent
+      (bits &&& 2^52 - 1) -- d0...d52, the fractional part f of the mantissa
+        |> (· + 2^52)     -- 1d0...d52 aka 1.f × b^52
   let isNeg := bits >= 2^63
   let mantissa :=
     unsigned_mantissa
     |> Int.ofNat
     |> fun n => if isNeg then -n else n
   {mantissa, exponent}
+
+#eval DyadicRat.ofFloat 1.0
+-- { mantissa := 4503599627370496, exponent := -52 }
+
+
+#eval DyadicRat.ofFloat 3.14
+-- { mantissa := 7070651414971679, exponent := -51 }
 
 theorem two_divides_ten : 2 ∣ 10 := by
   simp [Dvd.dvd] -- ∃ c, 10 = 2 * c
@@ -458,17 +466,22 @@ instance {m} : BEq (RadixRat m) where
   beq := RadixRat.beq
 
 def RadixRat.toString {b} (r : RadixRat b) : String :=
-  r
-    |>.canonicalize
-    |> fun r => s!"{r.mantissa} × {b} ^ {r.exponent}"
+  let r := r.canonicalize
+  let exponentString :=
+    if r.exponent ≥ 0 then
+      s!"{r.exponent}"
+    else
+      s!"({r.exponent})"
+  s!"{r.mantissa} * {b} ^ {exponentString}"
 
 instance {b} : ToString (RadixRat b) where
   toString := RadixRat.toString
 
-#eval ({ mantissa := 100, exponent := -2} : DyadicRat)
--- 25 × 2 ^ 0
+#eval DyadicRat.ofFloat 3.14
+-- 7070651414971679 * 2 ^ (-51)
 
-#eval ({ mantissa := 314, exponent := -2} : DecimalRat)
+#eval ({ mantissa := 100, exponent := 0} : DyadicRat)
+-- 25 × 2 ^ 2
 
 #eval 1 + 1
 
@@ -484,20 +497,38 @@ instance {b} : ToString (RadixRat b) where
 -- then to DecimalRat, canonicalize, then truncate to 17 digits and
 -- display appropriately.
 
-def Float.toSciString (f : Float) (precision : Nat := 17) : String :=
+def Float.toScientificNotation (f : Float) (precision : Nat := 17) : String :=
   -- TODO: handle special cases : ± inf, nan, -0.0 (?)
   let df :=
     f
     |> DyadicRat.ofFloat
-    |>.coerce (n := 10) (show 2 | 10 by grind)
-  let mantissaToString := df.mantissa.toString
-  let numDigits := mantissaToString.length
-  let e := df.exponent - (numDigits - 1)
-  let m := mantissaToString.front ++ "." ++ (mantissaToString.drop 1)
-  let m_trunc := m.take (precision + 1)
-  s!"{m_trunc}e{e}"
+    |> dbgTraceVal
+    |>.coerce (n := 10) (show 2 ∣ 10 by grind)
+  dbg_trace df
+  let mabs := df.mantissa.natAbs |> ToString.toString
+  let numDigits := mabs.length
+  let e := df.exponent + (numDigits - 1)
+  let m := (mabs.take 1).toString ++ "." ++ (mabs.drop 1)
+  let m_trunc := m.take (precision + 1) -- round towards zero
+  let sign := if df.mantissa < 0 then "-" else ""
+  s!"{sign}{m_trunc}e{e}"
 
+#eval Float.toScientificNotation 3.14
+-- "3.1400000000000001e-102" WRONG
 
+#eval Float.toScientificNotation 0.3
+-- "2.9999999999999998e-1"
+
+#eval Float.toScientificNotation (0.1 + 0.2)
+-- "3.0000000000000004e-1"
+
+#eval Float.toScientificNotation (-0.3)
+-- -2.9999999999999998e-1
+
+#eval Float.toScientificNotation 0.0001
+
+-- #eval Float.toScientificNotation 0.0 runs forever?
+-- where does it hang?
 
 -- TODO:
 -- - [X] float to DyadicRat
@@ -508,7 +539,8 @@ def Float.toSciString (f : Float) (precision : Nat := 17) : String :=
 
 -- TODO: convert Scientific 2 to Scientific 10.
 
-#eval Float.scientific 3.14
+#eval Float.toScienticNotation 3.14
+-- "2.0806951639991532e-324" -- *cough, cough* 🪲
 
 -- Q: is the repr easy once we have the float components?
 
