@@ -1,6 +1,6 @@
 name = "leap"
 version = "0.1.0"
-defaultTargets = ["Python", "Raylib", "maze", "snake", "fs"]
+defaultTargets = ["Python", "Raylib", "snake", "fs"]
 
 [[require]]
 name = "mathlib"
@@ -15,9 +15,9 @@ name = "Python"
 [[lean_lib]]
 name = "Raylib"
 
-[[lean_exe]]
-name = "maze"
-root = "Maze"
+#[[lean_exe]]
+#name = "maze"
+#root = "Maze"
 
 [[lean_exe]]
 name = "snake"
