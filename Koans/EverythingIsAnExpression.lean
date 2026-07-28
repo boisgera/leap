@@ -32,7 +32,13 @@ Test with `lean --run App.lean
 Equivalent lean code:
 -/
 
-def mainDesugared : IO Unit :=
+def mainDesugared: IO Unit :=
+  IO.print "Enter your name: "
+    >>= fun _ => IO.getStdin
+    >>= fun stdin => (stdin.getLine)
+    >>= fun name => IO.println s!"Hello, {name.trimAscii}"
+
+def mainDesugaredVerbose : IO Unit :=
   let prompt : IO Unit :=
     IO.print "Enter your name: "
   let getStdin : IO IO.FS.Stream :=
@@ -42,6 +48,21 @@ def mainDesugared : IO Unit :=
   let greet (name : String): IO Unit :=
     IO.println s!"Hello, {name.trimAscii}"
   prompt
+    -- we don't actually use the (non-informative) out of prompt
     >>= fun (_ : Unit) => getStdin
+    >>= getName
+    >>= greet
+
+def mainDesugared'' : IO Unit :=
+  let prompt : IO Unit :=
+    IO.print "Enter your name: "
+  let getStdin : IO IO.FS.Stream :=
+    IO.getStdin
+  let getName (stdin : IO.FS.Stream) : IO String :=
+    stdin.getLine
+  let greet (name : String): IO Unit :=
+    IO.println s!"Hello, {name.trimAscii}"
+  prompt
+    *>  getStdin
     >>= getName
     >>= greet
