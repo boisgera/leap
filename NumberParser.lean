@@ -73,7 +73,6 @@ def parseDigit (cs : List Char) : Option (Nat × List Char) :=
 #eval parseDigit "...".toList
 -- none
 
-
 partial def parseNatAux (cs : List Char) (nat : Nat) : Option (Nat × List Char) :=
   match parseDigit cs with
   | some (d, cs) => parseNatAux cs (nat * 10 + d)
@@ -415,4 +414,31 @@ def parseExponent (cs : List Char) : Option (Int × List Char) :=
 #eval parseExponent "e+100zzz".toList
 -- some (100, ['z', 'z', 'z'])
 
+/-!
+TODO:
+
+- <|> stuff
+-/
+
 end v2
+
+namespace v3
+
+/-! Monads -/
+
+/-! TODO: bind in the Option + State monad and syntactic sugar.
+
+Given the context, that provides:
+
+  - "linear" sequencing of actions
+
+  - decoupling of returning the result of the parse and
+    getting/setting/modifying the token stream.
+
+  - automatic do-bloc level fail on any local <- fail.
+
+Redo some elementary constructs with these tools ;
+then redo some combinators?
+
+-/
+end v3
