@@ -3,7 +3,7 @@
 TODO:
   - typed expression to be exact, but delay
   - compare with Python
-  - compare with Civet
+  - compare with ts
   - simple, then inc complicated patterns taht are expression
   - let are for convenience, change nothing
   - concept of reduction (link to purity) of expressions
@@ -36,7 +36,7 @@ def greet(name=None):
 -/
 
 /-!
-```civet
+```ts
 function greet(name = undefined)
   if name? then
     console.log `Hello ${name}!`
@@ -51,7 +51,7 @@ greet()
 
 ```
 
-```civet
+```ts
 function greet(name = undefined)
   name = if name? then name else "Noman"
   console.log `Hello ${name}!`
@@ -65,7 +65,7 @@ greet()
 
 ```
 
-```civet
+```ts
 function greet(name = undefined)
   name =
     if name? then
@@ -82,7 +82,7 @@ greet()
 
 ```
 
-```civet
+```ts
 function greet(name = undefined)
   result := if name? then
     console.log `Hello ${name}!`
@@ -100,7 +100,7 @@ greet()
 
 ```
 
-```civet
+```ts
 function greet(name = undefined)
   name = if name? then
     console.debug "✅"
