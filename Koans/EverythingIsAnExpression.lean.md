@@ -29,6 +29,7 @@ def greet(name=None):
     # `if-then-else` conditional expression
     name = name if name != None else "Nobody"
     print(f"Hello {name}!)
+```
 
 ```civet
 function greet(name = undefined)
