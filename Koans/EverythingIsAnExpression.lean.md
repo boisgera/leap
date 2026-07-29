@@ -1,5 +1,4 @@
 
-/-!
 TODO:
   - typed expression to be exact, but delay
   - compare with Python
@@ -9,9 +8,7 @@ TODO:
   - concept of reduction (link to purity) of expressions
   -> Computation is reduction of expression (mostly)
 
--/
 
-/-!
 ```python
 def greet(name=None):
     # `if-then-else` statement
@@ -32,9 +29,7 @@ def greet(name=None):
     # `if-then-else` conditional expression
     name = name if name != None else "Nobody"
     print(f"Hello {name}!)
--/
 
-/-!
 ```civet
 function greet(name = undefined)
   if name? then
@@ -120,31 +115,25 @@ greet()
 
 
 
--/
 
-
-
-/-!
 Even pseudo-imperative code (sequencing of actions/functions that may have
 side-effects) can be desugared into an expression. Here the key is the
 *monadic bind* operator `>>=`.
--/
 
+```lean4
 /-! `App.lean`:-/
 def main : IO Unit := do
   IO.print "Enter your name: "
   let stdin ← IO.getStdin
   let name ← stdin.getLine
   IO.println s!"Hello, {name.trimAscii}"
+```
 
-/-!
 Test with `lean --run App.lean
--/
 
-/-!
 Equivalent lean code:
--/
 
+```lean4
 def mainDesugared: IO Unit :=
   IO.print "Enter your name: "
     >>= fun _ => IO.getStdin
@@ -171,3 +160,4 @@ def mainDesugaredWithSeqRight : IO Unit :=
     *>  IO.getStdin
     >>= fun stdin => (stdin.getLine)
     >>= fun name => IO.println s!"Hello, {name.trimAscii}"
+```
