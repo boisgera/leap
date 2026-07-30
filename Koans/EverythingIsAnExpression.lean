@@ -13,6 +13,14 @@ TODO:
 
 
 /-!
+Idea: since the full FP package makes Python and Lean very different and
+transposition difficult, start with a comparison of Python and Civet,
+which has only the "EIAE" part (not the immutability, not the absence of
+side-effet, not the static type system). That makes Civet a system which
+is very close to working in `IO α` with `do` blocks.
+-/
+
+/-!
 
 ```python
 def greet(name=None):
@@ -206,7 +214,58 @@ but there expressivety is limited with respect to the classic functions.
 Note: `let a = ...` are statements in Civet, not expressions.
 -/
 
+/-!
+Mention relationship between Civet and Typescript.
+Mention Hy, a LISP language for the Python platform that has the same
+kind of relationship and interoperate seamlessly with Python libraries.
+-/
 
+/-!
+In Lean:
+
+-/
+
+def v0.greet (name? : Option String := none) : IO Unit := do
+    match name? with
+    | some name => IO.println s!"Hello {name}!"
+    | none => IO.println "Hello Nobody!"
+
+#eval v0.greet "Odysseus"
+-- Hello Odysseus
+
+#eval v0.greet
+-- Hello Nobody
+
+def v1.greet (name? : Option String := none) : IO Unit := do
+    let name := match name? with
+      | some name => name
+      | none => "Nobody"
+    IO.println s!"Hello {name}!"
+
+#eval v1.greet "Odysseus"
+-- Hello Odysseus
+
+#eval v1.greet
+-- Hello Nobody
+
+def v2.greet (name? : Option String := none) : IO Unit :=
+    pure (match name? with
+      | some name => name
+      | none => "Nobody"
+    )
+    >>= fun (x : String) => pure s!"Hello {x}!"
+    >>= IO.println
+
+#eval v2.greet "Odysseus"
+-- Hello Odysseus!
+
+#eval v2.greet
+-- Hello Nobody!
+
+
+/-!
+--------------------------------------------------------------------------------
+-/
 
 /-!
 Even pseudo-imperative code (sequencing of actions/functions that may have
