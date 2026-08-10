@@ -1,17 +1,17 @@
+
+```lean4
 import Mathlib
 import Lake.Util.Task -- Now `Task` is a `Monad`
 
 
 set_option pp.showLetValues true
+```
 
-/-!
 # Tasks
--/
 
-/-!
 ## Pure Tasks
--/
 
+```lean4
 #check List.max
 
 abbrev NonemptyList α := {l : List α // l ≠ []}
@@ -40,13 +40,13 @@ def parallel_max {α} [Max α] (l : List α) (h : l.length > 2 := by grind) : α
   max max_1 max_2
 
 #eval parallel_max [1, 2, 3, 4, 5, 6]
+```
 
-/-!
 The stuff above is fun but if we want to focus on the task stuff and not the
 proof stuff, it's probably better to focus on some operation that has a
 default value for max of the empty list.
--/
 
+```lean4
 def List.maxWithBot{α} [LinearOrder α] [OrderBot α] (l : List α) : α :=
   match l with
   | [] => ⊥
@@ -73,15 +73,14 @@ def pmax' {α} [LinearOrder α] [OrderBot α] (l : List α) : α :=
   let task_1 := Task.spawn fun () => l_1.maxWithBot
   let task_2 := Task.spawn fun () => l_2.maxWithBot
   [task_1, task_2] |> Task.mapList List.maxWithBot |>.get
+```
 
-
-/-!
 Nota: the API is a bit weird above; what's I'd like to do is
 "compute this function with this argument in a thread". And I think that
 we can do that with pure and bind (see monadic structure). And then after
 we gather the result.
--/
 
+```lean4
 def sumOfSquares (numbers : List ℕ) : ℕ :=
   numbers |>.map (· ^ 2) |>.sum
 
@@ -91,12 +90,12 @@ def sumOfSquares (numbers : List ℕ) : ℕ :=
 #check Task.map
 -- Task.map.{u_1, u_2} {α : Type u_1} {β : Type u_2} (f : α → β) (x : Task α)
 --   (prio : Task.Priority := Task.Priority.default) (sync : Bool := false) : Task β
+```
 
-/-!
 WARNING: this is WRONG. pure then map on Tasks spawns nothing AFAICT.
 Or does it? Arf unclear to me...
--/
 
+```lean4
 /--
 Compute the squares in separate tasks
 -/
@@ -127,10 +126,11 @@ def sumOfSquares'' (numbers : List ℕ) : ℕ :=
 
 #eval sumOfSquares'' [1, 2, 3]
 -- 14
+```
 
-/-!
 ⚠️ We need to import Lake to have `Task` declared as a `Monad`.
--/
+
+```lean4
 #check (inferInstance : Monad Task)
 
 /-
@@ -150,11 +150,11 @@ def sumOfSquares_3 (numbers : List ℕ) : ℕ :=
 
 #eval sumOfSquares_3 [1, 2, 3]
 -- 14
+```
 
-/-!
 ⛳ Code golf version (not worth it!!!)
--/
 
+```lean4
 def sumOfSquares_4 (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
     let number <- numbers
@@ -163,11 +163,11 @@ def sumOfSquares_4 (numbers : List ℕ) : ℕ :=
 
 #eval sumOfSquares_4 [1, 2, 3]
 -- 14
+```
 
-/-!
 Let's abstract a bit a parallel map and use it to achieve the same result.
--/
 
+```lean4
 def pmap_wrong {α β} (f : α → β) (inputs : List α) : List β := do
   let input <- inputs
   let t_output : Task β := return f input
@@ -176,8 +176,8 @@ def pmap_wrong {α β} (f : α → β) (inputs : List α) : List β := do
 
 #eval [1, 2, 3] |> pmap_wrong (· ^ 2) |>.sum
 -- 14
+```
 
-/-!
 📌 : use a large computation as f and check that several threads are used.
 Claude code tells me that it's invalid since the the `pmap` is equivalent to:
 ```
@@ -188,8 +188,8 @@ inputs.map (fun input =>
 
 That makes sense. I need to generate the tasks in one do block and wait for
 the results in another one.
--/
 
+```lean4
 /-
 Let's do the correct version. Actually, the do notation for lists is rather
 detrimental here IMHO (and actually it's only defined by Mathlib, not Lean
@@ -222,11 +222,11 @@ def List.tmap' {α β} (f : α → β) (inputs : List α) : List β :=
     |>.map (fun input : α => return input)
     |>.map (fun t_input => return f (<- t_input))
     |>.map Task.get
+```
 
-/-!
 With this we can for example do
--/
 
+```lean4
 def countdown (n : Nat) : Nat :=
   match n with
   | 0 => 0
@@ -242,14 +242,13 @@ def parallel_countdown: IO Unit := do
 #eval parallel_countdown
 -- countdown inputs: [1000000, 2000000, 3000000, 4000000, 5000000, 6000000, 7000000, 8000000]
 -- countdown outputs: [0, 0, 0, 0, 0, 0, 0, 0]
-/-!
+```
+
 
 /-
 🚧 TODO: general map-reduce algo? I have to understand what shuffle is before that!
--/
 
-
-
+```lean4
 ## Impure Tasks
 -/
 
@@ -277,11 +276,11 @@ def action : IO Unit := do
 -- action : IO Unit
 
 def main := action
+```
 
-/-!
 ### Blinking LEDs
--/
 
+```lean4
 def displayWhite : IO Unit := do
   repeat
     IO.println "⚪"
@@ -298,3 +297,4 @@ def displayWhiteAndBlack : IO Unit := do
   IO.sleep 3_000
 
 #eval 1+1
+```
