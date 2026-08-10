@@ -145,54 +145,41 @@ def List.parMap {α β} (f : α → β) (l : List α) : List β :=
 -- [0, 1, 4, 9, 16, 25, 36, 49]
 ```
 
+Let's benchmark this!
 
-Define the programm `benchmark1.lean` with:
+```lean4
+@[noinline]
+def mapSquare : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.map (· ^ 2)
+  IO.lazyPure deferred
 
-```lean
+@[noinline]
+def parMapSquare : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.parMap (· ^ 2)
+  IO.lazyPure deferred
 
-def List.parMap {α β} (f : α → β) (l : List α) : List β :=
-  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
-  tasks.map (fun task => task.get)
-
-def main : IO Unit := do
-  let result : List Nat <- timeit
-    "sequential map"
-    do
-      return 8 |> List.range |>.map (. ^ 2)
-  IO.println result
-  let result : List Nat <- timeit
-    "parallel map"
-    do
-      return 8 |> List.range |>.parMap (. ^ 2)
-  IO.println result
-```
-
-```console
-$ lean -c benchmark1.c benchmark1.lean
-$ leanc benchmark1.c -o benchmark1 -O3
-$ ./benchmark1
-sequential map 0.00151ms
-[0, 1, 4, 9, 16, 25, 36, 49]
-parallel map 0.000312ms
-[0, 1, 4, 9, 16, 25, 36, 49]
+#eval do
+  IO.println (<- timeit "sequential map" mapSquare)
+  IO.println (<- timeit "parallel map" parMapSquare)
+-- sequential map 0.142ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+-- parallel map 0.947ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
 ```
 
 For these super simple function evaluation, the overhead of threads
-hurts seriously the potential performance of parallelization
-(naively we could expect around a ~8x performance boost).
+is so important that it totally negates the benefit of using several
+processing units; we are worse with the parallel map than the
+sequential map.
 
 ```lean4
-#eval 0.00151 / 0.000312
--- 4.839744
+#eval 0.142 / 0.947
+-- 0.149947
 ```
 
-`benchmarks2.lean`:
+However, for heavy computation, things are different:
 
-```lean
-def List.parMap {α β} (f : α → β) (l : List α) : List β :=
-  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
-  tasks.map (fun task => task.get)
-
+```lean4
 partial def collatz (n start : Nat) : Nat :=
   if n == 0 then
     start
@@ -201,37 +188,35 @@ partial def collatz (n start : Nat) : Nat :=
   else
     collatz (n - 1) (3 * start + 1)
 
-def main : IO Unit := do
-  let n := 1_000_000
-  let result : List Nat <- timeit
-    "sequential map"
-    do
-      return 8 |> List.range |>.map (collatz n)
-  IO.println result
-  let result : List Nat <- timeit
-    "parallel map"
-    do
-      return 8 |> List.range |>.parMap (collatz n)
-  IO.println result
+def n := 1_000_000
+
+@[noinline]
+def mapCollatz : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.map (collatz n)
+  IO.lazyPure deferred
+
+@[noinline]
+def parMapCollatz : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.parMap (collatz n)
+  IO.lazyPure deferred
+
+#eval do
+  IO.println (<- timeit "sequential map" mapCollatz)
+  IO.println (<- timeit "parallel map" parMapCollatz)
+-- sequential map 3.98s
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+-- parallel map 1.2s
+-- [0, 4, 1, 1, 2, 2, 2, 1]
 ```
 
-```console
-$ lean -c benchmark2.c benchmark2.lean
-$ leanc benchmark2.c -o benchmark2 -O3
-$ ./benchmark2
-sequential map 0.00291ms
-[0, 4, 1, 1, 2, 2, 2, 1]
-parallel map 0.000363ms
-[0, 4, 1, 1, 2, 2, 2, 1]
-```
 
-Note here again the threads overhead. The parallel code runs faster than the
-sequential code, but far from 8x faster, which is what we could naively
-expect.
+
+Now the parallel code runs faster than the sequential code, but due to the
+threads overhead, we don't get a 8x performance.
 
 ```lean4
-#eval 0.00291 / 0.000363
--- 8.016529
+#eval 3.98 / 1.2
+-- 3.316667
 ```
 
 --------------------------------------------------------------------------------
