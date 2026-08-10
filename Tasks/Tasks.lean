@@ -155,6 +155,11 @@ def List.parMap {α β} (f : α → β) (l : List α) : List β :=
 Let's benchmark this!
 -/
 
+/-!
+[!WARNING] Benchmarking of pure functions can be tricky, see for example
+this [Control run-time execution of pure functions](https://github.com/leanprover/lean4/issues/8591) issue.
+-/
+
 @[noinline]
 def mapSquare : IO (List Nat) :=
   let deferred := fun (_ : Unit) => 8 |> List.range |>.map (· ^ 2)
