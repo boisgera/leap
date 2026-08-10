@@ -12,10 +12,244 @@ set_option pp.showLetValues true
 
 ## Pure Tasks
 
+The `Task` structure is a store of value; you put your value in a task with
+`Task.pure` and get it afterwards with `Task.get`.
+
+
+```lean4
+#print Task
+-- structure Task.{u} (α : Type u) : Type u
+-- number of parameters: 1
+-- fields:
+--   Task.get : α
+-- constructor:
+--   Task.pure.{u} {α : Type u} (get : α) : Task α
+
+
+#eval
+  let task := Task.pure "Hello world!"
+  -- compute something else and when you are ready...
+  task.get
+-- "Hello world!"
+```
+
+... and that's not very exciting!
+
+The magic really starts with `Task.spawn` which
+  - takes a function which evaluates an expression,
+  - creates a task around it and schedule it to be executed.
+
+The scheduler can use any available thread in a fixed thread pool.
+By default, there are as many threads in this pool as
+there are processing units in the computer.
+
+On my Linux computer, I can call the system command `nproc` to get this
+number:
+
+
+```lean4
+#eval do
+  let out ← IO.Process.run { cmd := "nproc" }
+  IO.println out
+-- 12
+```
+
+Afterwards, you get the computed value from the task as usual with `Task.get`,
+except that you may have to wait the time necessary for the scheduler
+to effectively start and complete the task.
+
+Note that the expression of the value to compute is wrapped into a function
+to defer its evaluation.
+
+```lean4
+#eval (dbg_trace "now"; 1 + 1)
+-- now
+-- 2
+
+def oneAddOne (_ : Unit) :=
+  dbg_trace "now"
+  1 + 1
+-- Nothing gets printed
+
+#eval oneAddOne ()
+-- now
+-- 2
+```
+
+`Task.spawn` requires a function "without argument" which does not exist
+strictly speaking in Lean (other than as a value which is not a function!).
+But we get around it by asking for a function whose argument is of type
+`Unit`.
+
+`Unit` has actually a single term: `unit`, which is also available as `()`.
+Therefore, the argument given to such a function carry no information.
+
+```lean4
+#print Unit
+-- @[reducible] def Unit : Type :=
+-- PUnit.{1}
+
+#print PUnit
+-- inductive PUnit.{u} : Sort u
+-- number of parameters: 0
+-- constructors:
+-- PUnit.unit : PUnit.{u}
+```
+
+The full signature of `Task.spawn`:
+
+```lean4
+#check Task.spawn
+-- Task.spawn.{u} {α : Type u}
+-- (fn : Unit → α) (prio : Task.Priority := Task.Priority.default) : Task α
+```
+
+Now a more realistic use of the `Task` API:
+
+```lean4
+#eval
+  let deferredValue := fun (_ : Unit) => "Hello" ++ " " ++ "world!"
+  let task := Task.spawn deferredValue
+  -- compute something else and when you are ready...
+  task.get
+-- "Hello world!"
+```
+
+Tasks make it easy to use all the processing unit to achieve a better
+performance, especially when the computations you need to do are unrelated.
+For example, we can reimplement a paralle version of `List.map` using tasks.
+
+```lean4
+#check List.map
+-- List.map.{u_1, u_2} {α : Type u_1} {β : Type u_2}
+-- (f : α → β) (l : List α) : List β
+```
+
+Implémentation of `List.map`:
+
+```lean
+def List.map (f : α → β) : (l : List α) → List β
+  | nil       => nil
+  | cons a as => cons (f a) (map f as)
+```
+
+```lean4
+def List.parMap {α β} (f : α → β) (l : List α) : List β :=
+  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
+  tasks.map (fun task => task.get)
+
+#eval 8 |> List.range |>.map (·^2)
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+
+#eval 8 |> List.range |>.parMap (·^2)
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+```
+
+
+Define the programm `benchmark1.lean` with:
+
+```lean
+
+def List.parMap {α β} (f : α → β) (l : List α) : List β :=
+  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
+  tasks.map (fun task => task.get)
+
+def main : IO Unit := do
+  let result : List Nat <- timeit
+    "sequential map"
+    do
+      return 8 |> List.range |>.map (. ^ 2)
+  IO.println result
+  let result : List Nat <- timeit
+    "parallel map"
+    do
+      return 8 |> List.range |>.parMap (. ^ 2)
+  IO.println result
+```
+
+```console
+$ lean -c benchmark1.c benchmark1.lean
+$ leanc benchmark1.c -o benchmark1 -O3
+$ ./benchmark1
+sequential map 0.00151ms
+[0, 1, 4, 9, 16, 25, 36, 49]
+parallel map 0.000312ms
+[0, 1, 4, 9, 16, 25, 36, 49]
+```
+
+For these super simple function evaluation, the overhead of threads
+hurts seriously the potential performance of parallelization
+(naively we could expect around a ~8x performance boost).
+
+```lean4
+#eval 0.00151 / 0.000312
+-- 4.839744
+```
+
+`benchmarks2.lean`:
+
+```lean
+def List.parMap {α β} (f : α → β) (l : List α) : List β :=
+  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
+  tasks.map (fun task => task.get)
+
+partial def collatz (n start : Nat) : Nat :=
+  if n == 0 then
+    start
+  else if start % 2 == 0 then
+    collatz (n - 1) (start / 2)
+  else
+    collatz (n - 1) (3 * start + 1)
+
+def main : IO Unit := do
+  let n := 1_000_000
+  let result : List Nat <- timeit
+    "sequential map"
+    do
+      return 8 |> List.range |>.map (collatz n)
+  IO.println result
+  let result : List Nat <- timeit
+    "parallel map"
+    do
+      return 8 |> List.range |>.parMap (collatz n)
+  IO.println result
+```
+
+```console
+$ lean -c benchmark2.c benchmark2.lean
+$ leanc benchmark2.c -o benchmark2 -O3
+$ ./benchmark2
+sequential map 0.00291ms
+[0, 4, 1, 1, 2, 2, 2, 1]
+parallel map 0.000363ms
+[0, 4, 1, 1, 2, 2, 2, 1]
+```
+
+Note here again the threads overhead. The parallel code runs faster than the
+sequential code, but far from 8x faster, which is what we could naively
+expect.
+
+```lean4
+#eval 0.00291 / 0.000363
+-- 8.016529
+```
+
+--------------------------------------------------------------------------------
+
 ```lean4
 #check List.max
+-- List.max.{u} {α : Type u} [Max α] (l : List α) (h : l ≠ []) : α
 
 abbrev NonemptyList α := {l : List α // l ≠ []}
+
+#print Subtype
+-- structure Subtype.{u} {α : Sort u} (p : α → Prop) : Sort (max 1 u)
+-- number of parameters: 2
+-- fields:
+--   Subtype.val : α
+--   Subtype.property : p ↑self
+-- constructor:
+--   Subtype.mk.{u} {α : Sort u} {p : α → Prop} (val : α) (property : p val) : Subtype p
 
 def List.split {α} (l : List α) (h : l.length > 2) : NonemptyList α × NonemptyList α :=
   let n := l.length / 2
