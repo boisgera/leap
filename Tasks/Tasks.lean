@@ -179,8 +179,8 @@ def parMapSquare : IO (List Nat) :=
   IO.lazyPure deferred
 
 #eval do
-  IO.println (<- timeit "sequential map" mapSquare)
-  IO.println (<- timeit "parallel map" parMapSquare)
+  IO.println (← timeit "sequential map" mapSquare)
+  IO.println (← timeit "parallel map" parMapSquare)
 -- sequential map 0.142ms
 -- [0, 1, 4, 9, 16, 25, 36, 49]
 -- parallel map 0.947ms
@@ -210,6 +210,8 @@ partial def collatz (n start : Nat) : Nat :=
 
 def n := 1_000_000
 
+
+-- TODO: parametrize by the map function and the range of initial values?
 @[noinline]
 def mapCollatz : IO (List Nat) :=
   let deferred := fun (_ : Unit) => 8 |> List.range |>.map (collatz n)
@@ -221,8 +223,8 @@ def parMapCollatz : IO (List Nat) :=
   IO.lazyPure deferred
 
 #eval do
-  IO.println (<- timeit "sequential map" mapCollatz)
-  IO.println (<- timeit "parallel map" parMapCollatz)
+  IO.println (← timeit "sequential map" mapCollatz)
+  IO.println (← timeit "parallel map" parMapCollatz)
 -- sequential map 3.98s
 -- [0, 4, 1, 1, 2, 2, 2, 1]
 -- parallel map 1.2s
@@ -469,7 +471,7 @@ def countTask (words : List String) : Task CountDict :=
 def reduceCountTasks (countTasks : List (Task CountDict)) : Task CountDict := do
   let mut counts : List CountDict := []
   for task in countTasks do
-    counts := (<- task) :: counts
+    counts := (← task) :: counts
   return reduceCounts counts.reverse
 
 #eval
@@ -528,6 +530,86 @@ def reduceCountTasksAlt
     Task.pure (reduceCounts counts.reverse)
   | task :: tasks =>
     Task.bind task (fun count => reduceCountTasksAlt tasks (count :: counts))
+
+/-!
+Actually now, we can design a better parMap:
+
+**TODO.** introduce that **before** and apply it to the mapReduce pattern?
+-/
+
+def getAllTask {α} (tasks : List (Task α)) (results : List α := [])
+    : Task (List α) := do
+  match tasks with
+  | [] =>
+    return results.reverse
+  | task :: tasks =>
+    let result ← task
+    getAllTask tasks (result :: results)
+
+def List.parMap' {α β} (f : α → β) (l : List α) : List β :=
+  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
+  (getAllTask tasks).get
+
+#eval 8 |> List.range |>.parMap' (·^2)
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+
+@[noinline]
+def parMap'Collatz : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.parMap' (collatz n)
+  IO.lazyPure deferred
+
+#eval do
+  IO.println (← timeit "sequential map" mapCollatz)
+  IO.println (← timeit "parallel map" parMapCollatz)
+  IO.println (← timeit "fixed parallel map" parMap'Collatz)
+-- sequential map 2.9s
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+-- parallel map 739ms
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+-- fixed parallel map 659ms
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+
+/-! TODO
+compare the performance of parMap and parMap' when there too many tasks
+-/
+
+#check List.map
+
+@[noinline]
+def parSquare (map : (Nat → Nat) → List Nat → List Nat) (n : Nat) : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => List.range n |> (map (· ^ 2) ·)
+  IO.lazyPure deferred
+
+#eval do
+  IO.println (← timeit "sequential map" (parSquare List.map 8))
+  IO.println (← timeit "parallel map" (parSquare List.parMap 8))
+  IO.println (← timeit "parallel map (fixed)" (parSquare List.parMap' 8))
+-- sequential map 0.0391ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+-- parallel map 0.255ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+-- parallel map (fixed) 4.64ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+
+#eval do
+  let n := 1_000
+  discard (timeit "sequential map" (parSquare List.map n))
+  discard (timeit "parallel map" (parSquare List.parMap n))
+  discard (timeit "parallel map (fixed)" (parSquare List.parMap' n))
+-- sequential map 0.965ms
+-- parallel map 8.49ms
+-- parallel map (fixed) 32.1ms
+
+#eval do
+  let n := 1_000_000
+  discard (timeit "sequential map" (parSquare List.map n))
+  discard (timeit "parallel map" (parSquare List.parMap n))
+  discard (timeit "parallel map (fixed)" (parSquare List.parMap' n))
+-- sequential map 384ms
+-- parallel map 5.77s
+-- parallel map (fixed) 15s
+
+
 
 /-!
 Misc., unsorted
@@ -651,7 +733,7 @@ Alt version using the monadic structure of lists (of tasks)
 -/
 def sumOfSquares'' (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     let square := number |> Task.pure |>.map (· ^ 2)
     return square
   let squares : List ℕ := t_squares.map Task.get
@@ -671,12 +753,12 @@ We can also use the `do` and `return` notation for tasks.
 
 def sumOfSquares_3 (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     let square : Task ℕ := do
       return number ^ 2
     return square
   let squares : List ℕ := do
-    let t_square <- t_squares
+    let t_square ← t_squares
     return t_square.get
   squares.sum
 
@@ -689,9 +771,9 @@ def sumOfSquares_3 (numbers : List ℕ) : ℕ :=
 
 def sumOfSquares_4 (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     return (return number ^ 2 : Task ℕ)
-  (return (<- t_squares).get) |>.sum
+  (return (← t_squares).get) |>.sum
 
 #eval sumOfSquares_4 [1, 2, 3]
 -- 14
@@ -701,7 +783,7 @@ Let's abstract a bit a parallel map and use it to achieve the same result.
 -/
 
 def pmap_wrong {α β} (f : α → β) (inputs : List α) : List β := do
-  let input <- inputs
+  let input ← inputs
   let t_output : Task β := return f input
   let output := t_output.get
   return output
@@ -752,7 +834,7 @@ A variant which uses:
 def List.tmap' {α β} (f : α → β) (inputs : List α) : List β :=
   inputs
     |>.map (fun input : α => return input)
-    |>.map (fun t_input => return f (<- t_input))
+    |>.map (fun t_input => return f (← t_input))
     |>.map Task.get
 
 /-!
@@ -791,7 +873,7 @@ def action : IO Unit := do
     IO.println "in the background"
     IO.sleep 1000
     IO.println "in the background"
-  let task <- IO.asTask do
+  let task ← IO.asTask do
     IO.sleep 1000
     return 42
   match task.get with
@@ -799,7 +881,7 @@ def action : IO Unit := do
   | Except.error _ => panic! "Ooops"
   IO.sleep 1000
   IO.println "Hello!"
-  -- let task <- IO.asTask (IO.println "Hello world!")
+  -- let task ← IO.asTask (IO.println "Hello world!")
   -- _ = task.get
   -- match task.get with
   -- | .ok _ => IO.println "ok."
@@ -825,8 +907,8 @@ def displayBlack : IO Unit := do
     IO.sleep 500
 
 def displayWhiteAndBlack : IO Unit := do
-  let _t_display_white <- IO.asTask displayWhite
-  let _t_display_black <- IO.asTask displayBlack
+  let _t_display_white ← IO.asTask displayWhite
+  let _t_display_black ← IO.asTask displayBlack
   IO.sleep 3_000
 
 #eval 1+1
