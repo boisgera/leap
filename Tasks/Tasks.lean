@@ -238,6 +238,8 @@ threads overhead, we don't get a 8x performance.
 Tasks dependencies
 --------------------------------------------------------------------------------
 
+### Deadlock
+
 There is a subtle issue with the model of a thread pool with a fixed number
 of threads. If your thread pool is full and you need to get the result of a task
 on one thread that all the tasks on the other thread depend on, but your thread
@@ -265,22 +267,51 @@ size while waiting for the result.
 -/
 
 /-!
+### Bind
+
+The creation of threads can be costly, so we would like not to have extra
+threads when we don't need them. An important use case concerns the scheduling
+of a task that depends on the result of another one.
+
+For example, consider the computation of `0 + 1 + ... + 999` in a task and
+then the computation of the successor of the result in another task.
 -/
 
-/-- Long running task -/
-def lazy (_ : Unit) : Nat :=
+def deferredSum (_ : Unit) : Nat :=
   (List.range 1_000).foldl (· + ·) 0
 
-def eager (n : Nat) : Nat :=
+def succ (n : Nat) : Nat :=
   n + 1
 
-def naive : IO Nat := do
-  let task1 : Task Nat := Task.spawn lazy
-  let task2 : Task Nat := Task.spawn (fun _ =>
-    let x := task1.get -- blocking wait *inside* a task
-    eager x)
-  return task2.get
+/-!
+With the current tools that we currently have, we could start two threads
+at once, but let the second thread block until the result of the first
+one is available.
+-/
 
+#eval do
+  let task1 : Task Nat := Task.spawn deferredSum
+  let task2 : Task Nat := Task.spawn (fun _ => task1.get |> succ)
+  return task2.get
+-- 499501
+
+/-!
+There is actually a more idiomatic and cheaper way to do this.
+With `Task.bind`, we can register the second task as a continuation
+of the first one when it's done, running on the same thread:
+-/
+
+#eval do
+  let task1 : Task Nat := Task.spawn deferredSum
+  let task2 : Task Nat := task1.bind (fun n => Task.spawn (fun _ => succ n))
+  return task2.get
+-- 499501
+
+
+/-!
+> [!TODO]
+> Monadic style.
+-/
 
 
 /-!
