@@ -115,6 +115,10 @@ Now a more realistic use of the `Task` API:
 -- "Hello world!"
 ```
 
+Parallel computations
+--------------------------------------------------------------------------------
+
+
 Tasks make it easy to use all the processing unit to achieve a better
 performance, especially when the computations you need to do are unrelated.
 For example, we can reimplement a paralle version of `List.map` using tasks.
@@ -164,8 +168,8 @@ def parMapSquare : IO (List Nat) :=
   IO.lazyPure deferred
 
 #eval do
-  IO.println (<- timeit "sequential map" mapSquare)
-  IO.println (<- timeit "parallel map" parMapSquare)
+  IO.println (← timeit "sequential map" mapSquare)
+  IO.println (← timeit "parallel map" parMapSquare)
 -- sequential map 0.142ms
 -- [0, 1, 4, 9, 16, 25, 36, 49]
 -- parallel map 0.947ms
@@ -195,6 +199,8 @@ partial def collatz (n start : Nat) : Nat :=
 
 def n := 1_000_000
 
+
+-- TODO: parametrize by the map function and the range of initial values?
 @[noinline]
 def mapCollatz : IO (List Nat) :=
   let deferred := fun (_ : Unit) => 8 |> List.range |>.map (collatz n)
@@ -206,15 +212,13 @@ def parMapCollatz : IO (List Nat) :=
   IO.lazyPure deferred
 
 #eval do
-  IO.println (<- timeit "sequential map" mapCollatz)
-  IO.println (<- timeit "parallel map" parMapCollatz)
+  IO.println (← timeit "sequential map" mapCollatz)
+  IO.println (← timeit "parallel map" parMapCollatz)
 -- sequential map 3.98s
 -- [0, 4, 1, 1, 2, 2, 2, 1]
 -- parallel map 1.2s
 -- [0, 4, 1, 1, 2, 2, 2, 1]
 ```
-
-
 
 Now the parallel code runs faster than the sequential code, but due to the
 threads overhead, we don't get a 8x performance.
@@ -254,7 +258,8 @@ flowchart TB
 To avoid such deadlocks, Lean will temporarily increase the maximum threadpool
 size while waiting for the result.
 
-### Bind
+Sequencing
+--------------------------------------------------------------------------------
 
 The creation of threads can be costly, so we would like not to have extra
 threads when we don't need them. An important use case concerns the scheduling
@@ -295,8 +300,299 @@ of the first one when it's done, running on the same thread:
 -- 499501
 ```
 
-> [!TODO]
-> Monadic style.
+Or, since bind always create a new task, simply:
+
+```lean4
+#eval do
+  let task1 : Task Nat := Task.spawn deferredSum
+  let task2 : Task Nat := task1.bind (fun n => Task.pure n)
+  return task2.get
+-- 499501
+```
+
+Actually `Task.pure` and `Task.bin` give `Task` a `Monad` structure,
+hence we can reimplement that code as:
+
+```lean4
+#eval (do
+  let n ← Task.spawn deferredSum
+  Task.spawn (fun _ => n + 1)
+).get
+-- 499501
+```
+
+Or again, the even simpler
+
+```lean4
+#eval (do
+  let n ← Task.spawn deferredSum
+  return n + 1
+).get
+-- 499501
+```
+
+MapReduce
+--------------------------------------------------------------------------------
+
+In the canonical MapReduce example, you distribute the computation of the
+count of each word in a set of documents:
+
+```lean4
+abbrev CountDict := Std.HashMap String Nat
+
+def count (words : List String) : CountDict :=
+  words.foldl (init := {}) fun dict word =>
+    let count := dict.getD word 0
+    dict.insert word (count + 1)
+
+#eval "to be or not to be that is the question" |>.splitOn " " |> count
+-- Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)]
+
+def corpus := [
+  "to be or not to be that is the question",
+  "all that glitters is not gold",
+  "actions speak louder than words",
+  "knowledge is power",
+  "the pen is mightier than the sword",
+  "a picture is worth a thousand words",
+  "practice makes perfect",
+  "better late than never",
+  "honesty is the best policy",
+  "where there is a will there is a way"
+].map (·.splitOn " ")
+
+#eval corpus.parMap count
+-- [Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)],
+--  Std.HashMap.ofList [("all", 1), ("is", 1), ("gold", 1), ("that", 1), ("not", 1), ("glitters", 1)],
+--  Std.HashMap.ofList [("than", 1), ("louder", 1), ("words", 1), ("speak", 1), ("actions", 1)],
+--  Std.HashMap.ofList [("knowledge", 1), ("is", 1), ("power", 1)],
+--  Std.HashMap.ofList [("than", 1), ("is", 1), ("the", 2), ("mightier", 1), ("pen", 1), ("sword", 1)],
+--  Std.HashMap.ofList [("is", 1), ("words", 1), ("worth", 1), ("thousand", 1), ("a", 2), ("picture", 1)],
+--  Std.HashMap.ofList [("practice", 1), ("perfect", 1), ("makes", 1)],
+--  Std.HashMap.ofList [("than", 1), ("better", 1), ("never", 1), ("late", 1)],
+--  Std.HashMap.ofList [("the", 1), ("is", 1), ("honesty", 1), ("policy", 1), ("best", 1)],
+--  Std.HashMap.ofList [("is", 2), ("where", 1), ("way", 1), ("a", 2), ("there", 2), ("will", 1)]]
+
+#check Std.HashMap.fold
+-- Std.HashMap.fold.{u, v, w} {α : Type u} {β : Type v} {x✝ : BEq α} {x✝¹ : Hashable α} {γ : Type w}
+--   (f : γ → α → β → γ)
+--   (init : γ)
+--   (b : Std.HashMap α β)
+--   : γ
+
+def mergeCounts (base update : CountDict) : CountDict :=
+  -- Iterate on the update
+  update.fold (init := base)
+    fun dict word count =>
+      let baseCount := dict.getD word 0
+      dict.insert word (baseCount + count)
+
+def reduceCounts (counts : List CountDict) : CountDict :=
+  counts.foldl (init := {}) mergeCounts
+
+#eval corpus.parMap count |> reduceCounts
+-- Std.HashMap.ofList [("knowledge", 1),
+--  ("mightier", 1),
+--  ("policy", 1),
+--  ("better", 1),
+--  ("worth", 1),
+--  ("that", 2),
+--  ("thousand", 1),
+--  ("where", 1),
+--  ("pen", 1),
+--  ("there", 2),
+--  ("way", 1),
+--  ("actions", 1),
+--  ("sword", 1),
+--  ("a", 4),
+--  ("practice", 1),
+--  ("is", 8),
+--  ("gold", 1),
+--  ("question", 1),
+--  ("not", 2),
+--  ("late", 1),
+--  ("glitters", 1),
+--  ("all", 1),
+--  ("than", 3),
+--  ("or", 1),
+--  ("words", 2),
+--  ("power", 1),
+--  ("never", 1),
+--  ("will", 1),
+--  ("picture", 1),
+--  ("be", 2),
+--  ("to", 2),
+--  ("louder", 1),
+--  ("the", 4),
+--  ("honesty", 1),
+--  ("makes", 1),
+--  ("perfect", 1),
+--  ("speak", 1),
+--  ("best", 1)]
+```
+
+Note: give that that we actually have a sequential reduce,
+we could use bind to (maybe) avoid a bunch of unnecessary extra thread
+creations due to the many gets we are doing.
+
+```lean4
+def countTask (words : List String) : Task CountDict :=
+  Task.spawn fun _ => count words
+
+#eval
+  let words := "to be or not to be that is the question".splitOn " "
+  let task := countTask words
+  task.get
+-- Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)]
+
+#check Task.bind
+
+-- def reduceCountTasks (countTasks : List (Task CountDict)) : Task CountDict :=
+--   let init := Task.spawn fun _ => {} -- start with the empty count
+--   countTasks.foldl (init := init) fun countTask newCountTask =>
+--     sorry
+
+def reduceCountTasks (countTasks : List (Task CountDict)) : Task CountDict := do
+  let mut counts : List CountDict := []
+  for task in countTasks do
+    counts := (← task) :: counts
+  return reduceCounts counts.reverse
+
+#eval
+  let countTasks := corpus.map countTask
+  reduceCountTasks countTasks |>.get
+-- Std.HashMap.ofList [("knowledge", 1),
+--  ("mightier", 1),
+--  ("better", 1),
+--  ("policy", 1),
+--  ("worth", 1),
+--  ("that", 2),
+--  ("thousand", 1),
+--  ("where", 1),
+--  ("pen", 1),
+--  ("actions", 1),
+--  ("there", 2),
+--  ("a", 4),
+--  ("way", 1),
+--  ("sword", 1),
+--  ("practice", 1),
+--  ("is", 8),
+--  ("gold", 1),
+--  ("question", 1),
+--  ("not", 2),
+--  ("glitters", 1),
+--  ("late", 1),
+--  ("all", 1),
+--  ("or", 1),
+--  ("than", 3),
+--  ("words", 2),
+--  ("power", 1),
+--  ("never", 1),
+--  ("will", 1),
+--  ("picture", 1),
+--  ("be", 2),
+--  ("to", 2),
+--  ("louder", 1),
+--  ("the", 4),
+--  ("honesty", 1),
+--  ("perfect", 1),
+--  ("makes", 1),
+--  ("speak", 1),
+--  ("best", 1)]
+```
+
+The desugared version of the `reduceCountsTask` code (many binds are used,
+that was implicit in the do block version.)
+
+```lean4
+def reduceCountTasksAlt
+  (countTasks : List (Task CountDict))
+  (counts : List CountDict := [])
+  : Task CountDict :=
+  match countTasks with
+  | [] =>
+    Task.pure (reduceCounts counts.reverse)
+  | task :: tasks =>
+    Task.bind task (fun count => reduceCountTasksAlt tasks (count :: counts))
+```
+
+Actually now, we can design a better parMap:
+
+**TODO.** introduce that **before** and apply it to the mapReduce pattern?
+
+```lean4
+def getAllTask {α} (tasks : List (Task α)) (results : List α := [])
+    : Task (List α) := do
+  match tasks with
+  | [] =>
+    return results.reverse
+  | task :: tasks =>
+    let result ← task
+    getAllTask tasks (result :: results)
+
+def List.parMap' {α β} (f : α → β) (l : List α) : List β :=
+  let tasks := l.map (fun x => Task.spawn (fun _ => f x))
+  (getAllTask tasks).get
+
+#eval 8 |> List.range |>.parMap' (·^2)
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+
+@[noinline]
+def parMap'Collatz : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => 8 |> List.range |>.parMap' (collatz n)
+  IO.lazyPure deferred
+
+#eval do
+  IO.println (← timeit "sequential map" mapCollatz)
+  IO.println (← timeit "parallel map" parMapCollatz)
+  IO.println (← timeit "fixed parallel map" parMap'Collatz)
+-- sequential map 2.9s
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+-- parallel map 739ms
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+-- fixed parallel map 659ms
+-- [0, 4, 1, 1, 2, 2, 2, 1]
+
+/-! TODO
+compare the performance of parMap and parMap' when there too many tasks
+-/
+
+#check List.map
+
+@[noinline]
+def parSquare (map : (Nat → Nat) → List Nat → List Nat) (n : Nat) : IO (List Nat) :=
+  let deferred := fun (_ : Unit) => List.range n |> (map (· ^ 2) ·)
+  IO.lazyPure deferred
+
+#eval do
+  IO.println (← timeit "sequential map" (parSquare List.map 8))
+  IO.println (← timeit "parallel map" (parSquare List.parMap 8))
+  IO.println (← timeit "parallel map (fixed)" (parSquare List.parMap' 8))
+-- sequential map 0.0391ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+-- parallel map 0.255ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+-- parallel map (fixed) 4.64ms
+-- [0, 1, 4, 9, 16, 25, 36, 49]
+
+#eval do
+  let n := 1_000
+  discard (timeit "sequential map" (parSquare List.map n))
+  discard (timeit "parallel map" (parSquare List.parMap n))
+  discard (timeit "parallel map (fixed)" (parSquare List.parMap' n))
+-- sequential map 0.965ms
+-- parallel map 8.49ms
+-- parallel map (fixed) 32.1ms
+
+#eval do
+  let n := 1_000_000
+  discard (timeit "sequential map" (parSquare List.map n))
+  discard (timeit "parallel map" (parSquare List.parMap n))
+  discard (timeit "parallel map (fixed)" (parSquare List.parMap' n))
+-- sequential map 384ms
+-- parallel map 5.77s
+-- parallel map (fixed) 15s
+```
 
 Misc., unsorted
 --------------------------------------------------------------------------------
@@ -418,7 +714,7 @@ Alt version using the monadic structure of lists (of tasks)
 -/
 def sumOfSquares'' (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     let square := number |> Task.pure |>.map (· ^ 2)
     return square
   let squares : List ℕ := t_squares.map Task.get
@@ -439,12 +735,12 @@ We can also use the `do` and `return` notation for tasks.
 
 def sumOfSquares_3 (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     let square : Task ℕ := do
       return number ^ 2
     return square
   let squares : List ℕ := do
-    let t_square <- t_squares
+    let t_square ← t_squares
     return t_square.get
   squares.sum
 
@@ -457,9 +753,9 @@ def sumOfSquares_3 (numbers : List ℕ) : ℕ :=
 ```lean4
 def sumOfSquares_4 (numbers : List ℕ) : ℕ :=
   let t_squares : List (Task ℕ) := do
-    let number <- numbers
+    let number ← numbers
     return (return number ^ 2 : Task ℕ)
-  (return (<- t_squares).get) |>.sum
+  (return (← t_squares).get) |>.sum
 
 #eval sumOfSquares_4 [1, 2, 3]
 -- 14
@@ -469,7 +765,7 @@ Let's abstract a bit a parallel map and use it to achieve the same result.
 
 ```lean4
 def pmap_wrong {α β} (f : α → β) (inputs : List α) : List β := do
-  let input <- inputs
+  let input ← inputs
   let t_output : Task β := return f input
   let output := t_output.get
   return output
@@ -520,7 +816,7 @@ A variant which uses:
 def List.tmap' {α β} (f : α → β) (inputs : List α) : List β :=
   inputs
     |>.map (fun input : α => return input)
-    |>.map (fun t_input => return f (<- t_input))
+    |>.map (fun t_input => return f (← t_input))
     |>.map Task.get
 ```
 
@@ -558,7 +854,7 @@ def action : IO Unit := do
     IO.println "in the background"
     IO.sleep 1000
     IO.println "in the background"
-  let task <- IO.asTask do
+  let task ← IO.asTask do
     IO.sleep 1000
     return 42
   match task.get with
@@ -566,7 +862,7 @@ def action : IO Unit := do
   | Except.error _ => panic! "Ooops"
   IO.sleep 1000
   IO.println "Hello!"
-  -- let task <- IO.asTask (IO.println "Hello world!")
+  -- let task ← IO.asTask (IO.println "Hello world!")
   -- _ = task.get
   -- match task.get with
   -- | .ok _ => IO.println "ok."
@@ -592,8 +888,8 @@ def displayBlack : IO Unit := do
     IO.sleep 500
 
 def displayWhiteAndBlack : IO Unit := do
-  let _t_display_white <- IO.asTask displayWhite
-  let _t_display_black <- IO.asTask displayBlack
+  let _t_display_white ← IO.asTask displayWhite
+  let _t_display_black ← IO.asTask displayBlack
   IO.sleep 3_000
 
 #eval 1+1
