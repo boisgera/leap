@@ -309,8 +309,7 @@ of the first one when it's done, running on the same thread:
 
 
 /-!
-> [!TODO]
-> Monadic style.
+**TODO.** Monadic style.
 -/
 
 
