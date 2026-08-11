@@ -120,7 +120,13 @@ Now a more realistic use of the `Task` API:
   task.get
 -- "Hello world!"
 
+
+
 /-!
+Parallel computations
+--------------------------------------------------------------------------------
+
+
 Tasks make it easy to use all the processing unit to achieve a better
 performance, especially when the computations you need to do are unrelated.
 For example, we can reimplement a paralle version of `List.map` using tasks.
@@ -224,8 +230,6 @@ def parMapCollatz : IO (List Nat) :=
 
 
 /-!
-
-
 Now the parallel code runs faster than the sequential code, but due to the
 threads overhead, we don't get a 8x performance.
 -/
@@ -267,7 +271,8 @@ size while waiting for the result.
 -/
 
 /-!
-### Bind
+Sequencing
+--------------------------------------------------------------------------------
 
 The creation of threads can be costly, so we would like not to have extra
 threads when we don't need them. An important use case concerns the scheduling
@@ -307,11 +312,222 @@ of the first one when it's done, running on the same thread:
   return task2.get
 -- 499501
 
-
 /-!
-**TODO.** Monadic style.
+Or, since bind always create a new task, simply:
 -/
 
+#eval do
+  let task1 : Task Nat := Task.spawn deferredSum
+  let task2 : Task Nat := task1.bind (fun n => Task.pure n)
+  return task2.get
+-- 499501
+
+/-!
+Actually `Task.pure` and `Task.bin` give `Task` a `Monad` structure,
+hence we can reimplement that code as:
+-/
+
+#eval (do
+  let n ← Task.spawn deferredSum
+  Task.spawn (fun _ => n + 1)
+).get
+-- 499501
+
+/-!
+Or again, the even simpler
+-/
+
+#eval (do
+  let n ← Task.spawn deferredSum
+  return n + 1
+).get
+-- 499501
+
+
+/-!
+MapReduce
+--------------------------------------------------------------------------------
+
+In the canonical MapReduce example, you distribute the computation of the
+count of each word in a set of documents:
+-/
+
+abbrev CountDict := Std.HashMap String Nat
+
+def count (words : List String) : CountDict :=
+  words.foldl (init := {}) fun dict word =>
+    let count := dict.getD word 0
+    dict.insert word (count + 1)
+
+#eval "to be or not to be that is the question" |>.splitOn " " |> count
+-- Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)]
+
+def corpus := [
+  "to be or not to be that is the question",
+  "all that glitters is not gold",
+  "actions speak louder than words",
+  "knowledge is power",
+  "the pen is mightier than the sword",
+  "a picture is worth a thousand words",
+  "practice makes perfect",
+  "better late than never",
+  "honesty is the best policy",
+  "where there is a will there is a way"
+].map (·.splitOn " ")
+
+#eval corpus.parMap count
+-- [Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)],
+--  Std.HashMap.ofList [("all", 1), ("is", 1), ("gold", 1), ("that", 1), ("not", 1), ("glitters", 1)],
+--  Std.HashMap.ofList [("than", 1), ("louder", 1), ("words", 1), ("speak", 1), ("actions", 1)],
+--  Std.HashMap.ofList [("knowledge", 1), ("is", 1), ("power", 1)],
+--  Std.HashMap.ofList [("than", 1), ("is", 1), ("the", 2), ("mightier", 1), ("pen", 1), ("sword", 1)],
+--  Std.HashMap.ofList [("is", 1), ("words", 1), ("worth", 1), ("thousand", 1), ("a", 2), ("picture", 1)],
+--  Std.HashMap.ofList [("practice", 1), ("perfect", 1), ("makes", 1)],
+--  Std.HashMap.ofList [("than", 1), ("better", 1), ("never", 1), ("late", 1)],
+--  Std.HashMap.ofList [("the", 1), ("is", 1), ("honesty", 1), ("policy", 1), ("best", 1)],
+--  Std.HashMap.ofList [("is", 2), ("where", 1), ("way", 1), ("a", 2), ("there", 2), ("will", 1)]]
+
+#check Std.HashMap.fold
+-- Std.HashMap.fold.{u, v, w} {α : Type u} {β : Type v} {x✝ : BEq α} {x✝¹ : Hashable α} {γ : Type w}
+--   (f : γ → α → β → γ)
+--   (init : γ)
+--   (b : Std.HashMap α β)
+--   : γ
+
+def mergeCounts (base update : CountDict) : CountDict :=
+  -- Iterate on the update
+  update.fold (init := base)
+    fun dict word count =>
+      let baseCount := dict.getD word 0
+      dict.insert word (baseCount + count)
+
+def reduceCounts (counts : List CountDict) : CountDict :=
+  counts.foldl (init := {}) mergeCounts
+
+#eval corpus.parMap count |> reduceCounts
+-- Std.HashMap.ofList [("knowledge", 1),
+--  ("mightier", 1),
+--  ("policy", 1),
+--  ("better", 1),
+--  ("worth", 1),
+--  ("that", 2),
+--  ("thousand", 1),
+--  ("where", 1),
+--  ("pen", 1),
+--  ("there", 2),
+--  ("way", 1),
+--  ("actions", 1),
+--  ("sword", 1),
+--  ("a", 4),
+--  ("practice", 1),
+--  ("is", 8),
+--  ("gold", 1),
+--  ("question", 1),
+--  ("not", 2),
+--  ("late", 1),
+--  ("glitters", 1),
+--  ("all", 1),
+--  ("than", 3),
+--  ("or", 1),
+--  ("words", 2),
+--  ("power", 1),
+--  ("never", 1),
+--  ("will", 1),
+--  ("picture", 1),
+--  ("be", 2),
+--  ("to", 2),
+--  ("louder", 1),
+--  ("the", 4),
+--  ("honesty", 1),
+--  ("makes", 1),
+--  ("perfect", 1),
+--  ("speak", 1),
+--  ("best", 1)]
+
+/-!
+Note: give that that we actually have a sequential reduce,
+we could use bind to (maybe) avoid a bunch of unnecessary extra thread
+creations due to the many gets we are doing.
+-/
+
+def countTask (words : List String) : Task CountDict :=
+  Task.spawn fun _ => count words
+
+#eval
+  let words := "to be or not to be that is the question".splitOn " "
+  let task := countTask words
+  task.get
+-- Std.HashMap.ofList [("to", 2), ("the", 1), ("is", 1), ("or", 1), ("question", 1), ("that", 1), ("not", 1), ("be", 2)]
+
+#check Task.bind
+
+-- def reduceCountTasks (countTasks : List (Task CountDict)) : Task CountDict :=
+--   let init := Task.spawn fun _ => {} -- start with the empty count
+--   countTasks.foldl (init := init) fun countTask newCountTask =>
+--     sorry
+
+def reduceCountTasks (countTasks : List (Task CountDict)) : Task CountDict := do
+  let mut counts : List CountDict := []
+  for task in countTasks do
+    counts := (<- task) :: counts
+  return reduceCounts counts.reverse
+
+#eval
+  let countTasks := corpus.map countTask
+  reduceCountTasks countTasks |>.get
+-- Std.HashMap.ofList [("knowledge", 1),
+--  ("mightier", 1),
+--  ("better", 1),
+--  ("policy", 1),
+--  ("worth", 1),
+--  ("that", 2),
+--  ("thousand", 1),
+--  ("where", 1),
+--  ("pen", 1),
+--  ("actions", 1),
+--  ("there", 2),
+--  ("a", 4),
+--  ("way", 1),
+--  ("sword", 1),
+--  ("practice", 1),
+--  ("is", 8),
+--  ("gold", 1),
+--  ("question", 1),
+--  ("not", 2),
+--  ("glitters", 1),
+--  ("late", 1),
+--  ("all", 1),
+--  ("or", 1),
+--  ("than", 3),
+--  ("words", 2),
+--  ("power", 1),
+--  ("never", 1),
+--  ("will", 1),
+--  ("picture", 1),
+--  ("be", 2),
+--  ("to", 2),
+--  ("louder", 1),
+--  ("the", 4),
+--  ("honesty", 1),
+--  ("perfect", 1),
+--  ("makes", 1),
+--  ("speak", 1),
+--  ("best", 1)]
+
+/-!
+The desugared version of the `reduceCountsTask` code (many binds are used,
+that was implicit in the do block version.)
+-/
+
+def reduceCountTasksAlt
+  (countTasks : List (Task CountDict))
+  (counts : List CountDict := [])
+  : Task CountDict :=
+  match countTasks with
+  | [] =>
+    Task.pure (reduceCounts counts.reverse)
+  | task :: tasks =>
+    Task.bind task (fun count => reduceCountTasksAlt tasks (count :: counts))
 
 /-!
 Misc., unsorted
