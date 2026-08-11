@@ -235,6 +235,56 @@ threads overhead, we don't get a 8x performance.
 
 
 /-!
+Tasks dependencies
+--------------------------------------------------------------------------------
+
+There is a subtle issue with the model of a thread pool with a fixed number
+of threads. If your thread pool is full and you need to get the result of a task
+on one thread that all the tasks on the other thread depend on, but your thread
+depends on a task that has not been scheduled yet... then you're stuck!
+This is a deadlock.
+
+```mermaid
+flowchart TB
+    subgraph Pool["Fixed thread pool (all threads busy)"]
+        T1["Thread 1<br/>blocked on Task B"]
+        T2["Thread 2..N<br/>running other tasks"]
+        B["Task B<br/>waiting in queue"]
+    end
+
+    T1 -- "waits for result" --> B
+    B -- "needs a free thread to run on" --> T1
+
+    D["Deadlock:<br/>no thread ever frees up for Task B"]
+    T1 --> D
+    B --> D
+```
+
+To avoid such deadlocks, Lean will temporarily increase the maximum threadpool
+size while waiting for the result.
+-/
+
+/-!
+-/
+
+/-- Long running task -/
+def lazy (_ : Unit) : Nat :=
+  (List.range 1_000).foldl (· + ·) 0
+
+def eager (n : Nat) : Nat :=
+  n + 1
+
+def naive : IO Nat := do
+  let task1 : Task Nat := Task.spawn lazy
+  let task2 : Task Nat := Task.spawn (fun _ =>
+    let x := task1.get -- blocking wait *inside* a task
+    eager x)
+  return task2.get
+
+
+
+/-!
+Misc., unsorted
 --------------------------------------------------------------------------------
 -/
 
