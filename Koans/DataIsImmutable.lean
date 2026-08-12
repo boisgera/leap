@@ -18,16 +18,16 @@ then see what changes when there is none.
 ### Two ways to prepend
 
 Python lists have (at least) two APIs to put an element in front of a list:
-an *in-place* one, that mutates the list, and a "functional" one, that
+an *in-place* one, that mutates the list, and a *functional* one, that
 builds a new list and leaves the original untouched.
 
 ```python
 # in-place API: mutates the list, returns nothing
 xs = [1, 2, 3]
-ys = xs           # ys and xs refer to the *same* list object
+ys = xs            # ys and xs refer to the same object
 ys.insert(0, 0)
-print(xs)          # [0, 1, 2, 3]  <- xs changed too!
 print(ys)          # [0, 1, 2, 3]
+print(xs)          # [0, 1, 2, 3]: xs changed too!
 print(xs is ys)    # True: same object
 ```
 
@@ -35,12 +35,12 @@ print(xs is ys)    # True: same object
 # functional API: builds a brand new list
 xs = [1, 2, 3]
 ys = [0] + xs      # a new list is created
-print(xs)          # [1, 2, 3]  unchanged
 print(ys)          # [0, 1, 2, 3]
+print(xs)          # [1, 2, 3]: xs is unchanged
 print(xs is ys)    # False: two different objects
 ```
 
-`is` tests *identity*: whether two names refer to the exact same object in
+The keyword `is` tests *identity*: whether two names refer to the exact same object in
 memory. `id(x)` returns a number that identifies this location. Identity is
 a notion that only makes sense because Python values live *somewhere* and
 can be pointed to from several places at once.
@@ -75,7 +75,7 @@ the default shares -- and corrupts -- the same list.
 -/
 
 /-!
-### A "snake" that doesn't actually move
+### 🐍 A moving snake
 
 Here is a more insidious version of the same bug: recording the complete
 trail of a snake that moves on a grid, one point at a time.
@@ -96,10 +96,13 @@ def move_snake(snake, direction):
 
 trail = snake  # record the initial serpent geometry in the trail.
 
+def update_trail(trail, head):
+    trail.append(head)
+
 for direction in [DOWN, DOWN, DOWN]:
     move_snake(snake, direction)
     head = snake[-1]
-    trail.append(head)
+    update_trail(trail, head)
 ```
 
 What we are expecting at the end:
@@ -128,22 +131,28 @@ gives the same list a second name.
 True
 ```
 
-From then on, `move` mutates that one shared list (`append` then `pop`),
-and `trail.append(head)` mutates it *again* right after -- both names are
-watching the same object being rewritten underneath them, three times over.
-There never was a separate history being built at all.
+From then on, `move_snake` mutates that one shared list (`append` then `pop`),
+and `update_trail(trail, head)` mutates it *again* right after
+-- both names are watching the same object being rewritten underneath them,
+three times over. There never was a separate history being built at all.
 
-The fix doesn't need to touch `move`, or the loop, or anything inside it:
-just give `trail` its own, independent copy of the initial geometry.
+The fix doesn't *need* to touch `move_snake`, `update_trail`, or the loop,
+or anything inside it.
+Just give `trail` its own, independent copy of the initial geometry: replace
+Replace
 
 ```python
-trail = list(snake)   # an independent copy, not another name for `snake`
-
-for direction in [DOWN, DOWN, DOWN]:
-    move_snake(snake, direction)
-    head = snake[-1]
-    trail.append(head)
+trail = snake  # record the initial serpent geometry in the trail.
 ```
+
+by
+
+
+```python
+trail = list(snake)  # record the initial serpent geometry in the trail.
+```
+
+and you will end up with the expected result:
 
 ```pycon
 >>> snake
@@ -161,8 +170,8 @@ giving it one of its own.
 
 
 Another option, more disciplined, that does not require a detailed analysis
-to work: use functions that never mutate/reuse their arguments and return
-brand new objects instead.
+to work: systematically use functions that never mutate or reuse their arguments
+but return brand new objects instead.
 
 ```python
 LEFT  = (-1,  0)
