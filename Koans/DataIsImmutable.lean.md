@@ -1,5 +1,4 @@
 
-/-!
 In Python, most data is *mutable*: you can change the content of an object
 after it has been created, without creating a new object. Lists are the
 classic example. `Lean`, on the other hand, has no mutable data at all:
@@ -8,13 +7,9 @@ every value, once built, stays exactly as it is forever.
 This sounds like a small technical detail, but it has deep consequences on
 how you reason about programs. Let's look at mutability in Python first,
 then see what changes when there is none.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### Two ways to prepend
 
 Python lists have (at least) two APIs to put an element in front of a list:
@@ -44,13 +39,9 @@ print(xs is ys)    # False: two different objects
 memory. `id(x)` returns a number that identifies this location. Identity is
 a notion that only makes sense because Python values live *somewhere* and
 can be pointed to from several places at once.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### In-place mutation is dangerous
 
 Sharing a mutable object is fine as long as nobody mutates it. But as soon
@@ -72,9 +63,7 @@ print(b)  # [0, 0]   <- the default list survived and grew across calls!
 The default value `[]` is created *once*, when the function is defined, not
 on every call. Since `insert` mutates it in place, every call that relies on
 the default shares -- and corrupts -- the same list.
--/
 
-/-!
 ### A "snake" that doesn't actually move
 
 Here is a more insidious version of the same bug: recording the complete
@@ -196,13 +185,9 @@ reach for. The initial `trail = snake` aliasing is now completely harmless,
 for the same reason the earlier fix was: nothing ever mutates either name
 again, so having them briefly point at the same object changes nothing
 observable.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### A classic immutable type: strings
 
 Python strings, unlike lists, are immutable: there is no in-place API for
@@ -223,13 +208,9 @@ print(s is t)      # False: `+=` rebound `t` to a freshly built string
 
 No method on `str` can mutate the object it is called on. This is exactly
 the property Lean gives to *every* value, not just strings.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### A mixed case: tuples
 
 Tuples look immutable: there is no method to insert, remove or reassign an
@@ -269,19 +250,15 @@ lists, but reused the pairs of integers they contained.
 This is fine, we didn't need to copy those beforehand because
 integers are immutable hence pairs of integers are immutable in the
 strongest interpretation of the term.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### In Lean, everything is immutable
 
 Lean has no mutation API whatsoever. Strings behave the way Python strings
 do -- but now *every* type does.
--/
 
+```lean4
 def s : String := "hello"
 
 #eval s.push '!'
@@ -289,16 +266,16 @@ def s : String := "hello"
 
 #eval s
 -- "hello"
+```
 
-/-!
 There is no operation, anywhere in the language, that could make the second
 `#eval` print anything other than `"hello"`. `s` is not a location whose
 content might have been overwritten; `s` *is* the value `"hello"`.
 
 The same holds for lists. Prepending an element does not touch the original
 list, it builds a new one:
--/
 
+```lean4
 def xs : List Nat := [1, 2, 3]
 def ys : List Nat := 0 :: xs
 
@@ -307,17 +284,13 @@ def ys : List Nat := 0 :: xs
 
 #eval ys
 -- [0, 1, 2, 3]
+```
 
-/-!
 This is exactly the "functional" API on the Python side (`[0] + xs`) -- Lean
 simply doesn't offer the other one.
--/
 
-/-!
 --------------------------------------------------------------------------------
--/
 
-/-!
 ### No identity, no problem
 
 Under the hood, `ys` is very likely represented as a small cell pointing to
@@ -330,20 +303,20 @@ observe. Lean has no `is` operator, no `id` function, nothing that lets a
 program ask "are these two values the same object in memory?". The only
 question you can ask is whether two values are *equal*, i.e. whether they
 have the same content:
--/
 
+```lean4
 #eval xs == ys.tail
 -- true
+```
 
-/-!
 Values can be shared -- passed around, stored in several places, reused by
 several pieces of code at once -- completely for free. Since no piece of
 code can ever mutate a shared value, sharing is entirely invisible: nothing
 that observes a value can tell whether it is "the" value or "a copy of" it,
 because there is no difference. Let's translate the last version of the
 Python snake example, line for line, and see what happens to its bug:
--/
 
+```lean4
 def LEFT  : Int × Int := (-1,  0)
 def RIGHT : Int × Int := ( 1,  0)
 def UP    : Int × Int := ( 0, -1)
@@ -366,8 +339,8 @@ def updateTrail (trail : List (Int × Int)) (head : Int × Int) : List (Int × I
     trail := updateTrail trail head
   return (snake, trail)
 -- ([(2, 1), (2, 2), (2, 3)], [(0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (2, 3)])
+```
 
-/-!
 `trail := snake` is not aliasing, it is just giving the current value of
 `snake` a second name. There is nothing to alias: neither `moveSnake` nor
 `updateTrail` has any way to mutate its arguments, so `snake := moveSnake
@@ -380,4 +353,3 @@ never the "got" one -- and unlike the Python `update_trail`, there is no
 in-place `.append` left anywhere to sneak back in by accident. The bug is
 not avoided here by discipline or a defensive copy, it is simply not a
 sentence you can write.
--/

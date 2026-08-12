@@ -546,6 +546,9 @@ def getAllTask {α} (tasks : List (Task α)) (results : List α := [])
     let result ← task
     getAllTask tasks (result :: results)
 
+/-
+Note: this is very similar to Task.mapList.
+-/
 def List.parMap' {α β} (f : α → β) (l : List α) : List β :=
   let tasks := l.map (fun x => Task.spawn (fun _ => f x))
   (getAllTask tasks).get
@@ -609,7 +612,9 @@ def parSquare (map : (Nat → Nat) → List Nat → List Nat) (n : Nat) : IO (Li
 -- parallel map 5.77s
 -- parallel map (fixed) 15s
 
-
+/-!
+TODO: use `#time` the line before an `#eval` instead of #timeit.
+-/
 
 /-!
 Misc., unsorted
