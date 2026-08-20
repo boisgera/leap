@@ -98,7 +98,41 @@ which we can also write:
 /-!
 But of course, this is not limited to this case, since we can have
 finite sets `Finset α` associated to non-finite types `α`.
+For example we have
 -/
+
+#check Finset.Iic
+-- Finset.Iic.{u_1} {α : Type u_1} [Preorder α] [LocallyFiniteOrderBot α]
+-- (a : α) : Finset α
+
+#eval -- 21
+  let f (n : ℕ) : ℕ := n + 1
+  ∑ i ∈ Finset.Iic 5, f i
+
+/-!
+Alternatively, since the previous example is a bit too specific, we can
+some of sets of indices (terms `Set ℕ`) when we know that they are
+`Finite`, with an explicit conversion to `Finset ℕ`)
+-/
+
+
+#check Set.toFinset
+-- Set.toFinset.{u_1} {α : Type u_1} (s : Set α) [Fintype ↑s] : Finset α
+
+/-!
+The set `s` coerced to the (sub-) type `{ x // x ∈ s }` and then hopefully an
+instance of the `Fintype` type class class for this type is known to exist.
+-/
+
+#eval
+  let f (n : ℕ) : ℕ := n + 1
+  ∑ i ∈ { n : ℕ | n ≤ 5 }.toFinset, f i
+
+/-!
+TODO: study the `Finite` stuff. I think this is pretty standard def, with
+equipotence to `Fin n` and so on.
+-/
+
 
 /-!
 So, let's have a look at the `Finset` structure, which will give us some
