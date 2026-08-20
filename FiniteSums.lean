@@ -35,7 +35,6 @@ By the way, this is funny but you kinda need the wrapping behavior for `Fin 10`
 to be a commutative monoid, a simpler "cliping" behavior wouldn't work.
 -/
 
-
 /-!
 Now, the thing is there is no `Fintype.sum`. `∑ i, f i` actually is a shortcut
 for `∑ i ∈ Finset.univ, f i`, which desugars to `Finset.sum s f`, where
@@ -44,6 +43,30 @@ for `∑ i ∈ Finset.univ, f i`, which desugars to `Finset.sum s f`, where
 #check Finset.sum
 -- Finset.sum.{u_1, u_3} {ι : Type u_1} {M : Type u_3} [AddCommMonoid M]
 -- (s : Finset ι) (f : ι → M) : M
+
+/-
+Basically:
+  - We define how to deal with sum when the indices belong to a finite set,
+  - Then consider as a set of indices the finite set that contains all the
+    terms of a finite type[^1].
+And voilà, we have the sum over a finite type defined "for free!".
+-/
+
+/-!
+[^1]: Actually, when to define a `Fintype`, you *need* to provide this
+associated universal finite set (and to prove that being a term of the
+type is equivalent to being an element of the universal set).
+So the implementation of `Finset.univ` is trivial: it's just `Fintype.elems`.
+-/
+
+#print Fintype
+-- class Fintype.{u_4} (α : Type u_4) : Type u_4
+-- number of parameters: 1
+-- fields:
+--   Fintype.elems : Finset α
+--   Fintype.complete : ∀ (x : α), x ∈ Fintype.elems
+-- constructor:
+--   Fintype.mk.{u_4} {α : Type u_4} (elems : Finset α) (complete : ∀ (x : α), x ∈ elems) : Fintype α
 
 /-!
 So that expands our tooling a bit, we can now also do partial sums if we want to:
@@ -66,7 +89,9 @@ finite sets `Finset α` associated to non-finite types `α`.
 -/
 
 /-!
-So, let's have a look at the `Finset` structure first
+So, let's have a look at the `Finset` structure, which will give us some
+insight into the more general case. Actually, we need to pull quite a lot
+of strings to get the big picture.
 -/
 
 #print Finset
@@ -78,18 +103,38 @@ So, let's have a look at the `Finset` structure first
 -- constructor:
 --   Finset.mk.{u_4} {α : Type u_4} (val : Multiset α) (nodup : val.Nodup) : Finset α
 
+#print Multiset
+-- def Multiset.{u} : Type u → Type u :=
+-- fun α => Quotient (List.isSetoid α)
 
+#check List.isSetoid
+-- List.isSetoid.{u_1} (α : Type u_1) : Setoid (List α)
 
-
-
-
-
-
-#print Fintype
--- class Fintype.{u_4} (α : Type u_4) : Type u_4
+#print Setoid
+-- class Setoid.{u} (α : Sort u) : Sort (max 1 u)
 -- number of parameters: 1
 -- fields:
---   Fintype.elems : Finset α
---   Fintype.complete : ∀ (x : α), x ∈ Fintype.elems
+--   Setoid.r : α → α → Prop
+--   Setoid.iseqv : Equivalence ⇑self
 -- constructor:
---   Fintype.mk.{u_4} {α : Type u_4} (elems : Finset α) (complete : ∀ (x : α), x ∈ elems) : Fintype α
+--   Setoid.mk.{u} {α : Sort u} (r : α → α → Prop) (iseqv : Equivalence r) : Setoid α
+
+#print Multiset.Nodup
+-- def Multiset.Nodup.{u_1} : {α : Type u_1} → Multiset α → Prop :=
+-- fun {α} s => Quot.liftOn s List.Nodup ⋯
+
+#print List.Nodup
+-- def List.Nodup.{u} : {α : Type u} → List α → Prop :=
+-- fun {α} => List.Pairwise fun x1 x2 => x1 ≠ x2
+
+
+/-!
+To summarize this,**TODO**
+
+
+-/
+
+
+/-!
+TODO: implementation of `Finset.sum`.
+-/
