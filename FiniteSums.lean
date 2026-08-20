@@ -36,6 +36,18 @@ to be a commutative monoid, a simpler "cliping" behavior wouldn't work.
 -/
 
 /-!
+In the same vein, `EReal` is also a commutative monoid.
+(Note that ⊤ + ⊥ = ⊥ + ⊤ = ⊥. So "-∞" is at the same time "-∞" and "nan".
+With this definition, when restricted to nonnegative numbers, things work
+"as usual" (with the exp, the log, etc.)).
+-/
+
+#synth AddCommMonoid EReal
+-- instAddCommMonoidEReal
+
+
+
+/-!
 Now, the thing is there is no `Fintype.sum`. `∑ i, f i` actually is a shortcut
 for `∑ i ∈ Finset.univ, f i`, which desugars to `Finset.sum s f`, where
 -/
@@ -137,4 +149,22 @@ To summarize this,**TODO**
 
 /-!
 TODO: implementation of `Finset.sum`.
+-/
+
+#print Finset.sum
+-- protected def Finset.sum.{u_1, u_3} : {ι : Type u_1} → {M : Type u_3} → [AddCommMonoid M] → Finset ι → (ι → M) → M :=
+-- fun {ι} {M} [AddCommMonoid M] s f => (Multiset.map f s.val).sum
+
+#print Multiset.map
+-- def Multiset.map.{v, u_1} : {α : Type u_1} → {β : Type v} → (α → β) → Multiset α → Multiset β :=
+-- fun {α} {β} f s => Quot.liftOn s (fun l => ↑(List.map f l)) ⋯
+
+#print List.sum
+-- def List.sum.{u_1} : {α : Type u_1} → [Add α] → [Zero α] → List α → α :=
+-- fun {α} [Add α] [Zero α] => List.foldr (fun x1 x2 => x1 + x2) 0
+
+/-!
+... but at the end of the day this is quite a mess so we need a small set
+of operational theorem (split the sum, sum over empty, singleton, etc.)
+to be able to make it work.
 -/
