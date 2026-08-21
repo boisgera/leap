@@ -12,15 +12,15 @@ instance : Hashable Float where
   hash f := hash f.toBits  -- or via UInt64 bit-reinterpretation
 
 structure Point where
-  x : Float
-  y : Float
-  z : Float
+  x : Float := 0.0
+  y : Float := 0.0
+  z : Float := 0.0
 deriving BEq, Hashable, Repr
 
 structure Vector where
-  x : Float
-  y : Float
-  z : Float
+  x : Float := 0.0
+  y : Float := 0.0
+  z : Float := 0.0
 deriving BEq, Hashable, Repr
 
 
@@ -297,135 +297,133 @@ Tesselation
 --------------------------------------------------------------------------------
 -/
 
-
--- This structure sucks ... we're lucky that "a tad larger" approx
--- works here when we consider the indices. We could even produce
--- a "fixed grid" with the effective min and max afterwards.
-structure Grid where
-  min : Point
-  max : Point
-  step : Float
-deriving BEq, Hashable, Repr
-
--- Point (grid node) index
 structure Index where
   i : Int
   j : Int
   k : Int
 deriving BEq, Hashable, Repr
 
-def Grid.imin (g : Grid) : Index :=
-  let q := fun (x : Float) => (x / g.step).floor.toInt64.toInt
-  Index.mk (q g.min.1) (q g.min.2) (q g.min.3)
+def Index.le (ijk1 ijk2 : Index) : Bool :=
+  ijk1.1 ≤ ijk2.1 && ijk1.2 ≤ ijk2.2 && ijk1.3 ≤ ijk2.3
 
-def Grid.imax (g : Grid) : Index :=
-  let q := fun (x : Float) => (x / g.step).ceil.toInt64.toInt
-  Index.mk (q g.max.1) (q g.max.2) (q g.max.3)
-
-def Grid.nextIndex? (g : Grid) (ijk : Index) : Option Index :=
-  let i := ijk.1
-  let j := ijk.2
-  let k := ijk.3
-  if k < g.imax.3 then
-    some (Index.mk i j (k + 1))
-  else
-    if j < g.imax.2 then
-      some (Index.mk i (j + 1) g.imin.3)
-    else
-      if i < g.imax.1 then
-        some (Index.mk (i + 1) g.imin.2 g.imin.3)
-      else
-        none
-
-partial def Grid.foldl {α} (f : α → Index → α) (init : α) (g : Grid) : α :=
-  let rec foldAux (index? : Option Index) (current : α) : α :=
-    match index? with
-    | none => current
-    | some index => foldAux (g.nextIndex? index) (f current index)
-  foldAux (some g.imin) init
-
-end STL
-
-def Float.sign (f : Float) : Float :=
-  if f ≥ 0 then 1.0 else -1.0
-
-namespace STL
-
-structure Edge where
-  ijk1 : Index
-  ijk2 : Index
-  grid : Grid
+structure Grid where
+  imin : Index
+  imax : Index
+  scale : Float
 deriving BEq, Hashable, Repr
 
-end STL
+def Grid.contains (grid : Grid) (ijk : Index) : Bool :=
+  Index.le grid.imin ijk && Index.le ijk grid.imax
 
-def Int.toFloat (i : Int) : Float :=
-  if i < 0 then -(i.natAbs.toFloat) else i.natAbs.toFloat
+def Grid.getElem (grid : Grid) (ijk : Index) : Point :=
+  let ⟨i, j, k⟩ := ijk
+  let scale := grid.scale
+  {
+    x := Float.ofInt i * scale,
+    y := Float.ofInt j * scale,
+    z := Float.ofInt k * scale,
+  }
 
-namespace STL
-
-def Grid.getElem (g : Grid) (ijk : Index) : Point :=
-  let i := ijk.1
-  let j := ijk.2
-  let k := ijk.3
-  Point.mk (g.step * i.toFloat) (g.step * j.toFloat) (g.step * k.toFloat)
-
+-- For the sake if simplicity, we provide a point grid[ijk]
+-- even if ijk is out of the grid.
 instance : GetElem? Grid Index Point (fun _grid _index => True) where
   getElem (g : Grid) (ijk : Index) _ := g.getElem ijk
   getElem? (g : Grid) (ijk : Index)  := some (g.getElem ijk)
 
--- φ is a level-set function. Probably not the smartest test ATM (consider, 0+, 0-, etc)
-def Edge.active (edge : Edge) (φ : Point → Float) : Bool :=
-  (φ edge.grid[edge.ijk1]!).sign != (φ edge.grid[edge.ijk2]!).sign
+def Grid.min (grid : Grid) : Point := grid[grid.imin]
+
+def Grid.max (grid : Grid) : Point := grid[grid.imax]
+
+def Grid.nextIndex? (g : Grid) (ijk : Index) : Option Index :=
+  let ⟨i, j, k⟩ := ijk
+  if k < g.imax.3 then
+    some { i, j, k := k + 1 }
+  else if j < g.imax.2 then -- reset k and increase j
+    some { i, j := j + 1, k := g.imin.3 }
+  else if i < g.imax.1 then -- reset j and k, increase i
+    some { i := i + 1, j := g.imin.2, k := g.imin.3 }
+  else -- that's over!
+    none
+
+partial def Grid.foldl {α} (f : α → Index → α) (init : α) (grid : Grid) : α :=
+  let rec foldAux (index? : Option Index) (current : α) : α :=
+    match index? with
+    | none => current
+    | some index => foldAux (grid.nextIndex? index) (f current index)
+  foldAux (some grid.imin) init
+
+inductive Axis where
+  | x
+  | y
+  | z
+  deriving BEq, Hashable, Repr
+
+def Axis.succ : Axis → Index → Index
+  | x => fun ⟨i, j, k⟩ => ⟨i + 1, j    , k    ⟩
+  | y => fun ⟨i, j, k⟩ => ⟨i    , j + 1, k    ⟩
+  | z => fun ⟨i, j, k⟩ => ⟨i    , j    , k + 1⟩
+
+structure Edge where
+  ijk : Index
+  axis : Axis
+deriving BEq, Hashable, Repr
+
+def Edge.indices (edge : Edge) : Index × Index :=
+  match edge with
+  | { ijk, axis, .. } => (ijk, axis.succ ijk)
+
+-- Belongs to edge or to grid?
+def Edge.active (edge : Edge) (grid : Grid) (φ : Point → Float) : Bool :=
+  let (ijk1, ijk2) := edge.indices
+  let p1 := grid[ijk1]
+  let p2 := grid[ijk2]
+  φ p1 < 0 && 0 ≤ φ p2 || φ p2 < 0 && 0 ≤ φ p1
 
 -- TODO: probably should replace φ arg here by a general predicate and implement
--- filter on top of Grid.
-
-def Grid.accActiveEdges (grid : Grid) (φ : Point → Float) (edges : List Edge) (ijk : Index) : List Edge :=
-  let i := ijk.1
-  let j := ijk.2
-  let k := ijk.3
-  let newEdges := [ -- we're lucky that we go overboard on the grid here
-    Edge.mk ijk (Index.mk i j (k+1)) grid,
-    Edge.mk ijk (Index.mk i (j+1) k) grid,
-    Edge.mk ijk (Index.mk (i+1) j k) grid,
+-- filter on top of Grid (?)
+def Grid.activeEdgesAux (grid : Grid) (φ : Point → Float) (edges : List Edge) (ijk : Index) : List Edge :=
+  let newEdges := [ -- we're lucky that we go overboard on the grid here ...
+  -- we should actually check the values of ijk and filter accordingly
+    { ijk, axis := .x },
+    { ijk, axis := .y },
+    { ijk, axis := .z },
   ]
-  let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
+  let newActiveEdges := newEdges.filter (fun edge => edge.active grid φ)
   newActiveEdges ++ edges
 
 def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
-  grid.foldl (grid.accActiveEdges φ) []
+  grid.foldl (grid.activeEdgesAux φ) []
 
-def crossing (p1 p2 : Point) (d1 d2 : Float) : Point :=
-  if d1 == d2 then
-    weightedSum [(1.0, p1), (1.0, p2)]
-  else
-    let w1 := d2 / (d2 - d1)
-    let w2 := -d1 / (d2 - d1)
-    weightedSum [(w1, p1), (w2, p2)]
+-- def crossing (p1 p2 : Point) (d1 d2 : Float) : Point :=
+--   if d1 == d2 then
+--     weightedSum [(1.0, p1), (1.0, p2)]
+--   else
+--     let w1 := d2 / (d2 - d1)
+--     let w2 := -d1 / (d2 - d1)
+--     weightedSum [(w1, p1), (w2, p2)]
 
-def Grid.accCrossingPoints (grid : Grid) (φ : Point → Float) (edges : Std.HashMap Edge Point) (ijk : Index) : List Edge :=
-  let i := ijk.1
-  let j := ijk.2
-  let k := ijk.3
-  let newEdges := [ -- we're lucky that we go overboard on the grid here
-    Edge.mk ijk (Index.mk i j (k+1)) grid,
-    Edge.mk ijk (Index.mk i (j+1) k) grid,
-    Edge.mk ijk (Index.mk (i+1) j k) grid,
-  ]
-  let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
-  newActiveEdges ++ edges
+-- def Grid.accCrossingPoints (grid : Grid) (φ : Point → Float) (edges : Std.HashMap Edge Point) (ijk : Index) : List Edge :=
+--   let i := ijk.1
+--   let j := ijk.2
+--   let k := ijk.3
+--   let newEdges := [ -- we're lucky that we go overboard on the grid here
+--     Edge.mk ijk (Index.mk i j (k+1)) grid,
+--     Edge.mk ijk (Index.mk i (j+1) k) grid,
+--     Edge.mk ijk (Index.mk (i+1) j k) grid,
+--   ]
+--   let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
+--   newActiveEdges ++ edges
 
-def Grid.crossingPoints (grid : Grid) (φ : Point → Float) :
-    Std.HashMap Edge Point :=
-  grid.foldl () {}
+-- def Grid.crossingPoints (grid : Grid) (φ : Point → Float) :
+--     Std.HashMap Edge Point :=
+--   grid.foldl () {}
 
 
 -- TODO: better structure here instead of List Edge? Hashset?
 -- Alternatively, return the crossint point in a Hashmap (for surface nets)
 
 #eval (
-  let grid := Grid.mk (Point.mk (-2) (-2) (-2)) (Point.mk 2 2 2) (step := 0.5)
+  let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1
   (grid.activeEdges φ).length
 
