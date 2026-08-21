@@ -68,7 +68,7 @@ def Vector.toSTL (u : Vector) : String :=
 def Vector.add (u v : Vector) : Vector :=
   {
     x := u.x + v.x,
-    y := u.y + u.y,
+    y := u.y + v.y,
     z := u.z + v.z,
   }
 
@@ -540,9 +540,9 @@ def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
 
 def test_sphere : Mesh :=
   let grid : Grid := {
-    imin := ⟨-2, -2, -2⟩,
-    imax := ⟨ 2,  2,  2⟩,
-    scale := 0.75
+    imin := ⟨-50, -50, -50⟩,
+    imax := ⟨ 50,  50,  50⟩,
+    scale := 0.02
   }
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
   let mesh := grid.mesh φ
