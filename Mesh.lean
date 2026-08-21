@@ -540,9 +540,9 @@ def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
 
 def test_sphere : Mesh :=
   let grid : Grid := {
-    imin := ⟨-50, -50, -50⟩,
-    imax := ⟨ 50,  50,  50⟩,
-    scale := 0.02
+    imin := ⟨-25, -25, -25⟩,
+    imax := ⟨ 25,  25,  25⟩,
+    scale := 0.05
   }
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
   let mesh := grid.mesh φ
