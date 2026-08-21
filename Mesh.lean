@@ -3,6 +3,11 @@ import Batteries.Lean.Float -- provides Float.toStringFull
 
 namespace STL
 
+/-!
+Points and Vectors
+--------------------------------------------------------------------------------
+-/
+
 structure Point where
   x : Float
   y : Float
@@ -15,6 +20,7 @@ structure Vector where
   z : Float
 deriving BEq, Repr
 
+
 #eval Vector.mk 1.0 2.0 3.0
 -- { x := 1.000000, y := 2.000000, z := 3.000000 }
 
@@ -23,6 +29,24 @@ deriving BEq, Repr
 
 #eval Float.toStringFull (0.1 + 0.2)
 -- "0.3000000000000000444089209850062616169452667236328125"
+
+#eval Float.toStringFull ((2.0 ^ 10.0) + 0.1)
+-- "0.3000000000000000444089209850062616169452667236328125"
+
+#eval Float.toStringFull 0.0
+-- 0
+
+#eval Float.toStringFull (1.0 / 0.0)
+-- "inf"
+
+#eval Float.toStringFull (-1.0 / 0.0)
+-- "-inf"
+
+#eval Float.toStringFull (-0.0)
+-- 0
+
+#eval Float.toStringFull (0.0 / 0.0)
+-- "NaN"
 
 def Vector.origin := Vector.mk 0 0 0
 
@@ -104,6 +128,11 @@ instance : HAdd Point Vector Point where
 #eval (Point.mk 1 1 1) + (Vector.mk 1 2 3)
 -- { x := 2.000000, y := 3.000000, z := 4.000000 }
 
+/-!
+Facets, Quads and Meshes
+--------------------------------------------------------------------------------
+-/
+
 structure Facet where
   vertex_1 : Point -- The f.1 notation is for free
   vertex_2 : Point
@@ -129,16 +158,8 @@ def facet := Facet.mk (Point.mk 0 0 0) (Point.mk 1.0 0.0 0.0) (Point.mk 0.0 1.0 
 #eval facet.normal
 -- { x := 0.000000, y := 0.000000, z := 1.000000 }
 
-def Facet.toSTL (f : Facet) : String :=
-s!"facet normal {f.normal.toSTL}
-    outer loop
-        vertex {f.1.toSTL}
-        vertex {f.2.toSTL}
-        vertex {f.3.toSTL}
-    endloop
-endfacet"
-
--- not sure we need a new type here...
+-- not sure we need a new type here... Actually the namespace is good,
+-- to host the `split` method.
 structure Quad where
   vertex_1 : Point
   vertex_2 : Point
@@ -179,22 +200,45 @@ def Quad.split (q : Quad) : List Facet :=
     Facet.mk q.4 q.1 center,
   ]
 
-
-
 structure Mesh where
   facets : List Facet
+  name? : Option String := none
 
-def Mesh.toSTL (m : Mesh) (name : String := "") : String :=
-  let facetsSTL := m.facets |>.map (fun f => f.toSTL) |> String.intercalate "\n"
+/-!
+ToSTL type class
+--------------------------------------------------------------------------------
+-/
+
+class ToSTL.{u} (α : Type u) where
+  toSTL : α → String
+
+def Facet.toSTL (f : Facet) : String :=
+s!"facet normal {f.normal.toSTL}
+    outer loop
+        vertex {f.1.toSTL}
+        vertex {f.2.toSTL}
+        vertex {f.3.toSTL}
+    endloop
+endfacet"
+
+instance : ToSTL Facet where
+  toSTL := Facet.toSTL
+
+def Mesh.toSTL (m : Mesh) : String :=
+  let name := if let some name := m.name? then name else ""
+  let facetsSTL := m.facets |>.map ToSTL.toSTL |> String.intercalate "\n"
   s!"solid {name}\n{facetsSTL}\nendsolid {name}"
 
-
--- TODO: STL export
+instance : ToSTL Mesh where
+  toSTL := Mesh.toSTL
 
 def test_facet :=
-  Mesh.mk [Facet.mk (Point.mk 0 0 0) (Point.mk 1 0 0) (Point.mk 0 1 0)]
-  |>.toSTL
-  |> IO.println
+  let mesh : Mesh := {
+    facets := [
+      Facet.mk (Point.mk 0 0 0) (Point.mk 1 0 0) (Point.mk 0 1 0)
+    ]
+  }
+  IO.println mesh.toSTL
 
 #eval test_facet
 -- solid
@@ -229,21 +273,28 @@ def test_cube := do
     quad_4.split ++
     quad_5.split ++
     quad_6.split
-  let mesh := Mesh.mk facets
-  let meshSTL := mesh.toSTL "cube"
-  meshSTL |> IO.println
+  let mesh : Mesh := { facets, name? := "cube"}
+  let meshSTL := mesh |> ToSTL.toSTL
+  IO.println meshSTL
   IO.FS.writeFile "cube.stl" meshSTL
+
+-- #eval test_cube
 
 -- TODO:
 -- given a SDF and a quantized 3D range, get the active edges (with sign change)
 -- collect the corresponding quad and build the mesh.
 -- How do we deal with the fact that we don't want to have all (active and non
 -- active) edges in memory at the same time? Try a first version where we don't
--- care? The iterator API is frightening ...
+-- care? T
 
 
--- TODO: replace min and max by custom bbox type? There could be a funny
--- custom algebra of bbox when we do CSG stuff (union, inter, etc.).
+/-!
+Tesselation
+--------------------------------------------------------------------------------
+-/
+
+
+-- This structure sucks ...
 structure Grid where
   min : Point
   max : Point
@@ -425,7 +476,7 @@ def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
   let facets := quads.foldl
     (init := [])
     (fun facets quad => quad.split ++ facets)
-  Mesh.mk facets
+  { facets }
 
 
 def test_sphere (step : Float): Mesh :=
@@ -441,6 +492,8 @@ def main := do
   let mesh := STL.test_sphere 0.1
   let stl := mesh.toSTL
   IO.FS.writeFile "sphere.stl" stl
+
+-- #eval main
 
 def _main := do
   STL.test_cube
