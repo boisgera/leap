@@ -23,6 +23,11 @@ structure Vector where
   z : Float := 0.0
 deriving BEq, Hashable, Repr
 
+def Vector.ex : Vector := { x := 1.0 }
+
+def Vector.ey : Vector := { y := 1.0 }
+
+def Vector.ez : Vector := { z := 1.0 }
 
 #eval Vector.mk 1.0 2.0 3.0
 -- { x := 1.000000, y := 2.000000, z := 3.000000 }
@@ -59,6 +64,7 @@ instance : Inhabited Vector where
 def Vector.toSTL (u : Vector) : String :=
   s!"{u.1.toStringFull} {u.2.toStringFull} {u.3.toStringFull}"
 
+
 def Vector.add (u v : Vector) : Vector :=
   {
     x := u.x + v.x,
@@ -84,6 +90,19 @@ instance : SMul Float Vector where
 
 #eval (2.0 : Float) • (Vector.mk 1.0 2.0 3.0)
 -- { x := 2.000000, y := 4.000000, z := 6.000000 }
+
+
+def Vector.neg (u : Vector) : Vector := (-1.0) • u
+
+instance : Neg Vector where
+  neg := Vector.neg   -- proof obligations if MyType has invariants
+
+def Vector.sub (u v : Vector) : Vector :=
+  u + (-v)
+
+instance : Sub Vector where
+  sub := Vector.sub
+
 
 def Vector.crossProduct (u v : Vector) : Vector :=
   {
@@ -168,7 +187,7 @@ structure Quad where
   vertex_2 : Point
   vertex_3 : Point
   vertex_4 : Point
-deriving BEq, Hashable, Repr
+deriving BEq, Hashable, Inhabited, Repr
 
 def Quad.toList (q : Quad) : List Point :=
   [q.vertex_1, q.vertex_2, q.vertex_3, q.vertex_4]
@@ -430,77 +449,81 @@ def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
 )
 
 
--- TODO: do not output a vector, this is much more spefic here,
+-- TODO: do not output a vector, this is much more specific here,
 -- use an enum ("cardinalDirection ?") that can be converted to a
 -- unit vector.
-def Edge.outerNormal (edge : Edge) (φ : Point → Float) : Vector :=
-  let ijk1 := edge.ijk1
-  let ijk2 := edge.ijk2
-  let point_1 := edge.grid[ijk1]!
-  let point_2 := edge.grid[ijk2]!
-  let Δφ := φ point_2 - φ point_1
-  if ijk1.1 ≠ ijk2.1 then
-    if (ijk1.1 < ijk2.1 && Δφ > 0) || (ijk1.1 > ijk2.1 && Δφ < 0) then
-      Vector.mk 1 0 0
+-- So that later we can pattern match
+def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector :=
+  let (ijk1, ijk2) := edge.indices
+  let ⟨i1, j1, k1⟩ := ijk1
+  let ⟨i2, j2, k2⟩ := ijk2
+  let p1 := grid[ijk1]
+  let p2 := grid[ijk2]
+  let Δφ := φ p2 - φ p1
+  if i1 ≠ i2 then
+    if (i1 < i2 && Δφ > 0) || (i1 > i2 && Δφ < 0) then
+      { x := 1 }
     else
-      Vector.mk (-1) 0 0
-  else if ijk1.2 ≠ ijk2.2 then
-    if (ijk1.2 < ijk2.2 && Δφ > 0) || (ijk1.2 > ijk2.2 && Δφ < 0) then
-      Vector.mk 0 1 0
+      { x := -1 }
+  else if j1 ≠ j2 then
+    if (j1 < j2 && Δφ > 0) || (j1 > j2 && Δφ < 0) then
+      { y := 1 }
     else
-      Vector.mk 0 (-1) 0
+      { y := -1 }
   else
-    if (ijk1.3 < ijk2.3 && Δφ > 0) || (ijk1.3 > ijk2.3 && Δφ < 0) then
-      Vector.mk 0 0 1
+    if (k1 < k2 && Δφ > 0) || (k1 > k2 && Δφ < 0) then
+      { z := 1 }
     else
-      Vector.mk 0 0 (-1)
+      { z := -1}
 
 -- TODO: to have surface nets, we need a (hash?)map from "cell" to weighted
 -- center, which requires already to have a set of active edges.
 
 -- Same stuff here, φ is "too much" info, that could be better
 def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
-  let normal := edge.outerNormal φ
-  let p1 := grid[edge.1]
-  let p2 := grid[edge.2]
-  let h := 0.5 * grid.step
+  let normal := edge.outerNormal grid φ
+  let (ijk1, ijk2) := edge.indices
+  let p1 := grid[ijk1]
+  let p2 := grid[ijk2]
+  let h := 0.5 * grid.scale
   let p := weightedSum [(0.5, p1), (0.5, p2)]
-  if normal == Vector.mk 0.0 0.0 1.0 then
+  open _root_.STL.Vector in
+  if normal == { z := 1 } then
     Quad.mk
-      (p + (Vector.mk (-h) (-h) 0))
-      (p + (Vector.mk ( h) (-h) 0))
-      (p + (Vector.mk ( h) ( h) 0))
-      (p + (Vector.mk (-h) ( h) 0))
-  else if normal == Vector.mk 0 0 (-1) then
+      (p + h • (- ex - ey))
+      (p + h • (  ex - ey))
+      (p + h • (  ex + ey))
+      (p + h • (- ex + ey))
+  else if normal == { z := -1 } then -- TODO: refactor, this is the reverse
     Quad.mk
-      (p + (Vector.mk (-h) ( h) 0))
-      (p + (Vector.mk ( h) ( h) 0))
-      (p + (Vector.mk ( h) (-h) 0))
-      (p + (Vector.mk (-h) (-h) 0))
-  else if normal == Vector.mk 0 1 0 then
+      (p + h • (- ex + ey))
+      (p + h • (  ex + ey))
+      (p + h • (  ex - ey))
+      (p + h • (- ex - ey))
+  else if normal == { y := -1 } then
     Quad.mk
-      (p + (Vector.mk (-h) 0 (-h)))
-      (p + (Vector.mk ( h) 0 (-h)))
-      (p + (Vector.mk ( h) 0 ( h)))
-      (p + (Vector.mk (-h) 0 ( h)))
-  else if normal == Vector.mk 0 (-1) 0 then
+      (p + h • (- ex - ez))
+      (p + h • (  ex - ez))
+      (p + h • (  ex + ez))
+      (p + h • (- ex + ez))
+  else if normal == { y := 1 } then
     Quad.mk
-      (p + (Vector.mk (-h) 0 ( h)))
-      (p + (Vector.mk ( h) 0 ( h)))
-      (p + (Vector.mk ( h) 0 (-h)))
-      (p + (Vector.mk (-h) 0 (-h)))
-  else if normal == Vector.mk 1 0 0 then
+      (p + h • (- ex + ez))
+      (p + h • (  ex + ez))
+      (p + h • (  ex - ez))
+      (p + h • (- ex - ez))
+  else if normal == { x := -1 } then
     Quad.mk
-      (p + (Vector.mk (0) (-h) (-h)))
-      (p + (Vector.mk (0) ( h) (-h)))
-      (p + (Vector.mk (0) ( h) ( h)))
-      (p + (Vector.mk (0) (-h) ( h)))
-  else if normal == Vector.mk (-1) 0 0 then
+      (p + h • (- ey + ez))
+      (p + h • (  ey + ez))
+      (p + h • (  ey - ez))
+      (p + h • (- ey - ez))
+  else if normal == { x := 1 } then
     Quad.mk
-      (p + (Vector.mk (0) (-h) ( h)))
-      (p + (Vector.mk (0) ( h) ( h)))
-      (p + (Vector.mk (0) ( h) (-h)))
-      (p + (Vector.mk (0) (-h) (-h)))
+      (p + h • (- ey - ez))
+      (p + h • (  ey - ez))
+      (p + h • (  ey + ez))
+      (p + h • (- ey + ez))
   else
     panic! "unreachable"
 
@@ -515,17 +538,20 @@ def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
   { facets }
 
 
-def test_sphere (step : Float): Mesh :=
-  let grid := Grid.mk (Point.mk (-2) (-2) (-2)) (Point.mk 2 2 2) (step := step)
+def test_sphere : Mesh :=
+  let grid : Grid := {
+    imin := ⟨-2, -2, -2⟩,
+    imax := ⟨ 2,  2,  2⟩,
+    scale := 0.75
+  }
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
   let mesh := grid.mesh φ
   mesh
 
 end STL
 
-
 def main := do
-  let mesh := STL.test_sphere 0.1
+  let mesh := STL.test_sphere
   let stl := mesh.toSTL
   IO.FS.writeFile "sphere.stl" stl
 
