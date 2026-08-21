@@ -8,17 +8,20 @@ Points and Vectors
 --------------------------------------------------------------------------------
 -/
 
+instance : Hashable Float where
+  hash f := hash f.toBits  -- or via UInt64 bit-reinterpretation
+
 structure Point where
   x : Float
   y : Float
   z : Float
-deriving BEq, Repr
+deriving BEq, Hashable, Repr
 
 structure Vector where
   x : Float
   y : Float
   z : Float
-deriving BEq, Repr
+deriving BEq, Hashable, Repr
 
 
 #eval Vector.mk 1.0 2.0 3.0
@@ -137,7 +140,7 @@ structure Facet where
   vertex_1 : Point -- The f.1 notation is for free
   vertex_2 : Point
   vertex_3 : Point
-deriving Repr
+deriving BEq, Hashable, Repr
 
 def Facet.normal (f : Facet) : Vector :=
   let u := f.2 - f.1
@@ -165,7 +168,7 @@ structure Quad where
   vertex_2 : Point
   vertex_3 : Point
   vertex_4 : Point
-deriving Inhabited
+deriving BEq, Hashable, Repr
 
 def Quad.toList (q : Quad) : List Point :=
   [q.vertex_1, q.vertex_2, q.vertex_3, q.vertex_4]
@@ -203,6 +206,7 @@ def Quad.split (q : Quad) : List Facet :=
 structure Mesh where
   facets : List Facet
   name? : Option String := none
+deriving BEq, Hashable, Repr
 
 /-!
 ToSTL type class
@@ -294,18 +298,21 @@ Tesselation
 -/
 
 
--- This structure sucks ...
+-- This structure sucks ... we're lucky that "a tad larger" approx
+-- works here when we consider the indices. We could even produce
+-- a "fixed grid" with the effective min and max afterwards.
 structure Grid where
   min : Point
   max : Point
   step : Float
-deriving Repr
+deriving BEq, Hashable, Repr
 
+-- Point (grid node) index
 structure Index where
   i : Int
   j : Int
   k : Int
-deriving Repr
+deriving BEq, Hashable, Repr
 
 def Grid.imin (g : Grid) : Index :=
   let q := fun (x : Float) => (x / g.step).floor.toInt64.toInt
@@ -348,7 +355,7 @@ structure Edge where
   ijk1 : Index
   ijk2 : Index
   grid : Grid
-deriving Repr
+deriving BEq, Hashable, Repr
 
 end STL
 
@@ -378,7 +385,7 @@ def Grid.accActiveEdges (grid : Grid) (φ : Point → Float) (edges : List Edge)
   let i := ijk.1
   let j := ijk.2
   let k := ijk.3
-  let newEdges := [
+  let newEdges := [ -- we're lucky that we go overboard on the grid here
     Edge.mk ijk (Index.mk i j (k+1)) grid,
     Edge.mk ijk (Index.mk i (j+1) k) grid,
     Edge.mk ijk (Index.mk (i+1) j k) grid,
@@ -388,6 +395,34 @@ def Grid.accActiveEdges (grid : Grid) (φ : Point → Float) (edges : List Edge)
 
 def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
   grid.foldl (grid.accActiveEdges φ) []
+
+def crossing (p1 p2 : Point) (d1 d2 : Float) : Point :=
+  if d1 == d2 then
+    weightedSum [(1.0, p1), (1.0, p2)]
+  else
+    let w1 := d2 / (d2 - d1)
+    let w2 := -d1 / (d2 - d1)
+    weightedSum [(w1, p1), (w2, p2)]
+
+def Grid.accCrossingPoints (grid : Grid) (φ : Point → Float) (edges : Std.HashMap Edge Point) (ijk : Index) : List Edge :=
+  let i := ijk.1
+  let j := ijk.2
+  let k := ijk.3
+  let newEdges := [ -- we're lucky that we go overboard on the grid here
+    Edge.mk ijk (Index.mk i j (k+1)) grid,
+    Edge.mk ijk (Index.mk i (j+1) k) grid,
+    Edge.mk ijk (Index.mk (i+1) j k) grid,
+  ]
+  let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
+  newActiveEdges ++ edges
+
+def Grid.crossingPoints (grid : Grid) (φ : Point → Float) :
+    Std.HashMap Edge Point :=
+  grid.foldl () {}
+
+
+-- TODO: better structure here instead of List Edge? Hashset?
+-- Alternatively, return the crossint point in a Hashmap (for surface nets)
 
 #eval (
   let grid := Grid.mk (Point.mk (-2) (-2) (-2)) (Point.mk 2 2 2) (step := 0.5)
@@ -421,6 +456,9 @@ def Edge.outerNormal (edge : Edge) (φ : Point → Float) : Vector :=
       Vector.mk 0 0 1
     else
       Vector.mk 0 0 (-1)
+
+-- TODO: to have surface nets, we need a (hash?)map from "cell" to weighted
+-- center, which requires already to have a set of active edges.
 
 -- Same stuff here, φ is "too much" info, that could be better
 def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
