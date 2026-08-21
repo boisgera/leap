@@ -4,3 +4,5 @@
 # Lean
 .lake
 
+# STL files
+*.stl
