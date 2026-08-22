@@ -383,8 +383,7 @@ def Axis.succ : Axis → Index → Index
   | y => fun ⟨i, j, k⟩ => ⟨i    , j + 1, k    ⟩
   | z => fun ⟨i, j, k⟩ => ⟨i    , j    , k + 1⟩
 
--- Here we hardcode the "increasing" prop, not sure that's for he best
--- Introduce neg on axis and a coercion to vector?
+-- Unordered edge between neighbours
 structure Edge where
   ijk : Index
   axis : Axis
@@ -453,12 +452,63 @@ def Grid.crossingPointsAux
 def Grid.crossingPoints (grid : Grid) (φ : Point → Float) : Std.HashMap Edge Point :=
   grid.foldl (Grid.crossingPointsAux grid φ) {}
 
--- TODO: function that given a "cell" (identified by the low-end corner)
--- and hashmap of crossingPoints computes the "center" (weighted average).
--- TODO: alternate Grid.quadOfEdge method that fetches the cells that are
--- the neighbors of an active cell, compute their "center" and makes the
--- quad (nota : at this stage we discard the crossing point itself, which
--- is a pity)
+def Grid.computeCenter (grid : Grid) (crossingPoints : Std.HashMap Edge Point) (ijk : Index)
+    : Point :=
+  let edges : List Edge := [
+    { ijk, axis := .x },
+    { ijk, axis := .y },
+    { ijk, axis := .z },
+    { ijk := Axis.x.succ ijk, axis := .y },
+    { ijk := Axis.x.succ ijk, axis := .z },
+    { ijk := Axis.y.succ ijk, axis := .x },
+    { ijk := Axis.y.succ ijk, axis := .z },
+    { ijk := Axis.z.succ ijk, axis := .x },
+    { ijk := Axis.z.succ ijk, axis := .y },
+    { ijk := Axis.x.succ (Axis.y.succ ijk), axis := .z },
+    { ijk := Axis.x.succ (Axis.z.succ ijk), axis := .y },
+    { ijk := Axis.y.succ (Axis.z.succ ijk), axis := .x },
+  ]
+  let points := edges.filterMap (fun k => crossingPoints.get? k)
+  let n := points.length
+  if n = 0 then
+    let min := grid[ijk]
+    let ⟨i, j, k⟩ := ijk
+    let max := grid[{ i := i + 1, j := j + 1, k := k + 1 : Index }]
+    weightedSum [(0.5, min), (0.5, max)]
+  else
+    let weightedPoints := points.map (fun point => (1 / n.toFloat, point))
+    weightedSum weightedPoints
+
+def Grid.quadOfEdge'
+  (grid : Grid) (edge : Edge)
+  (crossingPoints : Std.HashMap Edge Point) : Quad :=
+  -- TODO: get the list of 4 cells that are the edge neighbors,
+  --       in the proper order
+  -- TODO: compute the quad
+  let ⟨⟨i,j,k⟩, axis⟩ := edge
+  let cells : List Index := match axis with
+    | .x => [
+        { i, j := j - 1, k := k - 1 },
+        { i, j := j    , k := k - 1 },
+        { i, j := j - 1, k := k     },
+        { i, j := j    , k := k     },
+      ]
+    | .y => [
+        { i := i - 1, j, k := k - 1 },
+        { i := i    , j, k := k - 1 },
+        { i := i - 1, j, k := k     },
+        { i := i    , j, k := k     },
+      ]
+    | .z => [
+        { i := i - 1, j := j - 1, k },
+        { i := i    , j := j - 1, k },
+        { i := i - 1, j := j    , k },
+        { i := i    , j := j    , k },
+      ]
+  let points := cells.map
+    fun cell =>
+      grid.computeCenter (ijk := cell) (crossingPoints := crossingPoints)
+  Quad.mk points[0]! points[1]! points[2]! points[3]!
 
 #eval (
   let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
@@ -496,10 +546,6 @@ def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector
     else
       { z := -1 }
 
--- TODO: to have surface nets, we need a (hash?)map from "cell" to weighted
--- center, which requires already to have a set of active edges.
-
--- Same stuff here, φ is "too much" info, that could be better
 def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
   let normal := edge.outerNormal grid φ
   let (ijk1, ijk2) := edge.indices
@@ -547,7 +593,7 @@ def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
   else
     panic! "unreachable"
 
-def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
+def Grid.voxelMesh (grid : Grid) (φ : Point → Float) : Mesh :=
   -- TODO: get all activeEdges, map to the normals, map to quads,
   -- maps to facets, collect in a mesh.
   let edges := grid.activeEdges φ
@@ -557,21 +603,39 @@ def Grid.mesh (grid : Grid) (φ : Point → Float) : Mesh :=
     (fun facets quad => quad.split ++ facets)
   { facets }
 
+def Grid.surfaceNetMesh (grid : Grid) (φ : Point → Float) : Mesh :=
+  let crossingPoints := grid.crossingPoints φ
+  let edges := crossingPoints.keys
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge crossingPoints)
+  let facets := quads.foldl
+    (init := [])
+    (fun facets quad => quad.split ++ facets)
+  { facets }
 
-def test_sphere : Mesh :=
+def testSphere : Mesh :=
   let grid : Grid := {
     imin := ⟨-25, -25, -25⟩,
     imax := ⟨ 25,  25,  25⟩,
     scale := 0.05
   }
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
-  let mesh := grid.mesh φ
+  let mesh := grid.voxelMesh φ
+  mesh
+
+def testSphereSurfaceNets : Mesh :=
+  let grid : Grid := {
+    imin := ⟨-5, -5, -5⟩,
+    imax := ⟨ 5,  5,  5⟩,
+    scale := 1 / (5).toFloat
+  }
+  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
+  let mesh := grid.surfaceNetMesh φ
   mesh
 
 end STL
 
 def main := do
-  let mesh := STL.test_sphere
+  let mesh := STL.testSphereSurfaceNets
   let stl := mesh.toSTL
   IO.FS.writeFile "sphere.stl" stl
 
