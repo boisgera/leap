@@ -187,6 +187,7 @@ structure Quad where
   vertex_2 : Point
   vertex_3 : Point
   vertex_4 : Point
+
 deriving BEq, Hashable, Inhabited, Repr
 
 def Quad.toList (q : Quad) : List Point :=
@@ -213,13 +214,13 @@ def weightedSum (elts : List (Float × Point))
 ]
 -- { x := 0.500000, y := 0.500000, z := 0.000000 }
 
-def Quad.split (q : Quad) : List Facet :=
-  let center := q.toList.map (fun p => (0.25, p)) |> weightedSum
+def Quad.split (quad : Quad) : List Facet :=
+  let center := quad.toList.map (fun p => (0.25, p)) |> weightedSum
   [
-    Facet.mk q.1 q.2 center,
-    Facet.mk q.2 q.3 center,
-    Facet.mk q.3 q.4 center,
-    Facet.mk q.4 q.1 center,
+    Facet.mk quad.1 quad.2 center,
+    Facet.mk quad.2 quad.3 center,
+    Facet.mk quad.3 quad.4 center,
+    Facet.mk quad.4 quad.1 center,
   ]
 
 structure Mesh where
@@ -382,6 +383,8 @@ def Axis.succ : Axis → Index → Index
   | y => fun ⟨i, j, k⟩ => ⟨i    , j + 1, k    ⟩
   | z => fun ⟨i, j, k⟩ => ⟨i    , j    , k + 1⟩
 
+-- Here we hardcode the "increasing" prop, not sure that's for he best
+-- Introduce neg on axis and a coercion to vector?
 structure Edge where
   ijk : Index
   axis : Axis
@@ -413,33 +416,49 @@ def Grid.activeEdgesAux (grid : Grid) (φ : Point → Float) (edges : List Edge)
 def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
   grid.foldl (grid.activeEdgesAux φ) []
 
--- def crossing (p1 p2 : Point) (d1 d2 : Float) : Point :=
---   if d1 == d2 then
---     weightedSum [(1.0, p1), (1.0, p2)]
---   else
---     let w1 := d2 / (d2 - d1)
---     let w2 := -d1 / (d2 - d1)
---     weightedSum [(w1, p1), (w2, p2)]
+def crossing (p1 p2 : Point) (d1 d2 : Float) : Point :=
+  if d1 == d2 then
+    weightedSum [(0.5, p1), (0.5, p2)] -- (semi-)junk value
+  else
+    let w1 := d2 / (d2 - d1)
+    let w2 := -d1 / (d2 - d1)
+    weightedSum [(w1, p1), (w2, p2)]
 
--- def Grid.accCrossingPoints (grid : Grid) (φ : Point → Float) (edges : Std.HashMap Edge Point) (ijk : Index) : List Edge :=
---   let i := ijk.1
---   let j := ijk.2
---   let k := ijk.3
---   let newEdges := [ -- we're lucky that we go overboard on the grid here
---     Edge.mk ijk (Index.mk i j (k+1)) grid,
---     Edge.mk ijk (Index.mk i (j+1) k) grid,
---     Edge.mk ijk (Index.mk (i+1) j k) grid,
---   ]
---   let newActiveEdges := newEdges.filter (fun edge => edge.active φ)
---   newActiveEdges ++ edges
+def Grid.crossingPointsAux
+    (grid : Grid) (φ : Point → Float) (crossingPoints : Std.HashMap Edge Point) (ijk : Index)
+    : Std.HashMap Edge Point :=
+  let i := ijk.1
+  let j := ijk.2
+  let k := ijk.3
+  let newEdges : List Edge := [ -- we're lucky that we go overboard on the grid here
+    { ijk, axis := .x },
+    { ijk, axis := .y },
+    { ijk, axis := .z },
+  ]
+  let newActiveEdges := newEdges.filter
+    fun edge => edge.active (grid := grid) (φ := φ)
+  let newCrossingPoints : List (Edge × Point) := newActiveEdges.map
+    fun edge =>
+      let (ijk1, ijk2) := edge.indices
+      let p1 := grid[ijk1]
+      let p2 := grid[ijk2]
+      let d1 := φ p1
+      let d2 := φ p2
+      let cross := crossing p1 p2 d1 d2
+      (edge, cross)
+  newCrossingPoints.foldl
+    (fun acc (edge, cross) => acc.insert edge cross)
+    crossingPoints
 
--- def Grid.crossingPoints (grid : Grid) (φ : Point → Float) :
---     Std.HashMap Edge Point :=
---   grid.foldl () {}
+def Grid.crossingPoints (grid : Grid) (φ : Point → Float) : Std.HashMap Edge Point :=
+  grid.foldl (Grid.crossingPointsAux grid φ) {}
 
-
--- TODO: better structure here instead of List Edge? Hashset?
--- Alternatively, return the crossint point in a Hashmap (for surface nets)
+-- TODO: function that given a "cell" (identified by the low-end corner)
+-- and hashmap of crossingPoints computes the "center" (weighted average).
+-- TODO: alternate Grid.quadOfEdge method that fetches the cells that are
+-- the neighbors of an active cell, compute their "center" and makes the
+-- quad (nota : at this stage we discard the crossing point itself, which
+-- is a pity)
 
 #eval (
   let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
@@ -453,6 +472,7 @@ def Grid.activeEdges (grid : Grid) (φ : Point → Float) : List Edge :=
 -- use an enum ("cardinalDirection ?") that can be converted to a
 -- unit vector.
 -- So that later we can pattern match
+-- Mmm and the name outerNormal, I get it, but it kinda sucks...
 def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector :=
   let (ijk1, ijk2) := edge.indices
   let ⟨i1, j1, k1⟩ := ijk1
@@ -474,7 +494,7 @@ def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector
     if (k1 < k2 && Δφ > 0) || (k1 > k2 && Δφ < 0) then
       { z := 1 }
     else
-      { z := -1}
+      { z := -1 }
 
 -- TODO: to have surface nets, we need a (hash?)map from "cell" to weighted
 -- center, which requires already to have a set of active edges.
