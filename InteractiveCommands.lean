@@ -209,7 +209,9 @@ Extra examples
 -/
 
 /-!
-**TODO**
+**TODO**. Example with `succ` and maybe another global constant? I should
+have defined `name` as a global from the start with the `"L∃∀N"` value
+and used it in `#eval`. And then here, reuse it to print it.
 -/
 
 /-!
