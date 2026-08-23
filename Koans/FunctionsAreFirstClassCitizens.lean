@@ -1,7 +1,67 @@
 import Lean
 
 /-!
+Redux: is some languages, there is a clear split between functions and data and
+you can't do with data many things that you can with functions.
 
+But this is not a fatality:
+
+  - in some programming languages (untype lambda-calculus),
+    the only object is function, the data stuff (numbers, lists, etc)
+    is built on top. This is the conceptual founadtion of FP.
+  - you don't have to be that extreme to qualify as a FP language,
+    but functions should at least have equal rights. Question to ask:
+    can you put you function in a list? Have a function be a function
+    argument. Then it's fine!
+  - First-class functions open the way to higher-order programming
+    and constructors like filter, map and folds. For/while loops become
+    not necessary, since recursion + FP can replace them!
+
+-/
+
+/-!
+The untyped lambda calculus in Python
+--------------------------------------------------------------------------------
+
+(Just natural numbers and succ ATM...)
+
+The constraint: every object is a function that takes a function and returns
+a function (**TODO** a bit more complex ; hard to explain without a reference
+to Scott's construction?).
+
+
+```python
+def zero(f):
+  def id(g):
+    return g
+  return id
+
+def one(f):
+  def apply_f(g):
+    return f(g)
+  return apply_f
+
+def two(f):
+  def apply_f_twice(g):
+    return f(f(x))
+  return apply_f_twice
+
+def succ(n):
+  def succ_n(f):
+    def apply_f_n_plus_one_times(g):
+      h = n(f)(g)  # f applied n times to g
+      return f(h)  # f applied n + 1 times to g
+  return succ_n
+```
+
+-/
+
+/-!
+Equal rights for functions!
+--------------------------------------------------------------------------------
+-/
+
+/-!
 > In a given programming language design, a *first-class citizen* is an entity
 > which supports all the operations generally available to other entities.
 > These operations typically include being passed as an argument,
@@ -19,7 +79,7 @@ Source: [Wikipedia](https://en.wikipedia.org/wiki/First-class_citizen)
 > such as procedures or labels, can be used just like data. For example,
 > these elements could be used in the same way as arguments or values.
 
-Source: [Wikepedia](https://en.wikipedia.org/wiki/Higher-order_programming)
+Source: [Wikipedia](https://en.wikipedia.org/wiki/Higher-order_programming)
 -/
 
 /-

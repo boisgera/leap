@@ -30,10 +30,10 @@ The following Python function greets a person using its name if it is given,
 or greets "Nobody" otherwise:
 
 ```python
-def greet(maybe_name=None):
+def greet(optional_name=None):
     # `if-then-else` statement
-    if maybe_name is not None:
-        name = maybe_name
+    if optional_name is not None:
+        name = optional_name
         print(f"Hello {name}!")
     else:
         print("Hello Nobody!")
@@ -49,10 +49,10 @@ The repetition in the code could be considered a code smell. Instead we could
 implement `greet` by:
 
 ```python
-def greet(maybe_name=None):
+def greet(optional_name=None):
     # `if-then-else` statement again
-    if maybe_name is not None:
-        name = maybe_name
+    if optional_name is not None:
+        name = optional_name
     else:
         name = "Nobody"
     print(f"Hello {name}!")
@@ -64,9 +64,9 @@ if-then-else statement are doing is assigning a value to the variable
 which does not execute statements but computes a value instead.
 
 ```python
-def greet(maybe_name=None):
+def greet(optional_name=None):
     # `if-then-else` expression
-    name = maybe_name if maybe_name is not None else "Nobody"
+    name = optional_name if optional_name is not None else "Nobody"
     print(f"Hello {name}!")
 ```
 -/
@@ -79,9 +79,9 @@ that I can for example bind to a variable myself. Instead it has a side-effect:
 it creates a variable named `greet` and assign the function to it.
 
 ```python
-def greet(maybe_name=None):
+def greet(optional_name=None):
     # `if-then-else` expression
-    name = maybe_name if maybe_name is not None else "Nobody"
+    name = optional_name if optional_name is not None else "Nobody"
     print(f"Hello {name}!")
 
 print(greet)
@@ -92,7 +92,7 @@ There is a way to have function definition expression instead, with the
 keyword `lambda`, for example:
 
 ```python
-greet = lambda maybe_name=None : print(f'Hello {maybe_name if maybe_name is not None else "Nobody"}!')
+greet = lambda optional_name=None : print(f'Hello {optional_name if optional_name is not None else "Nobody"}!')
 ```
 
 This construct is, at least apparently, severely constrained: its body is made
@@ -100,19 +100,21 @@ of a single expression, which is implicitly returned, so we add the get rid
 of the temporary variable `name`. There is no indentation either, so we add to
 put everything on one line.
 
-We can "fix" these issues with some tricks since we too clever for our own good,
-but it's difficult to argue that this solution is great.
+We can "fix" these issues with some tricks, but our final solution is not
+that great:
 
 ```python
-greet = lambda maybe_name: print(
+greet = lambda optional_name: print(
     (
-        name := maybe_name if maybe_name is not None else "Nobody",
+        name := optional_name if optional_name is not None else "Nobody",
         f"Hello {name}"
     )[1]
 )
 ```
 
-Don't spend too much time understanding what this code snippet does...
+The moral of the story is that "function definition as an expression" is
+only meant for really simple cases in Python (single, short expression)
+and is not ergonomic beyond that, despite the potential.
 
 -/
 
@@ -120,19 +122,76 @@ Don't spend too much time understanding what this code snippet does...
 /-!
 ## Python: for loops
 
-**TODO** for loop statements and list comprehensions.
+
+Let's use greet several persons using a for loop statement:
+
+```python
+
+names = ["Penelope", "Telemachus", "Odysseus"]
+
+def greeting(optional_name=None):
+    name = optional_name if optional_name is not None else "Nobody"
+    return f"Hello {name}!"
+
+def greet(optional_name=None):
+    print(greeting(optional_name))
+
+for name in names:
+  greet(name)
+# Hello Penelope!
+# Hello Telemachus!
+# Hello Odysseus!
+```
+
+Alternatively, we can also collect the greeting messages and use them afterwards:
+
+```python
+
+greetings = []
+
+for name in names:
+  message = greeting(name)
+  greetings.append(message)
+
+print(greetings)
+# ['Hello Penelope!', 'Hello Telemachus!', 'Hello Odysseus!']
+
+for message in greetings:
+  print(message)
+# Hello Penelope!
+# Hello Telemachus!
+# Hello Odysseus!
+```
+
+If you want to do that, the first for loop statement is probably not the best
+construct. Instead, you can use a list comprehension, which is an expression.
+
+```python
+greetings = [greeting(name) for name in names]
+
+print(greetings)
+# ['Hello Penelope!', 'Hello Telemachus!', 'Hello Odysseus!']
+
+for message in greetings:
+  print(message)
+# Hello Penelope!
+# Hello Telemachus!
+# Hello Odysseus!
 
 -/
 
 
+
 /-!
 
-Civet:
+## Civet: if-then-else
+
+Let's write the Civet equivalent of our two first versions of `greet` in Python.
 
 ```ts
-function greet(name = undefined)
-  if name? then
-    console.log `Hello ${name}!`
+function greet(optional_name = undefined)
+  if optional_name then
+    console.log `Hello ${optional_name}!`
   else
     console.log "Hello Nobody"
 
@@ -146,7 +205,7 @@ greet()
 
 ```ts
 function greet(name = undefined)
-  name = if name? then name else "Noman"
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 
 
@@ -157,14 +216,19 @@ greet()
 // Hello Nobody
 
 ```
+
+We could think at this stage that Civet also has a if-then-else statement and
+an if-then-else expression, but this is actually the same construct. For
+example, we could write the second version as:
+
 
 ```ts
 function greet(name = undefined)
   name =
-    if name? then
-      name
+    if optional_name then
+      optional_name
     else
-      "Noman"
+      "Nobody"
   console.log `Hello ${name}!`
 
 greet("Odysseus")
@@ -175,10 +239,14 @@ greet()
 
 ```
 
+and the first version also produces a value, which can be collected!
+Here it's `undefined` since what matters in this version is the s
+display of the message and not the computation of a value.
+
 ```ts
 function greet(name = undefined)
-  let result = if name? then
-    console.log `Hello ${name}!`
+  let result = if optional_name then
+    console.log `Hello ${optional_name}!`
   else
     console.log "Hello Nobody"
   console.debug value
@@ -190,17 +258,23 @@ greet("Odysseus")
 greet()
 // Hello Nobody
 // undefined
-
 ```
 
+Of course we are free not to collect this value and then the if-then-else
+expression looks exactly like a statement.
+
+We can also mix and match in each clause (pseudo-)statements, used for their
+side-effects, whose value will be ignored and the last expression in the
+clause will be the returned value.
+
 ```ts
-function greet(name = undefined)
-  name = if name? then
+function greet(optional_name = undefined)
+  name = if optional_name then
     console.debug "✅"
-    name
+    optional_name
   else
     console.debug "❌"
-    "Noman"
+    "Nobody"
   console.log `Hello ${name}!`
 
 greet("Odysseus")
@@ -212,20 +286,22 @@ greet()
 // Hello Nobody
 ```
 
+## Civet: function declaration
+
 Now the declaration of the `greet` function in Civet is itself an expression.
 The code
 
 ```ts
-function greet(name = undefined)
-  name = if name? then name else "Noman"
+function greet(optional_name = undefined)
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 ```
 
 is actually a shortcut for:
 
 ```ts
-let greet = function greet(name = undefined)
-  name = if name? then name else "Noman"
+let greet = function greet(optional_name = undefined)
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 ```
 
@@ -237,8 +313,8 @@ This decomposition is actually conceptually much cleaner. In particular, we
 can decouple the name of the function and the name of the variable:
 
 ```ts
-g := function greet(name = undefined)
-  name = if name? then name else "Noman"
+g := function greet(optional_name = undefined)
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 
 console.log g.name
@@ -257,8 +333,8 @@ Now you totally can avoid naming the function explicitly and assign an
 anonymous function to a variable:
 
 ```ts
-let greet = function (name = undefined)
-  name = if name? then name else "Noman"
+let greet = function (optional_name = undefined)
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 
 greet("Odysseus")
@@ -281,26 +357,63 @@ and once only
 
 ```ts
 (function (name = undefined)
-  name = if name? then name else "Noman"
+  name = if optional_name then optional_name else "Nobody"
   console.log `Hello ${name}!`
 ) "Odysseus"
 // Hello Odysseus!
 ```
 
-The declaration of a function in Python is not an expression.
-Python has actually some support for anonymous function (called *lambdas*),
-but there expressivety is limited with respect to the classic functions.
+These anonymous functions are equally as expressive as the named only,
+not limited like Python lambdas.
 
--/
 
 /-!
-Note: `let a = ...` are statements in Civet, not expressions.
+## Civet: for loops
+
+
+Let's use greet several persons using a for loop statement:
+
+```ts
+names = ["Penelope", "Telemachus", "Odysseus"]
+
+function greeting(optional_name = undefined)
+  name = if optional_name then optional_name else "Nobody"
+  `Hello ${name}!`
+
+function greet(optional_name = undefined)
+  console.log greeting(optional_name)
+
+for name of names
+  greet(name)
+// Hello Penelope!
+// Hello Telemachus!
+// Hello Odysseus!
+```
+
+Like before, we can also collect the greeting messages and use them afterwards.
+The equivalent of the list comprehension of Python in Civet ... is the same
+for loop we used before, since it collects the values
+
+```ts
+greetings =
+  for names of names
+    greeting(name)
+
+console.log greetings
+// ['Hello Penelope!', 'Hello Telemachus!', 'Hello Odysseus!']
+
+for message of greetings
+  console.log message
+// Hello Penelope!
+// Hello Telemachus!
+// Hello Odysseus!
+```
 -/
 
-/-!
-Mention relationship between Civet and Typescript.
-Mention Hy, a LISP language for the Python platform that has the same
-kind of relationship and interoperate seamlessly with Python libraries.
+
+
+/!-
+--------------------------------------------------------------------------------
 -/
 
 /-!
@@ -308,8 +421,8 @@ In Lean:
 
 -/
 
-def v0.greet (name? : Option String := none) : IO Unit := do
-    match name? with
+def v0.greet (optional_name : Option String := none) : IO Unit := do
+    match optional_name with
     | some name => IO.println s!"Hello {name}!"
     | none => IO.println "Hello Nobody!"
 
@@ -319,8 +432,8 @@ def v0.greet (name? : Option String := none) : IO Unit := do
 #eval v0.greet
 -- Hello Nobody
 
-def v1.greet (name? : Option String := none) : IO Unit := do
-    let name := match name? with
+def v1.greet (optional_name : Option String := none) : IO Unit := do
+    let name := match optional_name with
       | some name => name
       | none => "Nobody"
     IO.println s!"Hello {name}!"
@@ -331,8 +444,8 @@ def v1.greet (name? : Option String := none) : IO Unit := do
 #eval v1.greet
 -- Hello Nobody
 
-def v2.greet (name? : Option String := none) : IO Unit :=
-    pure (match name? with
+def v2.greet (optional_name : Option String := none) : IO Unit :=
+    pure (match optional_name with
       | some name => name
       | none => "Nobody"
     )

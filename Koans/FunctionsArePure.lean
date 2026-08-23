@@ -1,0 +1,4 @@
+
+/-!
+Alternative: Referential Transparency
+-/
