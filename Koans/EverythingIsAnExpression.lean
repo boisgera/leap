@@ -1,5 +1,9 @@
 
 /-!
+Alternative koan name: Expression over Statement
+-/
+
+/-!
 TODO:
   - typed expression to be exact, but delay
   - compare with Python
@@ -13,19 +17,23 @@ TODO:
 
 
 /-!
-Idea: since the full FP package makes Python and Lean very different and
-transposition difficult, start with a comparison of Python and Civet,
-which has only the "EIAE" part (not the immutability, not the absence of
-side-effet, not the static type system). That makes Civet a system which
-is very close to working in `IO α` with `do` blocks.
+Didactic idea: since Python and Lean are very different and there are a lot
+of bagage associated to Lean, make a first comparison between Python and
+Civet first, which has only static type system and the purity constraints.
 -/
 
 /-!
 
+## Python: if-then-else
+
+The following Python function greets a person using its name if it is given,
+or greets "Nobody" otherwise:
+
 ```python
-def greet(name=None):
+def greet(maybe_name=None):
     # `if-then-else` statement
-    if name != None:
+    if maybe_name is not None:
+        name = maybe_name
         print(f"Hello {name}!")
     else:
         print("Hello Nobody!")
@@ -37,27 +45,102 @@ greet()
 # Hello Nobody!
 ```
 
+The repetition in the code could be considered a code smell. Instead we could
+implement `greet` by:
+
 ```python
-def greet(name=None):
-    # `if-then-else` conditional expression
-    name = name if name != None else "Nobody"
-    print(f"Hello {name}!)
+def greet(maybe_name=None):
+    # `if-then-else` statement again
+    if maybe_name is not None:
+        name = maybe_name
+    else:
+        name = "Nobody"
+    print(f"Hello {name}!")
+```
+
+That works but at this stage the only thing that both clauses of the
+if-then-else statement are doing is assigning a value to the variable
+`name`. And for this, there is the `if-then-else` expression,
+which does not execute statements but computes a value instead.
+
+```python
+def greet(maybe_name=None):
+    # `if-then-else` expression
+    name = maybe_name if maybe_name is not None else "Nobody"
+    print(f"Hello {name}!")
 ```
 -/
 
+/-
+## Python: function declaration
+
+The function declaration is itself a statement. It does not return a function
+that I can for example bind to a variable myself. Instead it has a side-effect:
+it creates a variable named `greet` and assign the function to it.
+
+```python
+def greet(maybe_name=None):
+    # `if-then-else` expression
+    name = maybe_name if maybe_name is not None else "Nobody"
+    print(f"Hello {name}!")
+
+print(greet)
+<function greet at 0x79ed03b837e0>
+```
+
+There is a way to have function definition expression instead, with the
+keyword `lambda`, for example:
+
+```python
+greet = lambda maybe_name=None : print(f'Hello {maybe_name if maybe_name is not None else "Nobody"}!')
+```
+
+This construct is, at least apparently, severely constrained: its body is made
+of a single expression, which is implicitly returned, so we add the get rid
+of the temporary variable `name`. There is no indentation either, so we add to
+put everything on one line.
+
+We can "fix" these issues with some tricks since we too clever for our own good,
+but it's difficult to argue that this solution is great.
+
+```python
+greet = lambda maybe_name: print(
+    (
+        name := maybe_name if maybe_name is not None else "Nobody",
+        f"Hello {name}"
+    )[1]
+)
+```
+
+Don't spend too much time understanding what this code snippet does...
+
+-/
+
+
 /-!
+## Python: for loops
+
+**TODO** for loop statements and list comprehensions.
+
+-/
+
+
+/-!
+
+Civet:
+
 ```ts
 function greet(name = undefined)
   if name? then
     console.log `Hello ${name}!`
   else
-    console.log "Hello Noman!"
+    console.log "Hello Nobody"
 
 greet("Odysseus")
 // Hello Odysseus!
 
 greet()
-// Hello Noman!
+// Hello Nobody
 
 ```
 
@@ -71,7 +154,7 @@ greet("Odysseus")
 // Hello Odysseus!
 
 greet()
-// Hello Noman!
+// Hello Nobody
 
 ```
 
@@ -88,7 +171,7 @@ greet("Odysseus")
 // Hello Odysseus!
 
 greet()
-// Hello Noman!
+// Hello Nobody
 
 ```
 
@@ -97,7 +180,7 @@ function greet(name = undefined)
   let result = if name? then
     console.log `Hello ${name}!`
   else
-    console.log "Hello Noman!"
+    console.log "Hello Nobody"
   console.debug value
 
 greet("Odysseus")
@@ -105,7 +188,7 @@ greet("Odysseus")
 // undefined
 
 greet()
-// Hello Noman!
+// Hello Nobody
 // undefined
 
 ```
@@ -126,7 +209,7 @@ greet("Odysseus")
 
 greet()
 // ❌
-// Hello Noman!
+// Hello Nobody
 ```
 
 Now the declaration of the `greet` function in Civet is itself an expression.
@@ -167,7 +250,7 @@ g("Odysseus")
 
 g()
 // ❌
-// Hello Noman!
+// Hello Nobody
 ```
 
 Now you totally can avoid naming the function explicitly and assign an
@@ -184,7 +267,7 @@ greet("Odysseus")
 
 greet()
 // ❌
-// Hello Noman!
+// Hello Nobody
 ```
 
 (In this particular use case Civet will actually infer the name of the function
