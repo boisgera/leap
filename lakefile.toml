@@ -5,6 +5,7 @@ defaultTargets = ["Python", "Raylib", "snake", "fs"]
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+rev = "v4.33.1"
 
 [[lean_lib]]
 name = "RealAnalysis"
@@ -74,3 +75,8 @@ root = "Tasks.NoDeadlock"
 [[lean_exe]]
 name = "unsafe-counter"
 root = "Tasks.UnsafeCounter"
+
+[[require]]
+name = "RyuLean4"
+git = "https://github.com/boisgera/ryu-lean4"
+rev = "main"
