@@ -479,45 +479,6 @@ def Grid.computeCenter (grid : Grid) (crossingPoints : Std.HashMap Edge Point) (
     let weightedPoints := points.map (fun point => (1 / n.toFloat, point))
     weightedSum weightedPoints
 
-def Grid.quadOfEdge'
-  (grid : Grid) (edge : Edge)
-  (crossingPoints : Std.HashMap Edge Point) : Quad :=
-  -- TODO: get the list of 4 cells that are the edge neighbors,
-  --       in the proper order
-  -- TODO: compute the quad
-  let ⟨⟨i,j,k⟩, axis⟩ := edge
-  let cells : List Index := match axis with
-    | .x => [
-        { i, j := j - 1, k := k - 1 },
-        { i, j := j    , k := k - 1 },
-        { i, j := j - 1, k := k     },
-        { i, j := j    , k := k     },
-      ]
-    | .y => [
-        { i := i - 1, j, k := k - 1 },
-        { i := i    , j, k := k - 1 },
-        { i := i - 1, j, k := k     },
-        { i := i    , j, k := k     },
-      ]
-    | .z => [
-        { i := i - 1, j := j - 1, k },
-        { i := i    , j := j - 1, k },
-        { i := i - 1, j := j    , k },
-        { i := i    , j := j    , k },
-      ]
-  let points := cells.map
-    fun cell =>
-      grid.computeCenter (ijk := cell) (crossingPoints := crossingPoints)
-  Quad.mk points[0]! points[1]! points[2]! points[3]!
-
-#eval (
-  let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
-  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1
-  (grid.activeEdges φ).length
-
-)
-
-
 -- TODO: do not output a vector, this is much more specific here,
 -- use an enum ("cardinalDirection ?") that can be converted to a
 -- unit vector.
@@ -545,6 +506,60 @@ def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector
       { z := 1 }
     else
       { z := -1 }
+
+def Grid.quadOfEdge'
+  (grid : Grid) (edge : Edge) (φ : Point → Float)
+  (crossingPoints : Std.HashMap Edge Point) : Quad :=
+  let ⟨⟨i,j,k⟩, axis⟩ := edge
+  let cells : List Index := match axis with
+    | .x => [
+        { i, j := j - 1, k := k - 1 },
+        { i, j := j    , k := k - 1 },
+        { i, j := j    , k := k     },
+        { i, j := j - 1, k := k     },
+      ]
+    | .y => [
+        { i := i - 1, j, k := k - 1 },
+        { i := i    , j, k := k - 1 },
+        { i := i    , j, k := k     },
+        { i := i - 1, j, k := k     },
+      ]
+    | .z => [
+        { i := i - 1, j := j - 1, k },
+        { i := i    , j := j - 1, k },
+        { i := i    , j := j    , k },
+        { i := i - 1, j := j    , k },
+      ]
+  -- `cells` above is wound so that, as-is, it produces an outward
+  -- normal of +x (for .x edges), -y (for .y edges) or +z (for .z
+  -- edges) -- the sign flips for .y because of the handedness of the
+  -- cross product across the three axes (same asymmetry visible in
+  -- Grid.quadOfEdge's separate x/z vs y quad-vertex tables). Reverse
+  -- the winding whenever that doesn't match the actual φ-gradient
+  -- outward direction, so the mesh normal is consistent with the
+  -- voxel renderer's.
+  let defaultIsPositive := match axis with
+    | .x => true
+    | .y => false
+    | .z => true
+  let outward := edge.outerNormal grid φ
+  let outwardIsPositive := match axis with
+    | .x => outward.x > 0
+    | .y => outward.y > 0
+    | .z => outward.z > 0
+  let orderedCells := if outwardIsPositive == defaultIsPositive then cells else cells.reverse
+  let points := orderedCells.map
+    fun cell =>
+      grid.computeCenter (ijk := cell) (crossingPoints := crossingPoints)
+  Quad.mk points[0]! points[1]! points[2]! points[3]!
+
+#eval (
+  let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
+  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1
+  (grid.activeEdges φ).length
+
+)
+
 
 def Grid.quadOfEdge (grid : Grid) (edge : Edge) (φ : Point → Float) : Quad :=
   let normal := edge.outerNormal grid φ
@@ -606,7 +621,7 @@ def Grid.voxelMesh (grid : Grid) (φ : Point → Float) : Mesh :=
 def Grid.surfaceNetMesh (grid : Grid) (φ : Point → Float) : Mesh :=
   let crossingPoints := grid.crossingPoints φ
   let edges := crossingPoints.keys
-  let quads := edges.map (fun edge => grid.quadOfEdge' edge crossingPoints)
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
   let facets := quads.foldl
     (init := [])
     (fun facets quad => quad.split ++ facets)
