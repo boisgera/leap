@@ -1,16 +1,42 @@
 import Mathlib
 import Batteries
+import RyuLean4
 
-def pi := 4 * Float.atan 1
+-- More than enough digits to get the best repr of pi as Float.
+def pi := 3.14159265358979323846264338327950288419716939937510582097494459230781
+def zeroDotThree := 0.3
 
 #eval pi
 -- 3.141593
 
+-- Experimentally, we could have used the atan to compute the same pi float.
+#eval pi == 4 * Float.atan 1
+-- true
+
+-- Exact value of "pi-as-a-Float"
 #eval pi.toStringFull |> IO.println
 -- 3.141592653589793115997963468544185161590576171875
 
--- "True" value of pi
--- 3.141592653589793238462643383279502884197169399375...
+-- Exact value of pi
+-- 3.141592653589793238462643383279502884197169399375....
+
+#eval zeroDotThree
+-- 0.300000
+
+#eval zeroDotThree.toStringFull |> IO.println
+-- 0.299999999999999988897769753748434595763683319091796875
+
+#eval 0.1 + 0.2
+-- 0.300000
+
+#eval (0.1 + 0.2).toStringFull |> IO.println
+-- 0.3000000000000000444089209850062616169452667236328125
+
+
+/-!
+Bit-level exploration
+--------------------------------------------------------------------------------
+-/
 
 def pi_binary := pi.toBits
 
@@ -29,11 +55,9 @@ def pi_binary := pi.toBits
 #eval ((-1.0).toBits : UInt64) >>> 63
 -- 1
 
--- The bit fiddling is not necessary here.
 def sign (float : Float) : Float :=
   if float.toBits >>> 63 == 0 then 1.0 else -1.0
 
--- Is the bit fiddling necessary?
 def exponent (float : Float) : Int :=
   float.toBits
     |> fun (bits : UInt64) => (bits &&& 2^63 - 1 : UInt64)
@@ -60,8 +84,7 @@ def exponent (float : Float) : Int :=
 /-!
 TODO: mantissa (no idea what the signature should be actually)
 Return a natural number which should be divided by 2^52?
-Makes sense ... Do I need the bit fiddling for that?
-Nope
+A float which is the number to be scaled+signed?
 -/
 
 #eval pi
@@ -115,216 +138,66 @@ How? Easy multiply by 5^52 so that we get mantissa * 10^52
 theorem uint64_shift_right_63 (u : UInt64) :
     (u >>> 63) = 0 ∨ (u >>> 63) = 1 := by bv_decide
 
--- def sign' (float : Float) : Float :=
---   match uint64_shift_right_63 float.toBits with
---   | Or.inl h => by
---       simp [h]
---       exact 1.0
---   | Or.inr h => by
---       simp [h]
---       exact -1.0
 
--- -- Step 1: as before
--- def decompose (bits : UInt64) : Bool × Int × Nat :=
---   let sign := (bits >>> 63) &&& 1 == 1
---   let biasedExp := (bits >>> 52) &&& 0x7FF
---   let M := (bits &&& ((1 <<< 52) - 1)).toNat
---   if biasedExp == 0 then
---     (sign, -1022, M)
---   else
---     (sign, biasedExp.toNat - 1023, M + (1 <<< 52))
+/-!
+Hadoken!
+--------------------------------------------------------------------------------
+-/
 
--- -- Step 2: turn (mantissaFull, e) into an exact (N, d) with value = N * 10^(-d)
--- def toExactDecimal (mantissaFull : Nat) (e : Int) : Nat × Nat :=
---   let k := e - 52
---   if k ≥ 0 then
---     (mantissaFull * 2 ^ k.toNat, 0)          -- integer, no fractional digits
---   else
---     let negk := (-k).toNat
---     (mantissaFull * 5 ^ negk, negk)          -- N / 10^negk, exact
+def Float.toF64 (f : Float) : F64 :=
+  let bits := f.toBits
+  let sign : Bool := (bits >>> 63) == 1
+  let biasedExp : Fin 2048 := bits
+    |>.toNat
+    |> (· &&& 2 ^ 63 - 1)
+    |> (· >>> 52)
+    |> Fin.ofNat (n := 2048)
+  let mantissa : Fin (2 ^ 52) := bits
+    |>.toNat
+    |> (· &&& 2 ^ 52 - 1)
+    |> Fin.ofNat (n := 2 ^ 52)
+  { sign, biasedExp, mantissa }
 
--- -- Step 3+4: round N's digit string to 17 sig figs, track exponent shift
--- def roundAndLocate (N d : Nat) : String × Int :=
---   let digits := toString N
---   let L := digits.length
---   -- exponent of leading digit before rounding: value = N * 10^(-d)
---   let exp10 : Int := (L : Int) - (d : Int) - 1
---   let (rounded, grew) := roundToSigDigits digits 17
---   (rounded, if grew then exp10 + 1 else exp10)
+#eval pi.toF64
+-- { sign := false, biasedExp := 1024, mantissa := 2570638124657944 }
 
--- -- Full pipeline
--- def floatToRepr17g (bits : UInt64) : String :=
---   let (sign, e, mantissaFull) := decompose bits
---   if mantissaFull == 0 then
---     (if sign then "-0" else "0")
---   else
---     let (N, d) := toExactDecimal mantissaFull e
---     let (roundedDigits, exp10) := roundAndLocate N d
---     formatG sign roundedDigits exp10
+#check F64.isFinite
+-- F64.isFinite (x : F64) : Prop
 
--- Increment a decimal digit string by 1 at the last position, propagating carry.
--- Returns (result, grew) where grew=true if the string got one digit longer
--- (e.g. "999" -> "1000").
-def incrementDecimalString (s : String) : String × Bool :=
-  let digits := s.toList
-  let rec go : List Char → List Char × Bool
-    | [] => ([], true)  -- ran off the front: carry out
-    | c :: rest =>
-      if c == '9' then
-        let (rest', carried) := go rest
-        if carried then ('0' :: rest', true) else (c :: rest', false)
-      else
-        (Char.ofNat (c.toNat + 1) :: rest, false)
-  -- process from the right: reverse, go, reverse back
-  let (revResult, carryOut) := go digits.reverse
-  let result := revResult.reverse
-  if carryOut then
-    (String.ofList ('1' :: result), true)
-  else
-    (String.ofList result, false)
+#print F64.isFinite
+-- fun x => x.classify =
+--   FloatClass.zero ∨
+--   x.classify = FloatClass.subnormal ∨
+--   x.classify = FloatClass.normal
 
--- Round a decimal digit string (no leading zeros, nonempty) to `keep`
--- significant digits, round-half-to-even. Returns (roundedDigits, grew)
--- where grew=true means the rounding caused a carry that grew the digit
--- count (so caller must bump the decimal exponent by 1).
+#synth ∀ x : F64, Decidable x.isFinite
 
-def roundToSigDigits (digits : String) (keep : Nat) : String × Bool :=
-  if digits.length ≤ keep then
-    (digits, false)
-  else
-    let kept := (digits.take keep).toString.toList
-    let rest := (digits.drop keep).toString.toList
-    let firstDropped := rest.headD '0'
-    let firstDigit := firstDropped.toNat - '0'.toNat
-    let restIsAllZero := rest.tail.all (· == '0')
-    let lastKeptDigit := (kept.getLastD '0').toNat - '0'.toNat
-    let roundUp :=
-      if firstDigit > 5 then true
-      else if firstDigit < 5 then false
-      else if !restIsAllZero then true
-      else lastKeptDigit % 2 == 1
-    if roundUp then
-      let (incremented, grew) := incrementDecimalString (String.ofList kept)
-      if grew then (incremented.dropEnd 1 |>.toString, true) else (incremented, false)
-    else
-      (String.ofList kept, false)
+#synth Decidable (F64.isFinite pi.toF64)
 
--- -- Step 1: decompose bits into sign, unbiased exponent, full mantissa (with implicit bit)
--- def decompose (bits : UInt64) : Bool × Int × Nat :=
---   let sign := (bits >>> 63) &&& 1 == 1
---   let biasedExp := (bits >>> 52) &&& 0x7FF
---   let M := (bits &&& ((1 <<< 52) - 1)).toNat
---   if biasedExp == 0 then
---     (sign, -1022, M)
---   else
---     (sign, biasedExp.toNat - 1023, M + (1 <<< 52))
+#check Ryu.ryu
+-- Ryu.ryu (x : F64) (hfin : x.isFinite) : Decimal
 
--- -- Step 2: exact value = N * 10^(-d)
--- def toExactDecimal (mantissaFull : Nat) (e : Int) : Nat × Nat :=
---   let k := e - 52
---   if k ≥ 0 then
---     (mantissaFull * 2 ^ k.toNat, 0)
---   else
---     let negk := (-k).toNat
---     (mantissaFull * 5 ^ negk, negk)
+#check Decimal.format
+-- Decimal.format (d : Decimal) : String
 
--- -- Step 3+4: round to 17 sig digits, compute exponent of leading digit
--- def roundAndLocate (N d : Nat) : String × Int :=
---   let digits := toString N
---   let L := digits.length
---   let exp10 : Int := (L : Int) - (d : Int) - 1
---   let (rounded, grew) := roundToSigDigits digits 17
---   (rounded, if grew then exp10 + 1 else exp10)
+#eval Ryu.ryu pi.toF64 (hfin := by decide) |>.format |> IO.println
+-- 3.141592653589793e0
 
--- -- helper: strip trailing zeros, keep at least one digit
--- def stripTrailingZeros (s : String) : String :=
---   let trimmed := s.dropRightWhile (· == '0')
---   if trimmed.isEmpty then "0" else trimmed
+#eval Ryu.ryu zeroDotThree.toF64 (hfin := by decide) |>.format |> IO.println
+-- 3e-1
 
--- -- helper: pad exponent to at least 2 digits, printf-style
--- def padExp (n : Nat) : String :=
---   let s := toString n
---   if s.length < 2 then String.mk (List.replicate (2 - s.length) '0') ++ s else s
+#eval Ryu.ryu (0.1 + 0.2).toF64 (hfin := by decide) |>.format |> IO.println
+-- 3.0000000000000004e-1
 
--- -- Step 5: %g-style formatting
--- def formatG (sign : Bool) (roundedDigits : String) (exp10 : Int) : String :=
---   let digits := stripTrailingZeros roundedDigits
---   let body :=
---     if exp10 < -4 || exp10 ≥ 17 then
---       let intPart := (digits.take 1).toString
---       let fracPart := (digits.drop 1).toString
---       let mantissaStr := if fracPart.isEmpty then intPart else intPart ++ "." ++ fracPart
---       mantissaStr ++ "e" ++ (if exp10 ≥ 0 then "+" else "-") ++ padExp exp10.natAbs
---     else if exp10 ≥ 0 then
---       let intLen := (exp10 + 1).toNat
---       let padded :=
---         if digits.length < intLen then
---           digits ++ String.mk (List.replicate (intLen - digits.length) '0')
---         else digits
---       let ip := (padded.take intLen).toString
---       let fp := (padded.drop intLen).toString
---       if fp.isEmpty then ip else ip ++ "." ++ fp
---     else
---       "0." ++ String.mk (List.replicate ((-exp10).toNat - 1) '0') ++ digits
---   (if sign then "-" else "") ++ body
-
--- -- Full pipeline
--- def floatToRepr17g (bits : UInt64) : String :=
---   let biasedExp := (bits >>> 52) &&& 0x7FF
---   let M := (bits &&& ((1 <<< 52) - 1)).toNat
---   let sign := (bits >>> 63) &&& 1 == 1
---   if biasedExp == 0x7FF then
---     if M == 0 then (if sign then "-inf" else "inf") else "nan"
---   else if biasedExp == 0 && M == 0 then
---     (if sign then "-0" else "0")
---   else
---     let (_, e, mantissaFull) := decompose bits
---     let (N, d) := toExactDecimal mantissaFull e
---     let (roundedDigits, exp10) := roundAndLocate N d
---     formatG sign roundedDigits exp10
-
-#eval 67.0
--- 0
-
-#eval 12.0
--- 0
-
-#eval some (1.5)
-
-#eval -1.5
+-- TODO: make a Float.toRyu (or similar) that special-cases the non-finite stuff
+-- to give a string in any case.
 
 
--- def leadingZeros (s : String) : Nat :=
---   let rec lz (cs : List Char) : Nat :=
---     match cs with
---     | '0' :: cs => 1 + (lz cs)
---     | _ => 0
---   lz s.toList
 
--- def trailingZeros (s : String) : Nat :=
---   s.toList |>.reverse |> String.ofList |> leadingZeros
-
--- def patchLarge (s : String) :=
---   if s == "0" then
---     s
---   else if s.contains '.' then
---       s
---   else -- now we can deal with large entire numbers
---     let n := trailingZeros s
---     let cs := String.toList s
---     let cs' := cs.take (cs.length - n)
---     -- Not perfect yet, e.g. may produce 314e18
---     let exp := n + (cs'.length - 1)
---     let cs'' := cs'.head! :: ['.'] ++ (cs'.drop 1)
---     cs'' |> String.ofList |> (· ++ s!"e{exp}")
-
--- -- TODO: patchSmall
-
--- -- TODO: patchTooManyDigits
-
--- def patchedToString (f : Float) : String :=
---   f.toStringFull
---     |> patchLarge
+/-!
+Radix Rationals
+--------------------------------------------------------------------------------
+-/
 
 -- Rationals of the form mantissa × base ^ exponent.
 -- Nota: when in canonical form, the mantissa is 0 or not a multiple of base
