@@ -354,6 +354,23 @@ def Grid.min (grid : Grid) : Point := grid[grid.imin]
 
 def Grid.max (grid : Grid) : Point := grid[grid.imax]
 
+-- Alternate constructor: the smallest `Grid` (at the given `scale`)
+-- whose extent covers the box between `min` and `max`.
+def Grid.ofBounds (min max : Point) (scale : Float) : Grid :=
+  let floorIndex (p : Point) : Index :=
+    { i := (p.x / scale).floor.toInt64.toInt,
+      j := (p.y / scale).floor.toInt64.toInt,
+      k := (p.z / scale).floor.toInt64.toInt }
+  let ceilIndex (p : Point) : Index :=
+    { i := (p.x / scale).ceil.toInt64.toInt,
+      j := (p.y / scale).ceil.toInt64.toInt,
+      k := (p.z / scale).ceil.toInt64.toInt }
+  { imin := floorIndex min, imax := ceilIndex max, scale }
+
+#eval Grid.ofBounds (Point.mk (-1) (-1) (-1)) (Point.mk 1 1 1) 0.3
+-- expect imin ≈ ⟨-4,-4,-4⟩ (since -1/0.3 ≈ -3.33, floor = -4),
+--        imax ≈ ⟨4,4,4⟩   (since  1/0.3 ≈  3.33, ceil  =  4)
+
 def Grid.nextIndex? (g : Grid) (ijk : Index) : Option Index :=
   let ⟨i, j, k⟩ := ijk
   if k < g.imax.3 then
@@ -627,22 +644,20 @@ def Grid.surfaceNetMesh (grid : Grid) (φ : Point → Float) : Mesh :=
     (fun facets quad => quad.split ++ facets)
   { facets }
 
-def testSphere : Mesh :=
-  let grid : Grid := {
-    imin := ⟨-25, -25, -25⟩,
-    imax := ⟨ 25,  25,  25⟩,
-    scale := 0.05
-  }
+def testVoxelSphere (scale : Float := 1.0): Mesh :=
+  let grid : Grid := Grid.ofBounds
+    ⟨ -1.0, -1.0, -1.0 ⟩
+    ⟨  1.0,  1.0,  1.0 ⟩
+    scale
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
   let mesh := grid.voxelMesh φ
   mesh
 
-def testSphereSurfaceNets : Mesh :=
-  let grid : Grid := {
-    imin := ⟨-5, -5, -5⟩,
-    imax := ⟨ 5,  5,  5⟩,
-    scale := 1 / (5).toFloat
-  }
+def testSurfaceNetSphere (scale : Float := 1.0): Mesh :=
+  let grid : Grid := Grid.ofBounds
+    ⟨ -1.0, -1.0, -1.0 ⟩
+    ⟨  1.0,  1.0,  1.0 ⟩
+    scale
   let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
   let mesh := grid.surfaceNetMesh φ
   mesh
@@ -650,9 +665,11 @@ def testSphereSurfaceNets : Mesh :=
 end STL
 
 def main := do
-  let mesh := STL.testSphereSurfaceNets
-  let stl := mesh.toSTL
-  IO.FS.writeFile "sphere.stl" stl
+  let scale : Float := 2 ^ (-2) -- 2 ^ (-5)
+  let voxelMesh := STL.testVoxelSphere scale
+  voxelMesh.toSTL |> IO.FS.writeFile "sphere-voxel.stl"
+  let surfaceNetMesh := STL.testSurfaceNetSphere scale
+  surfaceNetMesh.toSTL |> IO.FS.writeFile "sphere-surface-net.stl"
 
 -- #eval main
 
