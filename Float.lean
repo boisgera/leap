@@ -2,28 +2,20 @@ import Mathlib
 import Batteries
 import RyuLean4
 
--- More than enough digits to get the best repr of pi as Float.
-def pi := 3.14159265358979323846264338327950288419716939937510582097494459230781
-def zeroDotThree := 0.3
-
-#eval pi
+#eval Float.pi
 -- 3.141593
 
--- Experimentally, we could have used the atan to compute the same pi float.
-#eval pi == 4 * Float.atan 1
--- true
-
 -- Exact value of "pi-as-a-Float"
-#eval pi.toStringFull |> IO.println
+#eval Float.pi.toStringFull |> IO.println
 -- 3.141592653589793115997963468544185161590576171875
 
 -- Exact value of pi
 -- 3.141592653589793238462643383279502884197169399375....
 
-#eval zeroDotThree
+#eval 0.3
 -- 0.300000
 
-#eval zeroDotThree.toStringFull |> IO.println
+#eval (0.3).toStringFull |> IO.println
 -- 0.299999999999999988897769753748434595763683319091796875
 
 #eval 0.1 + 0.2
@@ -38,7 +30,7 @@ Bit-level exploration
 --------------------------------------------------------------------------------
 -/
 
-def pi_binary := pi.toBits
+def pi_binary := Float.pi.toBits
 
 #check pi_binary
 -- pi_binary : UInt64
@@ -66,7 +58,7 @@ def exponent (float : Float) : Int :=
     |> Int.ofNat
     |> (· - 1023)
 
-#eval exponent pi
+#eval exponent Float.pi
 -- 1
 
 #eval exponent 0.5
@@ -87,10 +79,10 @@ Return a natural number which should be divided by 2^52?
 A float which is the number to be scaled+signed?
 -/
 
-#eval pi
+#eval Float.pi
 -- 3.141593
 
-#eval exponent pi
+#eval exponent Float.pi
 -- 1
 
 /--
@@ -108,10 +100,10 @@ TODO: get ALL the decimal digits associated to the mantissa (/significand).
 How? Easy multiply by 5^52 so that we get mantissa * 10^52
 -/
 
-#eval pi
+#eval Float.pi
 -- 3.141593
 
-#eval exponent pi
+#eval exponent Float.pi
 -- 1
 
 /--
@@ -129,10 +121,10 @@ TODO: get ALL the decimal digits associated to the mantissa (/significand).
 How? Easy multiply by 5^52 so that we get mantissa * 10^52
 -/
 
-#eval (sihft pi) * 5 ^ 52
+#eval (sihft Float.pi) * 5 ^ 52
 -- 31415926535897931159979634685441851615905761718750000
 
-#eval pi |> (· * 2.0 ^ 52) |>.toInt64.toInt |> fun x : Int => x * 5 ^ 52
+#eval Float.pi |> (· * 2.0 ^ 52) |>.toInt64.toInt |> fun x : Int => x * 5 ^ 52
 -- 31415926535897931159979634685441851615905761718750000
 
 theorem uint64_shift_right_63 (u : UInt64) :
@@ -158,7 +150,7 @@ def Float.toF64 (f : Float) : F64 :=
     |> Fin.ofNat (n := 2 ^ 52)
   { sign, biasedExp, mantissa }
 
-#eval pi.toF64
+#eval Float.pi.toF64
 -- { sign := false, biasedExp := 1024, mantissa := 2570638124657944 }
 
 #check F64.isFinite
@@ -172,7 +164,7 @@ def Float.toF64 (f : Float) : F64 :=
 
 #synth ∀ x : F64, Decidable x.isFinite
 
-#synth Decidable (F64.isFinite pi.toF64)
+#synth Decidable (F64.isFinite Float.pi.toF64)
 
 #check Ryu.ryu
 -- Ryu.ryu (x : F64) (hfin : x.isFinite) : Decimal
@@ -180,10 +172,10 @@ def Float.toF64 (f : Float) : F64 :=
 #check Decimal.format
 -- Decimal.format (d : Decimal) : String
 
-#eval Ryu.ryu pi.toF64 (hfin := by decide) |>.format |> IO.println
+#eval Ryu.ryu Float.pi.toF64 (hfin := by decide) |>.format |> IO.println
 -- 3.141592653589793e0
 
-#eval Ryu.ryu zeroDotThree.toF64 (hfin := by decide) |>.format |> IO.println
+#eval Ryu.ryu (0.3).toF64 (hfin := by decide) |>.format |> IO.println
 -- 3e-1
 
 #eval Ryu.ryu (0.1 + 0.2).toF64 (hfin := by decide) |>.format |> IO.println
@@ -192,51 +184,87 @@ def Float.toF64 (f : Float) : F64 :=
 -- TODO: make a Float.toRyu (or similar) that special-cases the non-finite stuff
 -- to give a string in any case.
 
+#print F64.isFinite
+-- def F64.isFinite : F64 → Prop :=
+-- fun x => x.classify = FloatClass.zero ∨
+--   x.classify = FloatClass.subnormal ∨
+--   x.classify = FloatClass.normal
 
+#check F64.classify
+-- F64.classify (x : F64) : FloatClass
+
+#print FloatClass
+-- inductive FloatClass : Type
+-- number of parameters: 0
+-- constructors:
+-- FloatClass.zero : FloatClass
+-- FloatClass.subnormal : FloatClass
+-- FloatClass.normal : FloatClass
+-- FloatClass.infinity : FloatClass
+-- FloatClass.nan : FloatClass
+
+def Float.toShortestRoundtripString (f : Float) :=
+  let f64 := f.toF64
+  match h : f64.classify with
+  | .infinity =>
+    let signString := if f64.sign then "-" else ""
+    s!"{signString}inf"
+  | .nan => "nan"
+  | .zero | .subnormal | .normal =>
+    have hfin : f64.isFinite := by
+      simp only [F64.isFinite]
+      grind
+    let ryu := Ryu.ryu f64 hfin
+    ryu.format
+
+#eval (0.0).toShortestRoundtripString |> IO.println
+-- 0e0
+
+#eval Float.pi.toShortestRoundtripString |> IO.println
+-- 3.141592653589793e0
+
+#eval (0.3).toShortestRoundtripString |> IO.println
+-- 3e-1
+
+#eval (0.1 + 0.2).toShortestRoundtripString |> IO.println
+-- 3.0000000000000004e-1
 
 /-!
 Radix Rationals
 --------------------------------------------------------------------------------
+
+Rationals of the form mantissa × base ^ exponent.
+
+We go for signed exponents; they are not *necessary* but they are convenient:
+they can help reducing the size of the mantissa basically for free.
+
+Nota: In canonical form, the mantissa is 0 or not a multiple of base
+(i.e., we force the exponent to be maximal).
 -/
 
--- Rationals of the form mantissa × base ^ exponent.
--- Nota: when in canonical form, the mantissa is 0 or not a multiple of base
--- (force the exponent to be "maximal" somehow) ; think of it more, given
--- that the exponent can be non-positive (which is necessary) or negative
--- (which is useful to limit the memory footprint)
 structure RadixRat (base : Nat) where
   -- the rational is mantissa * base ^ exponent
   mantissa : Int
   exponent : Int
 
--- Nota : having neg_exponent : Nat instead of exponent would be as expressive
--- but less convenient and would have a larger memory footprint for some large
--- powers of the base.
-
 abbrev DyadicRat := RadixRat 2
-abbrev DecimalRat := RadixRat 1
+abbrev DecimalRat := RadixRat 10
 
--- Nota: default argument value to avoid an auxiliary recursive function
--- TODO: work on a version with proven termination? At the very least we
--- should have some extra assumption on the argument (m >= 2 to start with,
--- then n ≥ 1, etc.)
--- At the very least, we can question what kind of assumptions is necessary
--- to get the termination ; we could add those assumptions, even if we don't
--- want to make the effort to remove the partial.
+/-- Extract the maximal power of m inside n (partial)-/
 partial def maxPow (m n : Nat) (p : Nat := 0) : Nat :=
   if (n % m == 0) then
     maxPow m (n / m) (p := p + 1)
   else
     p
 
-#eval maxPow 2 16 -- 16 = 2 ^ 4
--- 4
+/-- info: 4 -/
+#guard_msgs in #eval maxPow 2 16 -- 16 = 2 ^ 4
 
-#eval maxPow 2 100 -- 100 = 2 ^ 2 * 5 ^ 2
--- 2
+/-- info: 2 -/
+#guard_msgs in #eval maxPow 2 100 -- 100 = 2 ^ 2 * 5 ^ 2
 
-#eval maxPow 2 7 -- 7 = 7
--- 0
+/-- info: 0 -/
+#guard_msgs in #eval maxPow 2 7 -- 7 = 2 ^ 0 * 7
 
 theorem div_pos_of_dvd (m n : Nat) (hm : 2 ≤ m) (hn : 0 < n) (hmod : n % m = 0) :
     0 < n / m := by
@@ -247,7 +275,9 @@ theorem div_pos_of_dvd (m n : Nat) (hm : 2 ≤ m) (hn : 0 < n) (hmod : n % m = 0
     grind
   exact Nat.div_pos m_le_n (by grind)
 
-def maxPow' (m n : Nat) (p : Nat := 0) (hm : m >= 2) (hn : n > 0) : Nat :=
+/-- Extract the maximal power of m inside n (terminates)-/
+def maxPow' (m n : Nat)
+    (p : Nat := 0) (hm : m >= 2 := by grind) (hn : n > 0 := by grind) : Nat :=
   if m_div_n : n % m = 0 then
     maxPow' m (n / m) (p + 1) hm (show n / m > 0 from div_pos_of_dvd m n hm hn m_div_n)
   else
@@ -257,6 +287,14 @@ decreasing_by
   apply Nat.div_lt_self
   repeat grind
 
+/-- info: 4 -/
+#guard_msgs in #eval maxPow' 2 16 -- 16 = 2 ^ 4
+
+/-- info: 2 -/
+#guard_msgs in #eval maxPow' 2 100 -- 100 = 2 ^ 2 * 5 ^ 2
+
+/-- info: 0 -/
+#guard_msgs in #eval maxPow' 2 7 -- 7 = 2 ^ 0 * 7
 
 def RadixRat.canonicalize {b} (r : RadixRat b) : RadixRat b :=
   let pow := maxPow b r.mantissa.natAbs
@@ -265,12 +303,20 @@ def RadixRat.canonicalize {b} (r : RadixRat b) : RadixRat b :=
     exponent := r.exponent + (Int.ofNat pow)
   }
 
-#eval {mantissa := 100, exponent := 0 : DyadicRat} |>.canonicalize
--- { mantissa := 25, exponent := 2 }
+/-- info: { mantissa := 25, exponent := 2 } -/
+#guard_msgs in
+#eval { mantissa := 100, exponent := 0 : DyadicRat } |>.canonicalize
+-- 100 * 2 ^ 0 → 25 * 2 ^ 2
 
-#eval {mantissa := 256, exponent := 8 : DyadicRat} |>.canonicalize
--- { mantissa := 1, exponent := 16 }
+/-- info: { mantissa := 1, exponent := 16 } -/
+#guard_msgs in
+#eval { mantissa := 256, exponent := 8 : DyadicRat } |>.canonicalize
+-- 256 * 2 ^ 0 → 1 * 2 ^ 16
 
+def DyadicRat.toFloat (d : DyadicRat) : Float :=
+  (Float.ofInt d.mantissa) * (2 ^ (Float.ofInt d.exponent))
+
+-- Note: we don't deal with inf, nan or subnormals properly
 def DyadicRat.ofFloat (f : Float) : DyadicRat :=
   let bits := f.toBits.toNat
   let exponent : Int := -- unbiased exponent
@@ -279,8 +325,6 @@ def DyadicRat.ofFloat (f : Float) : DyadicRat :=
     |> (· >>> 52)       -- shift the exponent down and trash the mantissa
     |> Int.ofNat
     |> (· - 1023 - 52)  -- debias & compensate for mantissa shift
-
-  dbg_trace (bits &&& (2^52 - 1)) -- should be 0 for f := 1.0
 
   let unsigned_mantissa :=
     if f == 0 then
@@ -293,14 +337,29 @@ def DyadicRat.ofFloat (f : Float) : DyadicRat :=
     unsigned_mantissa
     |> Int.ofNat
     |> fun n => if isNeg then -n else n
-  {mantissa, exponent}
+  { mantissa, exponent : DyadicRat } |>.canonicalize
 
+def DyadicRat.roundTrip (f : Float) : Float := f |> DyadicRat.ofFloat |>.toFloat
+
+/-- info: { mantissa := 1, exponent := 0 } -/
+#guard_msgs in
 #eval DyadicRat.ofFloat 1.0
--- { mantissa := 4503599627370496, exponent := -52 }
 
+/-- info: true -/
+#guard_msgs in
+#eval DyadicRat.roundTrip 1.0 == 1.0
 
-#eval DyadicRat.ofFloat 3.14
--- { mantissa := 7070651414971679, exponent := -51 }
+/-- info: true -/
+#guard_msgs in
+#eval DyadicRat.roundTrip 0.3 == 0.3
+
+/-- info: true -/
+#guard_msgs in
+#eval DyadicRat.roundTrip 0.1 + 0.2 == 0.1 + 0.2
+
+/-- info: true -/
+#guard_msgs in
+#eval DyadicRat.roundTrip Float.pi == Float.pi
 
 theorem two_divides_ten : 2 ∣ 10 := by
   simp [Dvd.dvd] -- ∃ c, 10 = 2 * c
@@ -356,28 +415,12 @@ instance {b} : ToString (RadixRat b) where
 #eval ({ mantissa := 100, exponent := 0} : DyadicRat)
 -- 25 × 2 ^ 2
 
-#eval 1 + 1
-
--- TODO: coerce to Rat (properly, with a typeclass!). We *could* define binary
--- equality by decidable equality of the Rats?
-
--- TODO : expose the design of Rat which containes two proposition, but who
--- mostly "get out of the way" since we can coerce integers without any proof
--- and operations such as '/' that are already implemented carry the burden
--- of the proofs. We *could* do something similar for RadixRat
-
--- TODO : get a float, coerce it to DyadicRat (manage special cases),
--- then to DecimalRat, canonicalize, then truncate to 17 digits and
--- display appropriately.
-
 def Float.toScientificNotation (f : Float) (precision : Nat := 17) : String :=
   -- TODO: handle special cases : ± inf, nan, -0.0 (?)
   let df :=
     f
     |> DyadicRat.ofFloat
-    |> dbgTraceVal
     |>.coerce (n := 10) (show 2 ∣ 10 by grind)
-  dbg_trace df
   let mabs := df.mantissa.natAbs |> ToString.toString
   let numDigits := mabs.length
   let e := df.exponent + (numDigits - 1)
@@ -386,46 +429,22 @@ def Float.toScientificNotation (f : Float) (precision : Nat := 17) : String :=
   let sign := if df.mantissa < 0 then "-" else ""
   s!"{sign}{m_trunc}e{e}"
 
-#eval Float.toScientificNotation 3.14
--- "3.1400000000000001e-102" WRONG
+/-- info: 3.1400000000000001e0 -/
+#guard_msgs in
+#eval Float.toScientificNotation 3.14 |> IO.println
 
-#eval Float.toScientificNotation 0.3
--- "2.9999999999999998e-1"
+/-- info: 2.9999999999999998e-1 -/
+#guard_msgs in
+#eval Float.toScientificNotation 0.3 |> IO.println
 
-#eval Float.toScientificNotation (0.1 + 0.2)
--- "3.0000000000000004e-1"
+/-- info: 3.0000000000000004e-1 -/
+#guard_msgs in
+#eval Float.toScientificNotation (0.1 + 0.2) |> IO.println
 
-#eval Float.toScientificNotation (-0.3)
--- -2.9999999999999998e-1
+/-- info: -2.9999999999999998e-1 -/
+#guard_msgs in
+#eval Float.toScientificNotation (-0.3) |> IO.println
 
-#eval Float.toScientificNotation 0.0001
-
--- #eval Float.toScientificNotation 0.0 runs forever?
--- where does it hang?
-
--- TODO:
--- - [X] float to DyadicRat
--- - canonicalization
--- - BEq and other typeclasses
--- - convert a DyadicRat to a DecimalRat
--- -
-
--- TODO: convert Scientific 2 to Scientific 10.
-
-#eval Float.toScienticNotation 3.14
--- "2.0806951639991532e-324" -- *cough, cough* 🪲
-
--- Q: is the repr easy once we have the float components?
-
--- instance (priority := high) : ToString Float where
---   toString := sorry -- patchedToString
-
--- instance (priority := high) : Repr Float where
---   reprPrec f prec :=
---     if f < 0 then
---       Repr.addAppParen (Std.Format.text (toString f)) prec
---     else
---       Std.Format.text (toString f)
-
-#eval 3.14e20
--- 314e18
+/-- info: 3.1415926535897931e0 -/
+#guard_msgs in
+#eval Float.toScientificNotation Float.pi |> IO.println
