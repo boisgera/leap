@@ -6,3 +6,6 @@
 
 # STL files
 *.stl
+
+# Generated HTML
+*.html

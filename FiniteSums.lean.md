@@ -1,7 +1,9 @@
+
+```lean4
 import Mathlib
 set_option pp.proofs true
+```
 
-/-!
 
 Intro
 --------------------------------------------------------------------------------
@@ -19,57 +21,54 @@ To make sense of the finite sum `∑ i, f i`, we need
   associativity and commutativity to reorder the sum arbitrarily.
   We also need a zero in `M` to sum over an empty type.
   To summarize, we need an instance of `AddCommMonoid M` to exist.
--/
 
-
+```lean4
 #eval ∑ i : Fin 10, (fun (n : ℕ) => n + 1) i
 -- 55
 
 #eval 10 * (10 + 1) / 2
 -- 55
+```
 
-/-!
 Note the need to cast the index to a natural number ;
 otherwise `i + 1` is computed modulo 10 (probably not what you want!).
--/
 
+```lean4
 #eval ∑ i : Fin 10, (· + 1) i
 -- 5
+```
 
-/-!
 By the way, this is funny but you kinda need the wrapping behavior for `Fin 10`
 for it to be a commutative monoid, a simpler "cliping" behavior wouldn't work.
--/
 
+```lean4
 #synth AddCommMonoid (Fin 10)
 -- Fin.addCommMonoid 10
+```
 
-/-!
 In the same vein, `EReal` is also a commutative monoid.
 (Note that ⊤ + ⊥ = ⊥ + ⊤ = ⊥. So "-∞" is at the same time "-∞" and "nan".
 With this definition, when restricted to nonnegative numbers, things work
 "as expected").
--/
 
+```lean4
 #synth AddCommMonoid EReal
 -- instAddCommMonoidEReal
+```
 
-
-
-/-!
 Finite types to finite sets
 --------------------------------------------------------------------------------
 
 There is no `sum` function in the `Fintype` namespace.
 The notation `∑ i, f i` actually is a shortcut for `∑ i ∈ Finset.univ, f i`,
 which desugars to `Finset.sum s f`.
--/
 
+```lean4
 #check Finset.sum
 -- Finset.sum.{u_1, u_3} {ι : Type u_1} {M : Type u_3} [AddCommMonoid M]
 -- (s : Finset ι) (f : ι → M) : M
+```
 
-/-!
 So basically when we want to sum over a finite type, we actually sum over
 an associated finite set that contains all the terms of the type.
 The simplest set that works is the universal set over the finite type itself.
@@ -78,8 +77,8 @@ So to sum over ℕ, we actually sum over the universal set of `Set ℕ`.
 **Note.** To define a `Fintype`, you actually need to:
 - provide the set we have been discussing and
 - prove that being a term of the type is equivalent to being an element of this set.
--/
 
+```lean4
 #print Fintype
 -- class Fintype.{u_4} (α : Type u_4) : Type u_4
 -- number of parameters: 1
@@ -88,39 +87,39 @@ So to sum over ℕ, we actually sum over the universal set of `Set ℕ`.
 --   Fintype.complete : ∀ (x : α), x ∈ Fintype.elems
 -- constructor:
 --   Fintype.mk.{u_4} {α : Type u_4} (elems : Finset α) (complete : ∀ (x : α), x ∈ elems) : Fintype α
+```
 
-/-!
 So `Finset.univ` is very simple: that's `Fintype.elems`.
--/
 
+```lean4
 #print Finset.univ
 -- def Finset.univ.{u_1} : {α : Type u_1} → [Fintype α] → Finset α :=
 -- fun {α} [Fintype α] => Fintype.elems
+```
 
-/-!
 Sums over finite sets
 --------------------------------------------------------------------------------
 
 Sums over finite sets expand our tooling a bit, since we can now do partial sums
 if we want to:
--/
 
+```lean4
 #eval Finset.sum { n : Fin 10 | n <= 5 } (fun n : Fin 10 => (n : ℕ) + 1)
 -- 21
+```
 
-/-!
 which we can also write:
--/
 
+```lean4
 #eval -- 21
   let f (n : Fin 10) : ℕ := (↑n : ℕ) + 1
   ∑ i ∈ { n : Fin 10 | n <= 5 }, f i
+```
 
-/-!
 But we are not limited to this, since we can have finite sets `Finset α`
 associated to non-finite types `α`. For example
--/
 
+```lean4
 #check Finset.Iic
 -- Finset.Iic.{u_1} {α : Type u_1} [Preorder α] [LocallyFiniteOrderBot α]
 -- (a : α) : Finset α
@@ -128,35 +127,33 @@ associated to non-finite types `α`. For example
 #eval -- 21
   let f (n : ℕ) : ℕ := n + 1
   ∑ i ∈ Finset.Iic 5, f i
+```
 
-/-!
 This example is a bit too specific. More generally,
 we can sum over a set of indices `s` when we know that
 the associated subtype `{ x // x ∈ s }` is finite.
 To do this, we use an explicit conversion to `Finset`:
--/
 
+```lean4
 #check Set.toFinset
 -- Set.toFinset.{u_1} {α : Type u_1} (s : Set α) [Fintype ↑s] : Finset α
 
 #eval
   let f (n : ℕ) : ℕ := n + 1
   ∑ i ∈ { n : ℕ | n ≤ 5 }.toFinset, f i
+```
 
-/-!
 TODO: study the `Finite` stuff. I think this is pretty standard def, with
 equipotence to `Fin n` and so on.
--/
 
-/-!
 
 About `Finset`
 --------------------------------------------------------------------------------
 
 Let's have a look at the definition of the `Finset` type;
 we actually need to pull a lot of extra definitions to get the full picture.
--/
 
+```lean4
 #print Finset
 -- structure Finset.{u_4} (α : Type u_4) : Type u_4
 -- number of parameters: 1
@@ -165,12 +162,12 @@ we actually need to pull a lot of extra definitions to get the full picture.
 --   Finset.nodup : self.val.Nodup
 -- constructor:
 --   Finset.mk.{u_4} {α : Type u_4} (val : Multiset α) (nodup : val.Nodup) : Finset α
+```
 
-/-!
 So, a `Finset α` is defined on top of a `Multiset α`. And `Multiset α` is the
 quotient of `List α` by the equivalence relation "being equal up to a permutation".
--/
 
+```lean4
 #print Multiset
 -- def Multiset.{u} : Type u → Type u :=
 -- fun α => Quotient (List.isSetoid α)
@@ -187,11 +184,11 @@ quotient of `List α` by the equivalence relation "being equal up to a permutati
 -- List.Perm.cons : ∀ {α : Type u} (x : α) {l₁ l₂ : List α}, l₁.Perm l₂ → (x :: l₁).Perm (x :: l₂)
 -- List.Perm.swap : ∀ {α : Type u} (x y : α) (l : List α), (y :: x :: l).Perm (x :: y :: l)
 -- List.Perm.trans : ∀ {α : Type u} {l₁ l₂ l₃ : List α}, l₁.Perm l₂ → l₂.Perm l₃ → l₁.Perm l₃
+```
 
-/-!
 The fancy term `Setoid` means only: a base type and an associated equivalence relation.
--/
 
+```lean4
 #print Setoid
 -- class Setoid.{u} (α : Sort u) : Sort (max 1 u)
 -- number of parameters: 1
@@ -200,13 +197,13 @@ The fancy term `Setoid` means only: a base type and an associated equivalence re
 --   Setoid.iseqv : Equivalence ⇑self
 -- constructor:
 --   Setoid.mk.{u} {α : Sort u} (r : α → α → Prop) (iseqv : Equivalence r) : Setoid α
+```
 
-/-!
 Ah, and a `Finset` also needs to know to prove that all elements in its
 multiset are different. The definition of this is actually delegated to
 the same test for the underlying lists.
--/
 
+```lean4
 #print Multiset.Nodup
 -- def Multiset.Nodup.{u_1} : {α : Type u_1} → Multiset α → Prop :=
 -- fun {α} s => Quot.liftOn s List.Nodup Multiset.Nodup._proof_1
@@ -214,13 +211,12 @@ the same test for the underlying lists.
 #print List.Nodup
 -- def List.Nodup.{u} : {α : Type u} → List α → Prop :=
 -- fun {α} => List.Pairwise fun x1 x2 => x1 ≠ x2
+```
 
-
-/-!
 Implementation of `Finset.sum`
 --------------------------------------------------------------------------------
--/
 
+```lean4
 #print Finset.sum
 -- protected def Finset.sum.{u_1, u_3} : {ι : Type u_1} → {M : Type u_3} → [AddCommMonoid M] → Finset ι → (ι → M) → M :=
 -- fun {ι} {M} [AddCommMonoid M] s f => (Multiset.map f s.val).sum
@@ -232,16 +228,13 @@ Implementation of `Finset.sum`
 #print List.sum
 -- def List.sum.{u_1} : {α : Type u_1} → [Add α] → [Zero α] → List α → α :=
 -- fun {α} [Add α] [Zero α] => List.foldr (fun x1 x2 => x1 + x2) 0
+```
 
-/-!
 ... but at the end of the day this is quite a mess so we need a small set
 of operational theorem (split the sum, sum over empty, singleton, etc.)
 to be able to make it work.
--/
 
-/-!
 Operational properties of finite sums
 --------------------------------------------------------------------------------
 
 **TODO**
--/
