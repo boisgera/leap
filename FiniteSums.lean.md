@@ -5,7 +5,7 @@ set_option pp.proofs true
 ```
 
 
-Intro
+Basics
 --------------------------------------------------------------------------------
 
 To make sense of the finite sum `∑ i, f i`, we need
@@ -16,9 +16,9 @@ To make sense of the finite sum `∑ i, f i`, we need
   The index type should be finite: an instance of `Fintype ι` should exist.
 
 - a value type `M` and function `f : ι → M`.
-  Since we have no on order on `ι` and still need to define the
-  sum unambiguously, we need at the very least
-  associativity and commutativity to reorder the sum arbitrarily.
+  Since there is no requirement that `ι` is ordered,
+  to define the sum unambiguously, we need at the very least
+  the associativity and commutativity of the addition.
   We also need a zero in `M` to sum over an empty type.
   To summarize, we need an instance of `AddCommMonoid M` to exist.
 
@@ -108,7 +108,7 @@ if we want to:
 -- 21
 ```
 
-which we can also write:
+which we can also write using the notation `∑ i ∈ s, f i`:
 
 ```lean4
 #eval -- 21
@@ -116,8 +116,9 @@ which we can also write:
   ∑ i ∈ { n : Fin 10 | n <= 5 }, f i
 ```
 
-But we are not limited to this, since we can have finite sets `Finset α`
-associated to non-finite types `α`. For example
+But we are not limited to finite sets inside a finite type!
+We can have finite sets `Finset α` associated to non-finite types `α`,
+for example
 
 ```lean4
 #check Finset.Iic
@@ -129,8 +130,9 @@ associated to non-finite types `α`. For example
   ∑ i ∈ Finset.Iic 5, f i
 ```
 
-This example is a bit too specific. More generally,
-we can sum over a set of indices `s` when we know that
+This example is actually a bit too specific.
+
+More generally, we can sum over a set of indices `s` when we know that
 the associated subtype `{ x // x ∈ s }` is finite.
 To do this, we use an explicit conversion to `Finset`:
 
@@ -144,7 +146,9 @@ To do this, we use an explicit conversion to `Finset`:
 ```
 
 TODO: study the `Finite` stuff. I think this is pretty standard def, with
-equipotence to `Fin n` and so on.
+equipotence to `Fin n` and so on. The test that a set can be coerce to a
+finite set if it can be cast to a finite type is a bit weird, I guess that
+testing for its finiteness **as a set** would be more natural?
 
 
 About `Finset`
@@ -216,6 +220,9 @@ the same test for the underlying lists.
 Implementation of `Finset.sum`
 --------------------------------------------------------------------------------
 
+The implementation of the sum over a finite set delegates the sum to the
+underlying multiset, which delegates himself to a corresponding list.
+
 ```lean4
 #print Finset.sum
 -- protected def Finset.sum.{u_1, u_3} : {ι : Type u_1} → {M : Type u_3} → [AddCommMonoid M] → Finset ι → (ι → M) → M :=
@@ -237,4 +244,29 @@ to be able to make it work.
 Operational properties of finite sums
 --------------------------------------------------------------------------------
 
-**TODO**
+Source: [Entries in Lean/Mathlib doc which start with `Finset.sum_`](https://leanprover-community.github.io/mathlib4_docs/search.html?q=Finset.sum_)
+
+
+Selection of basic results about finite sums (to be extended!):
+
+```lean4
+#check Finset.sum_of_isEmpty
+-- Finset.sum_of_isEmpty.{u_1, u_3} {ι : Type u_1} {M : Type u_3} {f : ι → M} [AddCommMonoid M] [IsEmpty ι]
+--   (s : Finset ι) : ∑ i ∈ s, f i = 0
+
+#print IsEmpty
+-- class IsEmpty.{u} (α : Sort u) : Prop
+-- number of parameters: 1
+-- fields:
+--   IsEmpty.false : ∀ (a : α), False
+-- constructor:
+--   IsEmpty.mk.{u} {α : Sort u} (false : ∀ (a : α), False) : IsEmpty α
+
+#check Finset.sum_singleton
+-- Finset.sum_singleton.{u_1, u_4} {ι : Type u_1} {M : Type u_4} [AddCommMonoid M] (f : ι → M) (a : ι) :
+--   ∑ x ∈ {a}, f x = f a
+
+#check Finset.sum_union
+-- Finset.sum_union.{u_1, u_4} {ι : Type u_1} {M : Type u_4} {s₁ s₂ : Finset ι} [AddCommMonoid M] {f : ι → M}
+--   [DecidableEq ι] (h : Disjoint s₁ s₂) : ∑ x ∈ s₁ ∪ s₂, f x = ∑ x ∈ s₁, f x + ∑ x ∈ s₂, f x
+```
