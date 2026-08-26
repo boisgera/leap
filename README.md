@@ -72,3 +72,4 @@ Getting Started
 [JetBrains Mono]: https://www.jetbrains.com/lp/mono/
 [coding ligatures]: https://betterwebtype.com/5-free-monospaced-fonts-with-coding-ligatures/
 [follow these instructions]: https://github.com/tonsky/FiraCode/wiki/VS-Code-Instructions
+
