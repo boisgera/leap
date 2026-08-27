@@ -277,3 +277,15 @@ Selection of basic results about finite sums (to be extended!):
 #check Finset.sum_union
 -- Finset.sum_union.{u_1, u_4} {ι : Type u_1} {M : Type u_4} {s₁ s₂ : Finset ι} [AddCommMonoid M] {f : ι → M}
 --   [DecidableEq ι] (h : Disjoint s₁ s₂) : ∑ x ∈ s₁ ∪ s₂, f x = ∑ x ∈ s₁, f x + ∑ x ∈ s₂, f x
+
+#check Finset.sum_add_distrib
+-- Finset.sum_add_distrib.{u_1, u_4} {ι : Type u_1} {M : Type u_4} {s : Finset ι} [AddCommMonoid M] {f g : ι → M} :
+--   ∑ x ∈ s, (f x + g x) = ∑ x ∈ s, f x + ∑ x ∈ s, g x
+
+#check Finset.sum_smul
+-- Finset.sum_smul.{u_1, u_5, u_6} {ι : Type u_1} {R : Type u_5} {M : Type u_6} [Semiring R] [AddCommMonoid M] [Module R M]
+--   {f : ι → R} {s : Finset ι} {x : M} : (∑ i ∈ s, f i) • x = ∑ i ∈ s, f i • x
+
+#check Finset.sum_mul
+-- Finset.sum_mul.{u_1, u_4} {ι : Type u_1} {R : Type u_4} [NonUnitalNonAssocSemiring R] (s : Finset ι) (f : ι → R)
+--   (a : R) : (∑ i ∈ s, f i) * a = ∑ i ∈ s, f i * a
