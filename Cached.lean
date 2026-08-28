@@ -112,6 +112,11 @@ def cachedMine (msg : String) (difficulty : Nat)
     | some solution => (some solution, cache.insert msg solution)
     | none => (none, cache)
 
+/-!
+Issues with the timing measurement due to some optimizations
+automatically made by Lean.
+-/
+
 #time
 #eval do
   let result := mine "Hello crypto!" (difficulty := 17)
