@@ -111,7 +111,11 @@ def findSomeWithIndexStateMDoSyntax (text : String) : StateM Index (List (List N
   let indices6 <- findWithIndex text "be"
   return [indices1, indices2, indices3, indices4, indices5, indices6]
 
-/- After that raw, hard higher-order version, do the same stuff with do tricks -/
+/-
+The hardest point: we start accepting that the building blocks are
+"values that update the index", but we have ZERO tools to deal with
+them yet, so we suffer. Things will get easier though.
+-/
 def findSomeListWithFunctionsOfTheIndex (text : String) :
     Index -> List (List Nat) × Index :=
   let words := "to be or not to be".splitOn " "
@@ -136,10 +140,10 @@ def findSomeListWithFunctionsOfTheIndex (text : String) :
 
 /-
 Use the monad type shortcut AND refactor the pieces using do ;
-the first step is interesting in its own right.
+the first step is interesting in its own right, do it first.
 -/
 
-abbrev m := StateM Index -- i.e fun α => Index -> α × Index
+abbrev m := StateM Index -- i.e. fun α => Index -> α × Index
 
 
 def findSomeListWithIndexStateMDoSyntax (text : String) : m (List (List Nat)) :=
