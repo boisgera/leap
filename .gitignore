@@ -9,3 +9,7 @@
 
 # Generated HTML
 *.html
+
+# Indexer stuff
+Hamlet.txt
+.index

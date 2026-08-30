@@ -1,14 +1,56 @@
 import Std
 
-
 def memoize {α β} [BEq α] [Hashable α] (f : α -> β) (a : α) :
       (Std.HashMap α β) -> β × (Std.HashMap α β) :=
-    fun cache => match cache.get? α with
+    fun cache => match cache.get? a with
       | some b =>
         (b, cache)
       | none =>
         let b := f a
         (b, cache.insert a b)
+
+
+/-
+Text Index
+--------------------------------------------------------------------------------
+
+That would actually be a reasonably useful CLI application to make,
+and one where which can also work without recursion
+-/
+
+#check List.filter
+
+namespace Library
+
+def find (text word : String) : List Nat :=
+  let chars := text.toList
+  let subChars := word.toList
+  let indices := List.range text.length
+  let matchAt (i : Nat) : Bool :=
+    subChars == (chars |>.drop i |>.take subChars.length)
+  indices.filter matchAt
+
+end Library
+
+/-
+--------------------------------------------------------------------------------
+-/
+
+namespace Fibonacci
+
+def fib : Nat -> Nat
+  | 0 => 0
+  | 1 => 1
+  | n + 2 => fib n + fib (n + 1)
+
+#time
+#eval fib 24
+
+end Fibonacci
+
+/-
+--------------------------------------------------------------------------------
+-/
 
 namespace Crypto
 
@@ -175,13 +217,13 @@ def checkRange (n : Nat) : List Bool :=
 #eval checkRange 1_000 |>.all (· == true)
 -- true
 
-#time -- 944 ms
-#eval checkRange 10_000 |>.all (· == true)
--- true
+-- #time -- 944 ms
+-- #eval checkRange 10_000 |>.all (· == true)
+-- -- true
 
-#time -- 13161 ms
-#eval checkRange 100_000 |>.all (· == true)
--- true
+-- #time -- 13161 ms
+-- #eval checkRange 100_000 |>.all (· == true)
+-- -- true
 
 /-
 Shoot, implementing a cache on this is complex because the function is recursive
