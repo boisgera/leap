@@ -1,6 +1,15 @@
 import Lean
 import Batteries.Lean.Float -- provides Float.toStringFull
 
+def UInt16.toBytesLE (n : UInt16) : ByteArray :=
+  .mk #[n.toUInt8, (n >>> 8).toUInt8]
+
+def UInt32.toBytesLE (n : UInt32) : ByteArray :=
+  .mk #[n.toUInt8, (n >>> 8).toUInt8, (n >>> 16).toUInt8, (n >>> 24).toUInt8]
+
+def Float32.toBytesLE (f : Float32) : ByteArray :=
+  f.toBits.toBytesLE
+
 namespace STL
 
 /-!
@@ -255,6 +264,40 @@ def Mesh.toSTL (m : Mesh) : String :=
 
 instance : ToSTL Mesh where
   toSTL := Mesh.toSTL
+
+/-!
+Binary STL export
+--------------------------------------------------------------------------------
+-/
+
+def Vector.toSTLBinary (u : Vector) : ByteArray :=
+  u.x.toFloat32.toBytesLE ++ u.y.toFloat32.toBytesLE ++ u.z.toFloat32.toBytesLE
+
+def Point.toSTLBinary (p : Point) : ByteArray :=
+  p.x.toFloat32.toBytesLE ++ p.y.toFloat32.toBytesLE ++ p.z.toFloat32.toBytesLE
+
+class ToSTLBinary.{u} (α : Type u) where
+  toSTLBinary : α → ByteArray
+
+def Facet.toSTLBinary (f : Facet) : ByteArray :=
+  f.normal.toSTLBinary ++ f.1.toSTLBinary ++ f.2.toSTLBinary ++ f.3.toSTLBinary
+    ++ (0 : UInt16).toBytesLE
+
+instance : ToSTLBinary Facet where
+  toSTLBinary := Facet.toSTLBinary
+
+def Mesh.header (m : Mesh) : ByteArray :=
+  let name := (m.name?.getD "").toUTF8
+  let n := min name.size 80
+  name.extract 0 n ++ .mk (Array.replicate (80 - n) 0)
+
+def Mesh.toSTLBinary (m : Mesh) : ByteArray :=
+  let count : UInt32 := .ofNat m.facets.length
+  m.facets.foldl (init := m.header ++ count.toBytesLE)
+    (fun acc f => acc ++ f.toSTLBinary)
+
+instance : ToSTLBinary Mesh where
+  toSTLBinary := Mesh.toSTLBinary
 
 def test_facet :=
   let mesh : Mesh := {
@@ -776,15 +819,15 @@ def main (args : List String) : IO UInt32 := do
   let scale : Float := 2 ^ (-5)
   if args.contains "--voxel" then
     let voxelMesh := STL.testVoxelSphere scale
-    voxelMesh.toSTL |> IO.FS.writeFile "sphere.stl"
+    voxelMesh.toSTLBinary |> IO.FS.writeBinFile "sphere.stl"
     return 0
   else if args.contains "--surface" then
     let surfaceNetMesh := STL.testSurfaceNetSphere scale
-    surfaceNetMesh.toSTL |> IO.FS.writeFile "sphere.stl"
+    surfaceNetMesh.toSTLBinary |> IO.FS.writeBinFile "sphere.stl"
     return 0
   else if args.contains "--sparse" then
     let surfaceNetMeshSparse := STL.testSurfaceNetSphereSparse scale
-    surfaceNetMeshSparse.toSTL |> IO.FS.writeFile "sphere.stl"
+    surfaceNetMeshSparse.toSTLBinary |> IO.FS.writeBinFile "sphere.stl"
     return 0
   else
     IO.println "usage: lake exe mesh [--voxel, --surface, --sparse]"
