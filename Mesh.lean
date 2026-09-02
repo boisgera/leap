@@ -524,29 +524,50 @@ def Edge.outerNormal (grid : Grid) (edge : Edge) (φ : Point → Float) : Vector
     else
       { z := -1 }
 
+-- The 4 grid cells whose centers form the quad dual to `edge`. Order is
+-- arbitrary here (winding is decided in `Grid.quadOfEdge'`); this is only
+-- meant to enumerate the cells a given edge touches, e.g. to precompute
+-- their centers once in `Grid.cellCenters` instead of on every quad build.
+def Edge.cornerCells (edge : Edge) : List Index :=
+  let ⟨⟨i,j,k⟩, axis⟩ := edge
+  match axis with
+  | .x => [
+      { i, j := j - 1, k := k - 1 },
+      { i, j := j    , k := k - 1 },
+      { i, j := j    , k := k     },
+      { i, j := j - 1, k := k     },
+    ]
+  | .y => [
+      { i := i - 1, j, k := k - 1 },
+      { i := i    , j, k := k - 1 },
+      { i := i    , j, k := k     },
+      { i := i - 1, j, k := k     },
+    ]
+  | .z => [
+      { i := i - 1, j := j - 1, k },
+      { i := i    , j := j - 1, k },
+      { i := i    , j := j    , k },
+      { i := i - 1, j := j    , k },
+    ]
+
+-- Precomputes `computeCenter` once per distinct cell touched by any active
+-- edge, instead of recomputing it (12 crossingPoints lookups + an average)
+-- every time that cell shows up as a corner of another edge's quad -- which
+-- happens often, since a surface-adjacent cell is typically a corner for
+-- several of its own active edges.
+def Grid.cellCenters (grid : Grid) (crossingPoints : Std.HashMap Edge Point)
+    : Std.HashMap Index Point :=
+  let cells : Std.HashSet Index :=
+    crossingPoints.keys.foldl
+      (fun acc edge => edge.cornerCells.foldl (fun acc' ijk => acc'.insert ijk) acc)
+      {}
+  cells.fold (fun acc ijk => acc.insert ijk (grid.computeCenter crossingPoints ijk)) {}
+
 def Grid.quadOfEdge'
   (grid : Grid) (edge : Edge) (φ : Point → Float)
-  (crossingPoints : Std.HashMap Edge Point) : Quad :=
-  let ⟨⟨i,j,k⟩, axis⟩ := edge
-  let cells : List Index := match axis with
-    | .x => [
-        { i, j := j - 1, k := k - 1 },
-        { i, j := j    , k := k - 1 },
-        { i, j := j    , k := k     },
-        { i, j := j - 1, k := k     },
-      ]
-    | .y => [
-        { i := i - 1, j, k := k - 1 },
-        { i := i    , j, k := k - 1 },
-        { i := i    , j, k := k     },
-        { i := i - 1, j, k := k     },
-      ]
-    | .z => [
-        { i := i - 1, j := j - 1, k },
-        { i := i    , j := j - 1, k },
-        { i := i    , j := j    , k },
-        { i := i - 1, j := j    , k },
-      ]
+  (cellCenters : Std.HashMap Index Point) : Quad :=
+  let ⟨⟨_i,_j,_k⟩, axis⟩ := edge
+  let cells := edge.cornerCells
   -- `cells` above is wound so that, as-is, it produces an outward
   -- normal of +x (for .x edges), -y (for .y edges) or +z (for .z
   -- edges) -- the sign flips for .y because of the handedness of the
@@ -565,9 +586,7 @@ def Grid.quadOfEdge'
     | .y => outward.y > 0
     | .z => outward.z > 0
   let orderedCells := if outwardIsPositive == defaultIsPositive then cells else cells.reverse
-  let points := orderedCells.map
-    fun cell =>
-      grid.computeCenter (ijk := cell) (crossingPoints := crossingPoints)
+  let points := orderedCells.map (fun cell => cellCenters.get! cell)
   Quad.mk points[0]! points[1]! points[2]! points[3]!
 
 #eval (
@@ -637,8 +656,9 @@ def Grid.voxelMesh (grid : Grid) (φ : Point → Float) : Mesh :=
 
 def Grid.surfaceNetMesh (grid : Grid) (φ : Point → Float) : Mesh :=
   let crossingPoints := grid.crossingPoints φ
+  let cellCenters := grid.cellCenters crossingPoints
   let edges := crossingPoints.keys
-  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ cellCenters)
   let facets := quads.foldl
     (init := [])
     (fun facets quad => quad.split ++ facets)
@@ -712,47 +732,13 @@ partial def Grid.crossingPointsSparse (grid : Grid)
 
 def Grid.surfaceNetMeshSparse (grid : Grid) (φ : Point → Float) : Mesh :=
   let crossingPoints := grid.crossingPointsSparse φ
+  let cellCenters := grid.cellCenters crossingPoints
   let edges := crossingPoints.keys
-  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ cellCenters)
   let facets := quads.foldl
     (init := [])
     (fun facets quad => quad.split ++ facets)
   { facets }
-
-/-!
-Instrumentation (benchmarking crossing-point construction vs. downstream cost)
---------------------------------------------------------------------------------
--/
-
-def Grid.surfaceNetMeshTimed (grid : Grid) (φ : Point → Float) : IO Mesh := do
-  let t0 ← IO.monoMsNow
-  let crossingPoints := grid.crossingPoints φ
-  let t1 ← IO.monoMsNow
-  let edges := crossingPoints.keys
-  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
-  let t2 ← IO.monoMsNow
-  let facets := quads.foldl (init := []) (fun facets quad => quad.split ++ facets)
-  let t3 ← IO.monoMsNow
-  IO.println s!"    crossingPoints (dense):   {t1 - t0} ms  ({crossingPoints.size} edges)"
-  IO.println s!"    edges.map quadOfEdge':    {t2 - t1} ms  ({quads.length} quads)"
-  IO.println s!"    quads.foldl quad.split:   {t3 - t2} ms  ({facets.length} facets)"
-  IO.println s!"    total:                    {t3 - t0} ms"
-  return { facets }
-
-def Grid.surfaceNetMeshSparseTimed (grid : Grid) (φ : Point → Float) : IO Mesh := do
-  let t0 ← IO.monoMsNow
-  let crossingPoints := grid.crossingPointsSparse φ
-  let t1 ← IO.monoMsNow
-  let edges := crossingPoints.keys
-  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
-  let t2 ← IO.monoMsNow
-  let facets := quads.foldl (init := []) (fun facets quad => quad.split ++ facets)
-  let t3 ← IO.monoMsNow
-  IO.println s!"    crossingPointsSparse:     {t1 - t0} ms  ({crossingPoints.size} edges)"
-  IO.println s!"    edges.map quadOfEdge':    {t2 - t1} ms  ({quads.length} quads)"
-  IO.println s!"    quads.foldl quad.split:   {t3 - t2} ms  ({facets.length} facets)"
-  IO.println s!"    total:                    {t3 - t0} ms"
-  return { facets }
 
 /-!
 --------------------------------------------------------------------------------
@@ -787,7 +773,7 @@ def testSurfaceNetSphereSparse (scale : Float := 1.0) : Mesh :=
 end STL
 
 def main (args : List String) : IO UInt32 := do
-  let scale : Float := 2 ^ (-5) -- 2 ^ (-5)
+  let scale : Float := 2 ^ (-5)
   if args.contains "--voxel" then
     let voxelMesh := STL.testVoxelSphere scale
     voxelMesh.toSTL |> IO.FS.writeFile "sphere.stl"
@@ -800,19 +786,8 @@ def main (args : List String) : IO UInt32 := do
     let surfaceNetMeshSparse := STL.testSurfaceNetSphereSparse scale
     surfaceNetMeshSparse.toSTL |> IO.FS.writeFile "sphere.stl"
     return 0
-  else if args.contains "--bench" then
-    let grid : STL.Grid := STL.Grid.ofBounds
-      ⟨ -1.0, -1.0, -1.0 ⟩
-      ⟨  1.0,  1.0,  1.0 ⟩
-      scale
-    IO.println s!"scale = {scale}"
-    IO.println "sparse (KDTree traversal):"
-    let _ ← grid.surfaceNetMeshSparseTimed STL.φ
-    IO.println "surface (dense grid traversal):"
-    let _ ← grid.surfaceNetMeshTimed STL.φ
-    return 0
   else
-    IO.println "usage: lake exe mesh [--voxel, --surface, --sparse, --bench]"
+    IO.println "usage: lake exe mesh [--voxel, --surface, --sparse]"
     return 1
 
 -- #eval main
