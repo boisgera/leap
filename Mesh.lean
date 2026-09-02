@@ -644,22 +644,110 @@ def Grid.surfaceNetMesh (grid : Grid) (φ : Point → Float) : Mesh :=
     (fun facets quad => quad.split ++ facets)
   { facets }
 
-def testVoxelSphere (scale : Float := 1.0): Mesh :=
+
+/-!
+Sparse (KDTree) Iteration
+--------------------------------------------------------------------------------
+-/
+
+def Grid.split (grid : Grid) : Grid × Grid :=
+  let di := grid.imax.i - grid.imin.i
+  let dj := grid.imax.j - grid.imin.j
+  let dk := grid.imax.k - grid.imin.k
+  if dk ≥ dj && dk ≥ di then
+    let kmid := (grid.imin.k + grid.imax.k) / 2
+    (
+      { grid with imax := ⟨grid.imax.i, grid.imax.j, kmid⟩ },
+      { grid with imin := ⟨grid.imin.i, grid.imin.j, kmid⟩ }
+    )
+  else if dj ≥ di then
+    let jmid := (grid.imin.j + grid.imax.j) / 2
+    (
+      { grid with imax := ⟨grid.imax.i, jmid, grid.imax.k⟩ },
+      { grid with imin := ⟨grid.imin.i, jmid, grid.imin.k⟩ }
+    )
+  else
+    let imid := (grid.imin.i + grid.imax.i) / 2
+    (
+      { grid with imax := ⟨imid, grid.imax.j, grid.imax.k⟩ },
+      { grid with imin := ⟨imid, grid.imin.j, grid.imin.k⟩ }
+    )
+
+partial def Grid.crossingPointsSparse (grid : Grid)
+    (φ : Point → Float) (crossingPoints : Std.HashMap Edge Point := {}) :
+    Std.HashMap Edge Point :=
+    let d := φ grid[grid.imin]
+    let delta_square : Int := (
+      (grid.imax.i - grid.imin.i) ^ 2 +
+      (grid.imax.j - grid.imin.j) ^ 2 +
+      (grid.imax.k - grid.imin.k) ^ 2
+    )
+    if d ^ 2 > (grid.scale ^ 2 * Float.ofInt delta_square) then
+      crossingPoints
+    else if (
+      (grid.imax.i - grid.imin.i) == 1 &&
+      (grid.imax.j - grid.imin.j) == 1 &&
+      (grid.imax.k - grid.imin.k) == 1 )
+    then
+      grid.crossingPointsAux φ crossingPoints (ijk := grid.imin)
+    else
+      let (grid1, grid2) := grid.split
+      let crossingPoints1 := grid1.crossingPointsSparse φ crossingPoints
+      let crossingPoints2 := grid2.crossingPointsSparse φ crossingPoints1
+      crossingPoints2
+
+#eval (
+  let grid : Grid := { imin := ⟨-4, -4, -4⟩, imax := ⟨4, 4, 4⟩, scale := 0.5 }
+  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1
+  ((grid.crossingPointsSparse φ).size, (grid.crossingPoints φ).size)
+)
+-- expect a matching pair, e.g. (n, n)
+
+#eval (
+  let grid : Grid := { imin := ⟨-8, -2, -2⟩, imax := ⟨8, 2, 2⟩, scale := 0.5 }
+  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1
+  ((grid.crossingPointsSparse φ).size, (grid.crossingPoints φ).size)
+)
+-- exercises the (fixed) i-axis branch of Grid.split; expect a matching pair
+
+def Grid.surfaceNetMeshSparse (grid : Grid) (φ : Point → Float) : Mesh :=
+  let crossingPoints := grid.crossingPointsSparse φ
+  let edges := crossingPoints.keys
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
+  let facets := quads.foldl
+    (init := [])
+    (fun facets quad => quad.split ++ facets)
+  { facets }
+
+/-!
+--------------------------------------------------------------------------------
+-/
+
+def testVoxelSphere (scale : Float := 1.0) : Mesh :=
   let grid : Grid := Grid.ofBounds
     ⟨ -1.0, -1.0, -1.0 ⟩
     ⟨  1.0,  1.0,  1.0 ⟩
     scale
-  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
+  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
   let mesh := grid.voxelMesh φ
   mesh
 
-def testSurfaceNetSphere (scale : Float := 1.0): Mesh :=
+def testSurfaceNetSphere (scale : Float := 1.0) : Mesh :=
   let grid : Grid := Grid.ofBounds
     ⟨ -1.0, -1.0, -1.0 ⟩
     ⟨  1.0,  1.0,  1.0 ⟩
     scale
-  let φ (p : Point) : Float := p.x * p.x + p.y * p.y + p.z * p.z - 1.0
+  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
   let mesh := grid.surfaceNetMesh φ
+  mesh
+
+def testSurfaceNetSphereSparse (scale : Float := 1.0) : Mesh :=
+  let grid : Grid := Grid.ofBounds
+    ⟨ -1.0, -1.0, -1.0 ⟩
+    ⟨  1.0,  1.0,  1.0 ⟩
+    scale
+  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
+  let mesh := grid.surfaceNetMeshSparse φ
   mesh
 
 end STL
@@ -668,8 +756,13 @@ def main := do
   let scale : Float := 2 ^ (-2) -- 2 ^ (-5)
   let voxelMesh := STL.testVoxelSphere scale
   voxelMesh.toSTL |> IO.FS.writeFile "sphere-voxel.stl"
+  IO.println "*"
   let surfaceNetMesh := STL.testSurfaceNetSphere scale
   surfaceNetMesh.toSTL |> IO.FS.writeFile "sphere-surface-net.stl"
+  IO.println "**"
+  let surfaceNetMeshSparse := STL.testSurfaceNetSphereSparse scale
+  surfaceNetMeshSparse.toSTL |> IO.FS.writeFile "sphere-surface-net-sparse.stl"
+  IO.println "***"
 
 -- #eval main
 
