@@ -720,15 +720,51 @@ def Grid.surfaceNetMeshSparse (grid : Grid) (φ : Point → Float) : Mesh :=
   { facets }
 
 /-!
+Instrumentation (benchmarking crossing-point construction vs. downstream cost)
 --------------------------------------------------------------------------------
 -/
+
+def Grid.surfaceNetMeshTimed (grid : Grid) (φ : Point → Float) : IO Mesh := do
+  let t0 ← IO.monoMsNow
+  let crossingPoints := grid.crossingPoints φ
+  let t1 ← IO.monoMsNow
+  let edges := crossingPoints.keys
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
+  let t2 ← IO.monoMsNow
+  let facets := quads.foldl (init := []) (fun facets quad => quad.split ++ facets)
+  let t3 ← IO.monoMsNow
+  IO.println s!"    crossingPoints (dense):   {t1 - t0} ms  ({crossingPoints.size} edges)"
+  IO.println s!"    edges.map quadOfEdge':    {t2 - t1} ms  ({quads.length} quads)"
+  IO.println s!"    quads.foldl quad.split:   {t3 - t2} ms  ({facets.length} facets)"
+  IO.println s!"    total:                    {t3 - t0} ms"
+  return { facets }
+
+def Grid.surfaceNetMeshSparseTimed (grid : Grid) (φ : Point → Float) : IO Mesh := do
+  let t0 ← IO.monoMsNow
+  let crossingPoints := grid.crossingPointsSparse φ
+  let t1 ← IO.monoMsNow
+  let edges := crossingPoints.keys
+  let quads := edges.map (fun edge => grid.quadOfEdge' edge φ crossingPoints)
+  let t2 ← IO.monoMsNow
+  let facets := quads.foldl (init := []) (fun facets quad => quad.split ++ facets)
+  let t3 ← IO.monoMsNow
+  IO.println s!"    crossingPointsSparse:     {t1 - t0} ms  ({crossingPoints.size} edges)"
+  IO.println s!"    edges.map quadOfEdge':    {t2 - t1} ms  ({quads.length} quads)"
+  IO.println s!"    quads.foldl quad.split:   {t3 - t2} ms  ({facets.length} facets)"
+  IO.println s!"    total:                    {t3 - t0} ms"
+  return { facets }
+
+/-!
+--------------------------------------------------------------------------------
+-/
+
+def φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
 
 def testVoxelSphere (scale : Float := 1.0) : Mesh :=
   let grid : Grid := Grid.ofBounds
     ⟨ -1.0, -1.0, -1.0 ⟩
     ⟨  1.0,  1.0,  1.0 ⟩
     scale
-  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
   let mesh := grid.voxelMesh φ
   mesh
 
@@ -737,7 +773,6 @@ def testSurfaceNetSphere (scale : Float := 1.0) : Mesh :=
     ⟨ -1.0, -1.0, -1.0 ⟩
     ⟨  1.0,  1.0,  1.0 ⟩
     scale
-  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
   let mesh := grid.surfaceNetMesh φ
   mesh
 
@@ -746,23 +781,39 @@ def testSurfaceNetSphereSparse (scale : Float := 1.0) : Mesh :=
     ⟨ -1.0, -1.0, -1.0 ⟩
     ⟨  1.0,  1.0,  1.0 ⟩
     scale
-  let φ (p : Point) : Float := ‖p - Point.origin‖ - 1.0
   let mesh := grid.surfaceNetMeshSparse φ
   mesh
 
 end STL
 
-def main := do
-  let scale : Float := 2 ^ (-2) -- 2 ^ (-5)
-  let voxelMesh := STL.testVoxelSphere scale
-  voxelMesh.toSTL |> IO.FS.writeFile "sphere-voxel.stl"
-  IO.println "*"
-  let surfaceNetMesh := STL.testSurfaceNetSphere scale
-  surfaceNetMesh.toSTL |> IO.FS.writeFile "sphere-surface-net.stl"
-  IO.println "**"
-  let surfaceNetMeshSparse := STL.testSurfaceNetSphereSparse scale
-  surfaceNetMeshSparse.toSTL |> IO.FS.writeFile "sphere-surface-net-sparse.stl"
-  IO.println "***"
+def main (args : List String) : IO UInt32 := do
+  let scale : Float := 2 ^ (-5) -- 2 ^ (-5)
+  if args.contains "--voxel" then
+    let voxelMesh := STL.testVoxelSphere scale
+    voxelMesh.toSTL |> IO.FS.writeFile "sphere.stl"
+    return 0
+  else if args.contains "--surface" then
+    let surfaceNetMesh := STL.testSurfaceNetSphere scale
+    surfaceNetMesh.toSTL |> IO.FS.writeFile "sphere.stl"
+    return 0
+  else if args.contains "--sparse" then
+    let surfaceNetMeshSparse := STL.testSurfaceNetSphereSparse scale
+    surfaceNetMeshSparse.toSTL |> IO.FS.writeFile "sphere.stl"
+    return 0
+  else if args.contains "--bench" then
+    let grid : STL.Grid := STL.Grid.ofBounds
+      ⟨ -1.0, -1.0, -1.0 ⟩
+      ⟨  1.0,  1.0,  1.0 ⟩
+      scale
+    IO.println s!"scale = {scale}"
+    IO.println "sparse (KDTree traversal):"
+    let _ ← grid.surfaceNetMeshSparseTimed STL.φ
+    IO.println "surface (dense grid traversal):"
+    let _ ← grid.surfaceNetMeshTimed STL.φ
+    return 0
+  else
+    IO.println "usage: lake exe mesh [--voxel, --surface, --sparse, --bench]"
+    return 1
 
 -- #eval main
 
