@@ -816,7 +816,7 @@ def testSurfaceNetSphereSparse (scale : Float := 1.0) : Mesh :=
 end STL
 
 def main (args : List String) : IO UInt32 := do
-  let scale : Float := 2 ^ (-5)
+  let scale : Float := 2 ^ (-7) -- 2 ^ (-5)
   if args.contains "--voxel" then
     let voxelMesh := STL.testVoxelSphere scale
     voxelMesh.toSTLBinary |> IO.FS.writeBinFile "sphere.stl"
