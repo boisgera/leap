@@ -1,10 +1,5 @@
 
-/-!
-TODO:
-  - push Not
-  - by_contra
-  - excluded middle
--/
+import Mathlib
 
 namespace Sandbox
 
@@ -102,7 +97,7 @@ initial contradiction
 
 example {P : Prop} (p : P) (not_p : ¬P) : 1 + 1 = 3 := (not_p p).elim
 
-/-
+/-!
 You can use the `term` absurd to combine both steps in one:
 -/
 
@@ -111,13 +106,103 @@ You can use the `term` absurd to combine both steps in one:
 
 example {P : Prop} (p : P) (not_p : ¬P) : 1 + 1 = 3 := absurd p not_p
 
-/-
+/-!
 In tactic mode, `contradiction` also works (and you don't need to name the
 contradicting hypotheses, they will be search in the environnement).
 -/
 
 example {P : Prop} (p : P) (not_p : ¬P) : 1 + 1 = 3 := by contradiction
 
+/-! Push `Not`
+--------------------------------------------------------------------------------
 
+Negation doesn't have to stay stuck on the outside of a formula: it can be
+pushed *inward*, through `∧`, `∨`, `→`, `¬` and quantifiers, turning it into
+an equivalent (often more usable) statement. The tactic `push Not` performs
+this rewriting for you, both on the goal and on hypotheses (with `at`).
+
+For instance, `¬(P ∧ Q)` becomes `P → ¬Q` (not `¬P ∨ ¬Q`: that stronger form
+needs excluded middle, see below), `¬(P ∨ Q)` becomes `¬P ∧ ¬Q`, and
+`¬∀ x, P x` becomes `∃ x, ¬P x`. It also cancels double negations, `¬¬P`
+becoming `P`.
+-/
+
+example (P Q : Prop) : ¬(P ∧ Q) ↔ (P → ¬Q) := by push Not; rfl
+
+example (P Q : Prop) : ¬(P ∨ Q) ↔ ¬P ∧ ¬Q := by
+  push Not
+  rfl
+
+example (P : Nat → Prop) : (¬ ∀ n, P n) ↔ ∃ n, ¬ P n := by
+  push Not
+  rfl
+
+example {P : Prop} : ¬¬P ↔ P := by
+  push Not
+  rfl
+
+/-!
+`push Not` is just as useful on a hypothesis: it turns an awkward negated
+statement into the positive statement it really means.
+-/
+
+theorem not_or_elim {P Q : Prop} (h : ¬(P ∨ Q)) : ¬P ∧ ¬Q := by
+  push Not at h -- h : ¬P ∧ ¬Q
+  exact h
+
+/-! `by_contra`
+--------------------------------------------------------------------------------
+
+The tactic `by_contra h` implements proof by contradiction: to prove a goal
+`P`, it suffices to assume `¬P` (naming that hypothesis `h`) and derive
+`False`. This is exactly `Classical.byContradiction`, packaged as a tactic:
+-/
+
+#check @Classical.byContradiction
+-- Classical.byContradiction : ∀ {p : Prop}, (¬p → False) → p
+
+/-!
+For example, double negation elimination, `¬¬P → P`, which has *no*
+constructive proof (there is no way to build a `P` out of a `¬¬P` alone
+without extra assumptions), becomes immediate with `by_contra`: assuming
+`¬P` alongside `¬¬P` is a straight contradiction.
+-/
+
+theorem not_not_elim {P : Prop} (h : ¬¬P) : P := by
+  by_contra hp
+  exact h hp
+
+/-! Excluded middle
+--------------------------------------------------------------------------------
+
+The Law of Excluded Middle (LEM) states that every proposition is either true
+or false: `P ∨ ¬P`. It cannot be proved constructively (there is, in
+general, no algorithm deciding an arbitrary proposition), so in Lean it is
+introduced as a classical axiom:
+-/
+
+#check Classical.em
+-- Classical.em (p : Prop) : p ∨ ¬p
+
+/-!
+This is what powers `by_contra` and `push Not` behind the scenes, and it is
+what lets us prove `not_not_elim` directly, by cases on `Classical.em P`:
+-/
+
+theorem not_not_elim' {P : Prop} (h : ¬¬P) : P :=
+  match Classical.em P with
+  | Or.inl p => p
+  | Or.inr not_p => absurd not_p h
+
+/-!
+In tactic mode, `by_cases h : P` does the case split on `Classical.em P` for
+you, naming the resulting hypothesis `h : P` in the first branch and
+`h : ¬P` in the second.
+-/
+
+example (P : Prop) : P ∨ ¬P := by
+  by_cases h : P
+  · exact Or.inl h
+  · exact Or.inr h
 
 end Sandbox
