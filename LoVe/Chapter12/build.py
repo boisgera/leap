@@ -22,7 +22,7 @@ def build(lean_file: str) -> None:
     md = src.with_suffix(".lean.md")
     html = src.with_suffix(".lean.html")
 
-    run(["mol", str(src)])  # -> .lean.md
+    run(["lmd", str(src)])  # -> .lean.md
 
     run(
         [

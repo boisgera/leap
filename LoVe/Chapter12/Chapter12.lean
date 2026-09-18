@@ -11,16 +11,16 @@ lang: en
 
 /-!
 # 12.3 The Axiom of Choice
+-/
 
-## The Axiom of Choice in Set Theory
+/-!
+## In ZFC
 
-⚠️ **Warning.** Here we massage the formulation of the axiom of choice in ZFC,
-until we end up with an equivalent formulation which is very similar to the
-statement of the axiom of choice in a type-theoretic context.
-This section is an anti-wtf for the readers who know about set theory;
-skip it if you are not familiar with set theory!
+The ZFC acronym stands for "Zermelo-Fraenkel set theory with the axiom of choice".
+This framework is the most classic, widely accepted axiomatic system,
+that acts as a foundation for all of Mathematics.
 
-The classic axiom of choice in ZFC is:
+In this framework, the axiom of choice in ZFC is formally:
 
 $$
 \forall c,
@@ -30,6 +30,75 @@ $$
 \exists f: c \rightarrow \cup c, \; \forall s \in c, \; f(s) \in s
 \right)
 $$
+
+and, in my opinion, this doesn't look **at all** like the statement of the axiom
+of choice in Lean that we will see shortly, which can be quite confusing.
+
+Why the dissimilarity? Arguably, because the Lean version is much closer to an
+alternate and less popular, but equivalent version of the axiom of choice in set
+theory called *the axiom of global choice*.
+So, in order to smooth the transition between ZFC and Lean, in this section,
+
+  - we will explain what the axiom of choice in ZFC mean in plain english,
+
+  - explain why the statement is arguably convoluted, what we'd like to state
+    instead and why we can't,
+
+  - introduce the concept of class, use it to reformulate the axiom as global
+    choice.
+
+### The axiom of choice in plain english
+
+The axiom of choice translates informally to
+
+> For any collection of sets, if none of the sets in collection
+> is empty, there is a function that maps each set in the collection
+> to an element of this set.
+
+Here we have used the term "collection" merely to distinguish the
+different objects that we handle, but it is nothing more than a set:
+in ZFC every object of the theory is a set.
+
+Now call *choice function* of a collection any function which
+maps each set in the collection to an element of this set,
+in other words which **choses** an element in each set of the collection,
+and you can state the more compact version of the axiom of choice:
+
+> Every collection of non-empty subsets has a choice function.
+
+
+### Simpler, stronger?
+
+The main source in my opinion of the complexity in the statement of the
+axiom of choice in ZFC is that it gives us a choice function *for every
+collection* and its main weakness is that it tells us nothing about the
+consistency of the choice function on different collections when they
+are not disjoint. Naively, I'd like to solve both problems with an
+axiom that would introduce a global choice function:
+
+> There is a function which associates to any non-empty set an element of the set
+
+That would be super neat in my opinion, simpler **and** stronger,
+*but* unfortunately, no such a function exist
+**as an object of the theory** in ZFC. The reason is that its domain of
+definition would be the set of all sets, minus the empty set...
+But this cannot exist as a set, it is "too large"; assuming that this
+set exist would lead to a paradox[^RP]
+
+
+
+[^RP]: If this set exists, you can perform the union of it with
+$\{\varnothing\}$ and you get the set of all sets $V$. Now, by bounded
+comprehension, the set of all sets that do not belong to themselves
+$\{x \in V \; | \; x \not \in x\}$ also exists and this leads to a known
+contradiction, called [Russel's Paradox](https://plato.stanford.edu/entries/russell-paradox/).
+
+
+
+
+
+
+
 
 What bugs me in this formulation: the function $f$ depends on the collection
 of non-empty sets $c$ but if two collections share some sets we don't know if
@@ -76,24 +145,32 @@ Why does it work? Two possible answers:
 
 /-!
 
-## The Axiom of Choice in Type Theory
+
+## In Lean
 
 In type theory the axiom of choice states that their is a function,
 named `choice` (in the namespace `Classical`) which associate to any
-non-empty sorts (proposition or type) a term of this sort:
+non-empty sort (proposition or type) a term of this sort:
 
 -/
 
 #check Classical.choice
 -- Classical.choice.{u} {α : Sort u} : Nonempty α → α
 
-/-!
-More explicitly maybe, the type of `choice` is:
+#print Classical.choice
+-- axiom Classical.choice.{u} : {α : Sort u} → Nonempty α → α
 
-```
-⊢ {α : Sort u} → Nonempty α → α
+/-!
+So the type of `choice` is:
+
+```lean
+{α : Sort u} → Nonempty α → α
 ```
 -/
+
+
+
+
 
 /-!
 ## `Nonempty`
