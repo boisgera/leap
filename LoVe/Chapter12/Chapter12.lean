@@ -14,13 +14,12 @@ lang: en
 -/
 
 /-!
-## In ZFC
+## In set theory
 
-The ZFC acronym stands for "Zermelo-Fraenkel set theory with the axiom of choice".
-This framework is the most classic, widely accepted axiomatic system,
-that acts as a foundation for all of Mathematics.
+The classic/default foundation for Mathematics is set theory, described by
+the Zermelo-Fraenkel axioms the axiom of choice (ZF+C for the sake of brevity).
 
-In this framework, the axiom of choice in ZFC is formally:
+In this framework, the axiom of choice reads formally:
 
 $$
 \forall c,
@@ -37,9 +36,9 @@ of choice in Lean that we will see shortly, which can be quite confusing.
 Why the dissimilarity? Arguably, because the Lean version is much closer to an
 alternate and less popular, but equivalent version of the axiom of choice in set
 theory called *the axiom of global choice*.
-So, in order to smooth the transition between ZFC and Lean, in this section,
+So, in order to smooth the transition between ZF+C and Lean, in this section,
 
-  - we will explain what the axiom of choice in ZFC mean in plain english,
+  - we will explain what the axiom of choice in ZF+C mean in plain english,
 
   - explain why the statement is arguably convoluted, what we'd like to state
     instead and why we can't,
@@ -47,95 +46,96 @@ So, in order to smooth the transition between ZFC and Lean, in this section,
   - introduce the concept of class, use it to reformulate the axiom as global
     choice.
 
-### The axiom of choice in plain english
+### The axiom of choice in plain words
 
 The axiom of choice translates informally to
 
-> For any collection of sets, if none of the sets in collection
+> For any collection of sets, if none of the sets in the collection
 > is empty, there is a function that maps each set in the collection
 > to an element of this set.
 
-Here we have used the term "collection" merely to distinguish the
-different objects that we handle, but it is nothing more than a set:
-in ZFC every object of the theory is a set.
+Note that in this statement, the term "collection" actually means "set";
+we only use the word a different term to distinguish the role of the object
+that we handle.
+Here, there are "items", sets that contains theses items and a "collection"
+that contains these sets, but **all these things are sets**, since
+in ZF+C theory, every is a set (an integer is a set, a function is a set,
+etc.).
 
-Now call *choice function* of a collection any function which
+Now let's call *choice function* of a collection any function which
 maps each set in the collection to an element of this set,
-in other words which **choses** an element in each set of the collection,
-and you can state the more compact version of the axiom of choice:
+in other words a function which **choses** an element in each set of
+the collection. Then we can state the more compact version of the axiom of choice:
 
 > Every collection of non-empty subsets has a choice function.
 
 
 ### Simpler, stronger?
 
-The main source in my opinion of the complexity in the statement of the
-axiom of choice in ZFC is that it gives us a choice function *for every
-collection* and its main weakness is that it tells us nothing about the
+One issue with this statement is that we need to introduce a collection to get
+the existence choice function, but it tells us nothing about the
 consistency of the choice function on different collections when they
-are not disjoint. Naively, I'd like to solve both problems with an
-axiom that would introduce a global choice function:
+are not disjoint. A stronger and more convenient variant of the
+axiom of choice would state the existence of a unique global choice function,
+that can make a selection in any non-empty set:
 
-> There is a function which associates to any non-empty set an element of the set
+> There is a function mapping each nonempty set to one of its elements.
 
-That would be super neat in my opinion, simpler **and** stronger,
-*but* unfortunately, no such a function exist
-**as an object of the theory** in ZFC. The reason is that its domain of
-definition would be the set of all sets, minus the empty set...
-But this cannot exist as a set, it is "too large"; assuming that this
-set exist would lead to a paradox[^RP]
+That would be great in my opinion, except that **it can't work**.
+No such a function exist in ZF+C. The reason is that its domain of
+definition would be the set of all sets, minus the empty set and we know
+is "too large" and that its existence would lead to a paradox[^RP].
 
+[^RP]: If this set $S$ exists, you can perform the union of it with
+$\{\varnothing\}$ and you get the set of all sets $V$. Now, by
+the [axiom of bounded comprehension](https://en.wikipedia.org/wiki/Axiom_schema_of_specification), the set of all sets that do not belong to themselves
+$\{x \in V \; | \; x \not \in x\}$ also exists and this leads to a classic
+contradiction, known as [Russel's Paradox](https://plato.stanford.edu/entries/russell-paradox/).
 
+The good news is however that we can slightly alter the statement of this
+axiom to make it work, but that requires the concept of classes.
 
-[^RP]: If this set exists, you can perform the union of it with
-$\{\varnothing\}$ and you get the set of all sets $V$. Now, by bounded
-comprehension, the set of all sets that do not belong to themselves
-$\{x \in V \; | \; x \not \in x\}$ also exists and this leads to a known
-contradiction, called [Russel's Paradox](https://plato.stanford.edu/entries/russell-paradox/).
+### Classes in set theory
 
+[Classes](class) are meant to describes some collections of sets that are "too large to
+be sets", such as: the collections of all sets, the collection of all vector
+spaces, the collection of all sets with one element, etc.
 
+There are two equivalent way to introduce them:
 
+  - stay in ZF+C, and work at the syntactic level.
+    Introduce for each predicate $\phi$ a symbol $C$ and interpret
+    the notation "$x \in C$" as "$\phi(x)$ holds" or equivalently, denote $C$ as
+    the (unbounded) comprehension $\{ x \; | \; \phi(x) \}$, (which may not exist
+    as a set). For example, the class of all sets exists as
+    $\{x \; | \; x = x\}$.
+    Every set can be described like that however, since we may
+    associate to any set $S$ the predicate $x \in S$.
 
+  - even better, replace ZF+C with [NBG], an alternate axiomatic system
+    (NBG stands or von Neuman, Bernays, Gödel), where the objects of the theory are
+    not sets but classes. A class is a set if it is the element of some class,
+    otherwise it is a *proper class*.
 
+You know have at your disposal the concept of class functions,
+whose domain can be either a set or a proper class. For example with $V$ as
+the collection of all sets, the function that maps each set with itself.
 
+Now interpret "function" as "class function" instead of "set function" and
+you can state the axiom of global choice (GC) in NBG:
 
+> There is a function mapping each nonempty set to one of its elements.
 
-What bugs me in this formulation: the function $f$ depends on the collection
-of non-empty sets $c$ but if two collections share some sets we don't know if
-both associated choices are the same. That would be nice right?
-So can we require this consistency in ZFC "for free"?
-The answer is yes! (see below why).
+We are pretty confident that using this axiom won't cause a problem in NBG,
+since NBG+GC and ZF+C are equiconsistent: there is a paradox in NBG with the
+axiom of global choice if and only if there is a paradox in the ZF system with
+the classic axiom of choice.
+Additionally, NBG+GC is a conservative extension of ZF+C: a statement mentionning
+only sets in NBG+GC, not classes, can be proved in NBG+GC if and only if it can
+be proved in ZF+C. So both axiomatic system are **very** similar.
 
-So what? Now consider any increasing
-"collection"[^cl] of sets that do no contain the empty sets
-and spans the universe of all sets, minus the empty set.
-With our strengthened axiom of choice we have just defined a
-global choice "function"[^fcl] whose value if defined for any non-empty set of
-our universe!
-
-[^cl]: this collection is not a set technically, but a [class].
-
-[^fcl]: technically, a [class] function.
 
 [class]: https://en.wikipedia.org/wiki/Class_(set_theory)
-
-Why does it work? Two possible answers:
-
-- This work trivially in [NBG] (with global choice) and since NBG is a
-  conservative extension of ZFC, and the consistency between our choice
-  functions can be stated in ZFC, it actually works!
-
-- Without the reference to NBG, we could construct the choice function in a
-  consistent manner in the [Von Neumann hierarchy]. And since every collection is
-  included at some stage in the cumulative hierarchy (the "union" of all
-  V_α is the universe), we get the general result by restriction.
-  Anyway, this stuff reads something like: for every ordinal $α$, there is a
-  choice function $f: V_{α} \setminus {\varnothing} \to \cup V_{\alpha}$
-  such that for any $s \in V_{α} \setminus {\varnothing}$, $f(s) \in s$.
-  This is *very* similar to what we're going to introduce as our axiom of
-  choice in the type-theoretic context (except that the hierarchy is not
-  cumulative and we don't have the equivalent of limit universes,
-  only successors).
 
 [NBG]: https://en.wikipedia.org/wiki/Von_Neumann%E2%80%93Bernays%E2%80%93G%C3%B6del_set_theory
 
@@ -146,31 +146,24 @@ Why does it work? Two possible answers:
 /-!
 
 
-## In Lean
+## The axiom of choice in Lean
 
-In type theory the axiom of choice states that their is a function,
-named `choice` (in the namespace `Classical`) which associate to any
-non-empty sort (proposition or type) a term of this sort:
+In Lean, the axiom of choice states that their is a function,
+named `choice`, in the namespace `Classical` which associates to any
+non-empty sort (i.e. proposition or type) a term of this sort:
 
 -/
 
 #check Classical.choice
 -- Classical.choice.{u} {α : Sort u} : Nonempty α → α
 
-#print Classical.choice
--- axiom Classical.choice.{u} : {α : Sort u} → Nonempty α → α
-
 /-!
-So the type of `choice` is:
-
-```lean
-{α : Sort u} → Nonempty α → α
-```
+Note that this function is not built on top of other objects, its existence
+is postulated: this is an axiom.
 -/
 
-
-
-
+#print Classical.choice
+-- axiom Classical.choice.{u} : {α : Sort u} → Nonempty α → α
 
 /-!
 ## `Nonempty`
@@ -186,25 +179,33 @@ So the type of `choice` is:
 -- Nonempty.intro : ∀ {α : Sort u} (val : α), Nonempty α
 
 /-!
-`Nonempty α` is a proposition that states that there is an element in `α`.
+`Nonempty α` is a proposition that states that there is a term in `α`.
+Here `α` can be any proposition or type.
 
-In set theory we would state something like $\exists \, a, \, a \in \alpha$,
-but here, there is no extra "in α", since we only consider `a` in $α$ to
-begin with. So what we have is actually:
+A similar statement in set theory would be something like
+
+$$
+\exists \, a, \, a \in \alpha
+$$
+
+Of course in the Lean version, there is no "$a \in \alpha$"
+since we only consider terms $a$ in $α$ to begin with.
+So the equivalence we can actually prove in Lean
+is between `Nonempty α` and `∃ (a: α), True`:
 -/
 
 example {α} : Nonempty α ↔ ∃ (_ : α), True := by
   constructor
   . intro nonempty
-    let ⟨a⟩ := nonempty
+    have ⟨a⟩ := nonempty
     exact Exists.intro a trivial
   . intro exists_a
-    let ⟨a, _⟩ := exists_a
+    have ⟨a, _⟩ := exists_a
     exact Nonempty.intro a
 
 /-!
 If you look at the definition of `Exists`, you can see how it is pretty
-similar to `NonEmpty`, with the extra property that needs to be fulfilled.
+similar to `NonEmpty`, but with an extra property that needs to be fulfilled.
 -/
 
 #print Exists
@@ -214,32 +215,17 @@ similar to `NonEmpty`, with the extra property that needs to be fulfilled.
 -- Exists.intro : ∀ {α : Sort u} {p : α → Prop} (w : α), p w → Exists p
 
 /-!
-We can probably agree that having a custom prop is nicer than dealing
-with this existential statement with a dummy prop attached...
+We can probably agree that having the custom prop `Nonempty` is nicer than
+dealing with an existential statement with a dummy prop attached...
 -/
 
 /-!
 
 ## `Inhabited`
 
-Some types have a default value:
-
+Some types have a "natural" default value. In Lean, this value should be
+declared as an instance of type class `Inhabited`.
 -/
-
-#eval (Inhabited.default : ℕ)
--- 0
-
-#eval (Inhabited.default : String)
--- ""
-
-/-!
-That feature is available for types with an `Inhabited` instance.
--/
-
-
-#check (inferInstance : Inhabited ℕ)
-
-#check (inferInstance : Inhabited String)
 
 #print Inhabited
 -- class Inhabited.{u} (α : Sort u) : Sort (max 1 u)
@@ -249,11 +235,50 @@ That feature is available for types with an `Inhabited` instance.
 -- constructor:
 --   Inhabited.mk.{u} {α : Sort u} (default : α) : Inhabited α
 
+/-!
+
+The default value of a type can be obtained as the (polymorphic) term `Inhabited.default`.
+-/
+
+#check Inhabited.default
+-- Inhabited.default.{u} {α : Sort u} [self : Inhabited α] : α
 
 /-!
-For any inductive type with no constructor,
-there is no way we can declare such an instance;
-for example:
+For example:
+-/
+
+#eval (Inhabited.default : ℕ)
+-- 0
+
+#eval (Inhabited.default : String)
+-- ""
+
+/-!
+In both cases, we can check that the corresponding instances of
+`Inhabited` have been defined with
+-/
+
+#check (inferInstance : Inhabited ℕ)
+-- inferInstance : Inhabited ℕ
+
+#check (inferInstance : Inhabited String)
+-- inferInstance : Inhabited String
+
+/-!
+or equivalently with
+-/
+
+#synth Inhabited ℕ
+-- instInhabitedNat
+
+#synth Inhabited String
+-- String.instInhabited
+
+
+/-!
+But for any inductive type with no constructor,
+we cannot declare such an instance;
+for example the `Empty` type there is no instance of `Inhabited`:
 -/
 
 #print Empty
@@ -272,16 +297,6 @@ Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean 
 #guard_msgs in
 #check (inferInstance : Inhabited Empty)
 
-/-!
--/
-
-/-- error: failed to synthesize instance of type class
-  Inhabited Empty
-
-Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean to derive the missing instance.
--/
-#guard_msgs in
-#eval (Inhabited.default : Empty)
 
 /-!
 `Inhabited` and `Nonempty` are related but not identical. Obviously, we have:
