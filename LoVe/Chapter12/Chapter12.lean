@@ -390,8 +390,7 @@ instance (priority := 100) instNonemptyOfInhabited [Inhabited α] : Nonempty α 
 
 ## Syntaxic sugar
 
-
-There is an alternative notation to invoke `Classical.choice`,
+In Mathlib, there is an alternative notation to invoke `Classical.choice`,
 that is meant to be used as a method call (i.e. "dot syntax" or [UFCS]).
 
 [UFCS]: https://en.wikipedia.org/wiki/Uniform_function_call_syntax
@@ -444,8 +443,8 @@ noncomputable def choice' {α} : Nonempty α → α :=
 /-!
 ## To be or not to be
 
-Use the functions `chose` and `chose_spec` to apply the axiom of choice to
-existential statements.
+To apply the axiom of choice to existential statements, we
+can use the functions `chose` and `chose_spec`.
 -/
 
 #check Classical.choose
@@ -457,9 +456,9 @@ existential statements.
 --     (h : ∃ x, p x) : p (Classical.choose h)
 
 /-!
-Alternatively, use `indefiniteDescription`[^id],
-which encapsulates the return values of `choose` and `choose_spec`
-in a subtype:
+Alternatively, we can use `indefiniteDescription`[^id],
+which encapsulates the return values of `choose` and
+`choose_spec` in a subtype:
 
 [^id]: The terminology originates in Bertrand Russel's [Theory of descriptions].
 
@@ -470,28 +469,45 @@ in a subtype:
 -- (p : α → Prop) (h : ∃ x, p x) : { x // p x }
 
 /-!
-It's educational to derive these three functions from `choice` ourselves:
+The notation `{ x // p x }` is a fancy syntax for `Subtype p`, a type that
+encapsulate a term `val` of type `α` and a proof `property` that the the term
+satisfies the predicate `p val`.
+-/
+
+#print Subtype
+-- structure Subtype.{u} {α : Sort u} (p : α → Prop) : Sort (max 1 u)
+-- number of parameters: 2
+-- fields:
+--   Subtype.val : α
+--   Subtype.property : p ↑self
+-- constructor:
+--   Subtype.mk.{u} {α : Sort u} {p : α → Prop} (val : α) (property : p val) : Subtype p
+
+
+/-!
+It's educational to derive these three functions from `Classical.choice`:
 -/
 
 noncomputable def indefiniteDescription.{u} {α : Sort u}
     (p : α → Prop) (h : ∃ x, p x) : { x // p x } :=
   have nonempty : Nonempty { x // p x } :=
     -- This unpacking is confined to a Prop context 👍
-    let ⟨x, px⟩ : ∃ x, p x := h;
+    let ⟨x, px⟩ : ∃ x, p x := h
     -- Repack as a subtype
     let x_px : { x // p x } := ⟨x, px⟩
     -- Return as a Nonempty prop.
-    x_px |> Nonempty.intro
+    Nonempty.intro x_px
   Classical.choice nonempty
 
 /-!
+That was the most complex step, deriving `choose` and `choose_spec` is easy:
 -/
 
 noncomputable def choose.{u} {α : Sort u} {p : α → Prop}
     (h : ∃ x, p x) : α :=
   indefiniteDescription p h |>.val
 
-noncomputable def choose_spec.{u} {α : Sort u} {p : α → Prop}
+theorem choose_spec.{u} {α : Sort u} {p : α → Prop}
     (h : ∃ x, p x) : p (choose h) :=
   indefiniteDescription p h |>.property
 
