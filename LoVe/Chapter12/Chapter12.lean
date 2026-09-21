@@ -593,6 +593,17 @@ is bijective, with the usual inverse equations.
 -- def Function.Bijective.{u₁, u₂} : {α : Sort u₁} → {β : Sort u₂} → (α → β) → Prop :=
 -- fun {α} {β} f => Function.Injective f ∧ Function.Surjective f
 
+
+
+/-!
+## Excluded Middle
+
+**TODO.** explain what it is and that it's a consequence of `choice`,
+not a new axiom.
+-/
+
+
+
 /-!
 ## References
 -/
