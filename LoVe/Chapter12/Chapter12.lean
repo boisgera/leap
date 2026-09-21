@@ -412,14 +412,14 @@ noncomputable example {α} : Nonempty α → Inhabited α :=
 Another example: a version of the axiom of choice based on collections
 (similar to the class version in ZF+C):
 -/
-theorem nonempty_pi_of_forall_nonempty {ι : Sort u} (c : ι → Sort v) :
+theorem nonempty_pi_of_forall_nonempty {ι : Sort u} {c : ι → Sort v} :
     ((i : ι) → Nonempty (c i)) -> Nonempty ((i : ι) → c i) :=
   fun h => Nonempty.intro fun i => (h i).some
 
 /-!
 To extract some data from the proof that this example provides, we can do
 -/
-noncomputable def inhabited_pi_of_forall_nonempty {ι : Sort u} (c : ι → Sort v) :
+noncomputable def inhabited_pi_of_forall_nonempty {ι : Sort u} {c : ι → Sort v} :
     ((i : ι) → Nonempty (c i)) -> ((i : ι) → c i) :=
   fun h i => (h i).some
 
@@ -429,12 +429,16 @@ We can rederive the original axiom of choice from this version:
 
 noncomputable def choice' {α} : Nonempty α → α :=
   fun nonempty =>
-    -- We build a family of one element of type α
+    -- Let's build a family of one element of type α
     let ι := Unit -- index type with a single term (the unit)
-    let c (i : ι) := α
+    let c (_ : ι) := α -- for any index, the data is of type α
+    -- Since α is non-empty, all the types in this family are non-empty
     let forall_nonempty (i : ι) : Nonempty (c i) := nonempty
-    let f := inhabited_pi_of_forall_nonempty forall_nonempty
-    f Unit.unit
+    -- We can invoke the previous theorem to get a function
+    -- that extracts a term of the type α for each index
+    let choice := inhabited_pi_of_forall_nonempty forall_nonempty
+    -- We conclude by specializing this to the unique index of the family
+    choice Unit.unit
 
 
 /-!
