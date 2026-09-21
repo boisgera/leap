@@ -33,6 +33,7 @@ def build(lean_file: str) -> None:
             "--syntax-definition=lean4.xml",
             "--mathjax=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js",
             "--bibliography=bib.json",
+            "--metadata=link-citations:true",
             "--citeproc",
             "-o",
             str(html),

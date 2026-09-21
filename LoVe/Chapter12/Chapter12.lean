@@ -299,7 +299,8 @@ Hint: Adding the command `deriving instance Inhabited for Empty` may allow Lean 
 
 
 /-!
-`Inhabited` and `Nonempty` are related but not identical. Obviously, we have:
+`Inhabited` and `Nonempty` are related but not identical. Obviously, we can
+go from a term (the datum) to the proof of its existence:
 -/
 
 example {α} : Inhabited α → Nonempty α := by
@@ -307,10 +308,17 @@ example {α} : Inhabited α → Nonempty α := by
   exact Nonempty.intro inhabited.default
 
 /-!
-But the converse is not true in general: an instance of `Inhabited α` provides
-a designated value of type `α` that we can use in our programs
-while `Nonempty α` merely provides the proof that (at least)
-one value of type `α` exists.
+or using the fact that `Inhabited` is a type class
+-/
+
+example {α} [Inhabited α] : Nonempty α :=
+  Nonempty.intro Inhabited.default
+
+/-!
+But the converse is not true in constructively:
+an instance of `Inhabited α` provides a designated value of type `α` that
+we can use in our programs while `Nonempty α` merely provides the proof that
+(at least) one value of type `α` exists.
 
 This is different because
 
@@ -327,7 +335,7 @@ of type α in our programs.
 -/
 
 /-!
-However, the axiom of choice bridges the gap *non-constructively*.
+The axiom of choice however bridges the gap *non-constructively*.
 If you flag your values or functions as `noncomputable`, you can use
 a value of an non-empty type α inside your programs:
 -/
@@ -346,7 +354,7 @@ value!
 #eval a (α := ℕ)
 
 /-!
-Note that the axiom of choice is an axiom, not a rule in Lean's kernel;
+Note that the axiom of choice is an axiom, not a rule harcoded in Lean's kernel;
 you can perfectly work "choice-free" if you are willing to audit all your
 dependencies to avoid any use of the axiom fo choice.
 -/
@@ -361,16 +369,21 @@ noncomputable example {α} : Nonempty α → Inhabited α := by
   exact Classical.choice nonEmpty |> Inhabited.mk
 
 /-!
-**TODO.** Explain/show that `Inhabited` types are automatically `Nonempty`,
-thanks to:
+or equivalently
+-/
+
+noncomputable example {α} [nonempty : Nonempty α] : Inhabited α :=
+  Classical.choice nonempty |> Inhabited.mk
+
+
+/-!
+Note that that `Inhabited` types are registered as `Nonempty`,
+thanks to the declaration:
 
 ```lean4
 instance (priority := 100) instNonemptyOfInhabited [Inhabited α] : Nonempty α :=
   ⟨default⟩
 ```
-
-Show the construction of an `Inhabited` type? (and demonstrate that it's nonempty)
-
 -/
 
 /-!
@@ -379,7 +392,9 @@ Show the construction of an `Inhabited` type? (and demonstrate that it's nonempt
 
 
 There is an alternative notation to invoke `Classical.choice`,
-that is meant to be used in the UFCS style.
+that is meant to be used as a method call (i.e. "dot syntax" or [UFCS]).
+
+[UFCS]: https://en.wikipedia.org/wiki/Uniform_function_call_syntax
 -/
 
 #print Nonempty.some
@@ -388,42 +403,39 @@ that is meant to be used in the UFCS style.
 --   fun {α} h => Classical.choice h
 
 /-!
-So for example:
+So for example, we can write
 -/
 noncomputable example {α} : Nonempty α → Inhabited α :=
   fun nonempty => nonempty.some |> Inhabited.mk
 
 /-!
-Type-theoretic (actually sort-theoretic) version of the axiom of choice
-I'm familiar with:
+Another example: a version of the axiom of choice based on collections
+(similar to the class version in ZF+C):
 -/
-example {ι : Sort u} (c : ι → Sort v) (h : (i : ι) → Nonempty (c i)) :
-    Nonempty ((i : ι) → c i) :=
-  Nonempty.intro fun i => (h i).some
+theorem nonempty_pi_of_forall_nonempty {ι : Sort u} (c : ι → Sort v) :
+    ((i : ι) → Nonempty (c i)) -> Nonempty ((i : ι) → c i) :=
+  fun h => Nonempty.intro fun i => (h i).some
 
 /-!
-... but this version of choice would be *weaker* than the original one
-since I get a term in `Prop`, of which I cannot get something as a type.
-Can I avoid that and return an object instead of a proof of existence?
-Yes, trivially actually!
+To extract some data from the proof that this example provides, we can do
 -/
-noncomputable def choice' {ι : Sort u} (c : ι → Sort v)
-    (h : (i : ι) → Nonempty (c i)) : (i : ι) → c i :=
-  fun i => (h i).some
+noncomputable def inhabited_pi_of_forall_nonempty {ι : Sort u} (c : ι → Sort v) :
+    ((i : ι) → Nonempty (c i)) -> ((i : ι) → c i) :=
+  fun h i => (h i).some
 
 /-!
-and this version is of course powerful enough to get the original choice
-axiom back:
+We can rederive the original axiom of choice from this version:
 -/
-noncomputable def choice'' {α} : Nonempty α → Inhabited α :=
+
+noncomputable def choice' {α} : Nonempty α → α :=
   fun nonempty =>
-    let f := choice' (ι := Unit) (h := fun _ => nonempty)
-    f () |> Inhabited.mk
+    -- We build a family of one element of type α
+    let ι := Unit -- index type with a single term (the unit)
+    let c (i : ι) := α
+    let forall_nonempty (i : ι) : Nonempty (c i) := nonempty
+    let f := inhabited_pi_of_forall_nonempty forall_nonempty
+    f Unit.unit
 
-/-!
-**TODO:** work the way up from `choice` to `choose` and `choose_spec`
-before dealing with the set-theoretic version of the axiom of choice.
--/
 
 /-!
 ## To be or not to be
