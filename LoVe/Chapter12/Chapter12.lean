@@ -517,105 +517,73 @@ theorem choose_spec.{u} {α : Sort u} {p : α → Prop}
 -/
 
 /-!
-The Law of Excluded Middle (LEM) states that for any proposition `p`, either
-`p` holds or `¬p` holds:
+The [Law of Excluded Middle][LEM] states that for any proposition $p$, either
+$p$ holds or its negation $\neg p$ holds:
 
 $$
 p \lor \lnot p.
 $$
 
-This looks completely innocuous, yet it has *no* proof in constructive
-(intuitionistic) logic. A proof of `p ∨ ¬p` is a value that commits, for
-*every* `p`, to one side of the disjunction — effectively a decision
-procedure for `p`. There is of course no such general procedure (think of
-an arbitrary, possibly undecidable, mathematical statement), so in a
-purely constructive setting LEM does not come "for free": it has to be
-postulated as an extra axiom if you want it at all.
+[LEM]: https://en.wikipedia.org/wiki/Law_of_excluded_middle
+
+In Lean, this law is available as `Classical.em`:
+
 -/
 
 #check Classical.em
 -- Classical.em (p : Prop) : p ∨ ¬p
 
+/-!
+This statement looks innocuous, yet it has *no* proof in constructive
+logic, this is something extra that needs to be added somehow to a
+constructive framework. However, `Classical.em` is not an extra axiom in Lean ;
+instead it is derived from existing axioms, among which choice.
+-/
+
 #print axioms Classical.em
 -- 'Classical.em' depends on axioms: [propext, Classical.choice, Quot.sound]
 
 /-!
-And indeed, Lean postulates no dedicated "excluded middle" axiom: `Classical.em`
-depends only on `propext` (propositional extensionality) and `Classical.choice`
-(`Quot.sound` is only pulled in as a dependency of `propext`'s own proof). So
-`Classical.em` is not an axiom at all, but a *theorem*, derived from choice —
-a classical result (pun intended) known as **Diaconescu's theorem**: in a
-logic with propositional extensionality, the axiom of choice implies the law
-of excluded middle.
+The derivation
+(excluded middle from choice, function extensionality and propositional extensionality)
+is known as [Diaconescu's theorem]:
 
-The idea behind the derivation (which is essentially what the proof term
-below does):
+[Diaconescu's theorem]: https://en.wikipedia.org/wiki/Diaconescu%27s_theorem
 
-  - build two predicates on `Prop`, `U := fun x => x = True ∨ p` and
-    `V := fun x => x = False ∨ p`. Both are trivially satisfiable
-    (`True` witnesses `U`, `False` witnesses `V`), so `choose`/`choose_spec`
-    hand us `u v : Prop` together with proofs `u = True ∨ p` and
-    `v = False ∨ p`.
-
-  - if `p` holds, every `x` satisfies both `U` and `V` (the right-hand `p`
-    disjunct makes them trivially true), so `U = V` by (functional and
-    propositional) extensionality. Since `choose` is a *function* of the
-    predicate and the existence proof, `U = V` forces `u = v`.
-
-  - contrapositively, if `u ≠ v`, `p` cannot hold (otherwise, by the previous
-    point, `u = v`), so `¬p` holds.
-
-  - it then suffices to decide whether `u = v` or `u ≠ v`, and unlike `p`
-    itself, that question *is* decidable here: case-splitting on
-    `u = True ∨ p` and `v = False ∨ p` gives us either `p` directly
-    (done, `Or.inl`), or `u = True` and `v = False`, hence `u ≠ v` (since
-    `True ≠ False`), hence `¬p` by the previous point (`Or.inr`).
-
-In short, the undecidable question "does `p` hold?" gets replaced by the
-decidable one "are the two witnesses `u` and `v` equal?" — and choice is
-exactly what let us build `u` and `v` in the first place. Here is the
-actual proof term Lean produces:
 
 ```lean
-theorem Classical.em : ∀ (p : Prop), p ∨ ¬p :=
-fun p =>
-  let U := fun x => x = True ∨ p;
-  let V := fun x => x = False ∨ p;
-  have exU := Exists.intro True (Or.inl rfl);
-  have exV := Exists.intro False (Or.inl rfl);
-  let u := Classical.choose exU;
-  let v := Classical.choose exV;
-  have u_def := Classical.choose_spec exU;
-  have v_def := Classical.choose_spec exV;
-  have not_uv_or_p :=
+theorem Classical.em (p : Prop) : p ∨ ¬p :=
+  let U (x : Prop) : Prop := x = True ∨ p
+  let V (x : Prop) : Prop := x = False ∨ p
+  have exU : ∃ x, U x := ⟨True, Or.inl rfl⟩
+  have exV : ∃ x, V x := ⟨False, Or.inl rfl⟩
+  let u : Prop := choose exU
+  let v : Prop := choose exV
+  have u_def : U u := choose_spec exU
+  have v_def : V v := choose_spec exV
+  have not_uv_or_p : u ≠ v ∨ p :=
     match u_def, v_def with
-    | Or.inr h, x => Or.inr h
-    | x, Or.inr h => Or.inr h
+    | Or.inr h, _ => Or.inr h
+    | _, Or.inr h => Or.inr h
     | Or.inl hut, Or.inl hvf =>
-      have hne :=
-        of_eq_true
-          (Eq.trans (congr (congrArg Ne hut) hvf)
-            (Eq.trans (congrArg Not (Eq.trans eq_iff_iff._simp_1 (Eq.trans (iff_false True) not_true_eq_false)))
-              not_false_eq_true));
-      Or.inl hne;
-  have p_implies_uv := fun hp =>
-    have hpred :=
+      have hne : u ≠ v := by simp [hvf, hut]
+      Or.inl hne
+  have p_implies_uv : p → u = v :=
+    fun hp =>
+    have hpred : U = V :=
       funext fun x =>
-        have hl := fun x_1 => Or.inr hp;
-        have hr := fun x_1 => Or.inr hp;
-        have this := propext { mp := hl, mpr := hr };
-        this;
-    have h₀ :=
-      Eq.mpr
-        (id
-          (congrArg (fun _a => ∀ (exU : ∃ x, _a x) (exV : ∃ x, V x), Classical.choose exU = Classical.choose exV)
-            hpred))
-        fun exU exV => Eq.refl (Classical.choose exU);
-    have this := h₀ exU exV;
-    this;
+        have hl : (x = True ∨ p) → (x = False ∨ p) :=
+          fun _ => Or.inr hp
+        have hr : (x = False ∨ p) → (x = True ∨ p) :=
+          fun _ => Or.inr hp
+        show (x = True ∨ p) = (x = False ∨ p) from
+          propext (Iff.intro hl hr)
+    have h₀ : ∀ exU exV, @choose _ U exU = @choose _ V exV := by
+      rw [hpred]; intros; rfl
+    show u = v from h₀ _ _
   match not_uv_or_p with
   | Or.inl hne => Or.inr (mt p_implies_uv hne)
-  | Or.inr h => Or.inl h
+  | Or.inr h   => Or.inl h
 ```
 -/
 
