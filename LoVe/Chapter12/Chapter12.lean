@@ -444,7 +444,7 @@ noncomputable def choice' {α} : Nonempty α → α :=
 ## To be or not to be
 
 To apply the axiom of choice to existential statements, we
-can use the functions `chose` and `chose_spec`.
+can use the functions `choose` and `choose_spec`.
 -/
 
 #check Classical.choose
@@ -511,98 +511,177 @@ theorem choose_spec.{u} {α : Sort u} {p : α → Prop}
     (h : ∃ x, p x) : p (choose h) :=
   indefiniteDescription p h |>.property
 
-/-!
-## Back to sets
 
-The set-theoretic version would use the `Nonempty` method defined
-for sets, not the type-theoretic version:
+/-!
+## Law of excluded middle
+-/
+
+/-!
+TODO: state and explain the law of excluded middle, explain that it is a
+non-constructive result and that it does not come "for free" in a constructive
+logic setting, but that it derives however from the axiom of choice.
+
+-/
+
+#check Classical.em
+-- Classical.em (p : Prop) : p ∨ ¬p
+
+#print axioms Classical.em
+-- 'Classical.em' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+/-!
+
+```lean
+theorem Classical.em : ∀ (p : Prop), p ∨ ¬p :=
+fun p =>
+  let U := fun x => x = True ∨ p;
+  let V := fun x => x = False ∨ p;
+  have exU := Exists.intro True (Or.inl rfl);
+  have exV := Exists.intro False (Or.inl rfl);
+  let u := Classical.choose exU;
+  let v := Classical.choose exV;
+  have u_def := Classical.choose_spec exU;
+  have v_def := Classical.choose_spec exV;
+  have not_uv_or_p :=
+    match u_def, v_def with
+    | Or.inr h, x => Or.inr h
+    | x, Or.inr h => Or.inr h
+    | Or.inl hut, Or.inl hvf =>
+      have hne :=
+        of_eq_true
+          (Eq.trans (congr (congrArg Ne hut) hvf)
+            (Eq.trans (congrArg Not (Eq.trans eq_iff_iff._simp_1 (Eq.trans (iff_false True) not_true_eq_false)))
+              not_false_eq_true));
+      Or.inl hne;
+  have p_implies_uv := fun hp =>
+    have hpred :=
+      funext fun x =>
+        have hl := fun x_1 => Or.inr hp;
+        have hr := fun x_1 => Or.inr hp;
+        have this := propext { mp := hl, mpr := hr };
+        this;
+    have h₀ :=
+      Eq.mpr
+        (id
+          (congrArg (fun _a => ∀ (exU : ∃ x, _a x) (exV : ∃ x, V x), Classical.choose exU = Classical.choose exV)
+            hpred))
+        fun exU exV => Eq.refl (Classical.choose exU);
+    have this := h₀ exU exV;
+    this;
+  match not_uv_or_p with
+  | Or.inl hne => Or.inr (mt p_implies_uv hne)
+  | Or.inr h => Or.inl h
+```
+-/
+
+/-!
+## Back to set theory
+
+To understand the set-theoretic version of choice in Lean, let's start with
+the set version of `Nonempty`. It merely states the existence of an element
+in a set:
 -/
 #print Set.Nonempty
 -- protected def Set.Nonempty.{u} : {α : Type u} → Set α → Prop :=
 -- fun {α} s => ∃ x, x ∈ s
 
 /-!
-Note that we have the "obvious"
+### Preamble: `Set.Nonempty`
+
+It's true, but not entirely obvious that
 -/
+
 #print Set.nonempty_iff_ne_empty
 -- Set.nonempty_iff_ne_empty.{u} {α : Type u} {s : Set α} : s.Nonempty ↔ s ≠ ∅
 
 /-!
-whose proof does not explicitly requires the axiom of choice ...
-but it needs contradiction which relies on em ... which is actually
-a consequence of choice by Diaconescu's theorem!
+The proof actually already depends on the axiom of choice!
 -/
+
+#print axioms Set.nonempty_iff_ne_empty
+-- 'Set.nonempty_iff_ne_empty' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+/-!
+Let's reproduce the proof to see how the axiom of choice is used
+-/
+
 example {α} {s : Set α} : s.Nonempty ↔ s ≠ ∅ := by
-  constructor
-  . rintro ⟨x, hx⟩ s_eq_empty
+  apply Iff.intro
+  . intro ⟨x, x_in_s⟩ s_eq_empty
     rw [Set.empty_def] at s_eq_empty
-    rw [s_eq_empty] at hx
-    simp only [Set.mem_setOf] at hx
-  . by_contra h
-    push_neg at h
-    have ⟨⟨x, h_in_s⟩, s_eq_empty⟩ := h
-    rw [Set.ext_iff] at s_eq_empty
-    simp only [Set.mem_empty_iff_false, iff_false] at s_eq_empty
-    specialize s_eq_empty x
+    rw [s_eq_empty] at x_in_s
+    simp only [Set.mem_ofPred] at x_in_s
+  . intro s_ne_empty
+    by_contra not_s_nonempty -- 👈 this tactic uses choice.
+    push Not at not_s_nonempty
     contradiction
 
 /-!
-The variant of choice applied to sets in Lean would be something like:
+The tactic `by_contra` proves the theorem by contradiction. From
+the proof state,
+
+```
+α : Type u
+s : Set α
+s_ne_empty : s ≠ ∅
+⊢ s.Nonempty
+```
+
+the tactic `by_contra not_s_nonempty` adds the negation of the goal to the
+assumption and asks you to derive `False` (a fundamental contradiction,
+since there is no term in `False`)
+
+```
+α : Type u_1
+s : Set α
+s_ne_empty : s ≠ ∅
+not_s_nonempty : ¬s.Nonempty
+⊢ False
+```
 -/
 
-noncomputable def choice_set {α} (s : Set α) : s.Nonempty → { x : α // x ∈ s } :=
-  fun s_nonempty =>
-      -- That line wouldn't work since we would extract type info from Prop
-      -- let ⟨x, x_in_s⟩ := s_nonempty
-      -- Instead:
-      let x := Exists.choose s_nonempty
-      let x_in_s := Exists.choose_spec s_nonempty
-      ⟨x, x_in_s⟩
+/-!
+This tactic relies on
+-/
 
+#check Classical.byContradiction
+-- Classical.byContradiction {p : Prop} (h : ¬p → False) : p
 
-#print Exists.choose
--- @[reducible] def Exists.choose.{u_1} : {α : Sort u_1} → {p : α → Prop} →
---     (∃ a, p a) → α :=
--- fun {α} {p} P => Classical.choose P
+/-!
+or in other words on the statement that `¬¬p` implies `p`. To prove this,
+we need the law of excluded middle, which as we know now, is derived from
+the axiom of choice in Lean.
+-/
+
+example {p : Prop} (hnnp : ¬p → False) : p :=
+  match (Classical.em p) with
+  | Or.inl hp => hp
+  | Or.inr hnp => absurd hnp hnnp
 
 
 /-!
-## Application : Inverse Function
+### `Set.some` and `Set.some_spec`
 
-
-
-Note: if `f : α → β`, `g : β → α := Function.invFun f ` is always defined.
-
-TODO: prove as an example than the `invFun` of a bijective function
-is bijective, with the usual inverse equations.
+The basic variant of choice in the context of set is embodied in:
 -/
 
+#check Set.Nonempty.some
+-- Set.Nonempty.some.{u} {α : Type u} {s : Set α} (h : s.Nonempty) : α
 
-#check Function.invFun
--- Function.invFun.{u, u_3} {α : Sort u} {β : Sort u_3} [Nonempty α] (f : α → β) : β → α
-
-#print Function.invFun
--- def Function.invFun.{u, u_3} : {α : Sort u} → {β : Sort u_3} → [Nonempty α] → (α → β) → β → α :=
--- fun {α} {β} [Nonempty α] f y => if h : ∃ x, f x = y then h.choose else Classical.arbitrary α
-
-#print Classical.arbitrary
--- @[reducible] protected def Classical.arbitrary.{u_3} : (α : Sort u_3) → [h : Nonempty α] → α :=
--- fun α [h : Nonempty α] => Classical.choice h
-
-#print Function.Bijective
--- def Function.Bijective.{u₁, u₂} : {α : Sort u₁} → {β : Sort u₂} → (α → β) → Prop :=
--- fun {α} {β} f => Function.Injective f ∧ Function.Surjective f
-
-
+#check Set.Nonempty.some_mem
+-- Set.Nonempty.some_mem.{u} {α : Type u} {s : Set α} (h : s.Nonempty) : h.some ∈ s
 
 /-!
-## Excluded Middle
-
-**TODO.** explain what it is and that it's a consequence of `choice`,
-not a new axiom.
+The implementation are straightforward uses of `choose` and `choose_spec`.
 -/
 
+#print Set.Nonempty.some
+-- protected def Set.Nonempty.some.{u} : {α : Type u} → {s : Set α} → s.Nonempty → α :=
+-- fun {α} {s} h => Classical.choose h
 
+#print Set.Nonempty.some_mem
+-- protected theorem Set.Nonempty.some_mem.{u} : ∀ {α : Type u} {s : Set α} (h : s.Nonempty), h.some ∈ s :=
+-- fun {α} {s} h => Classical.choose_spec h
 
 /-!
 ## References
