@@ -517,10 +517,20 @@ theorem choose_spec.{u} {α : Sort u} {p : α → Prop}
 -/
 
 /-!
-TODO: state and explain the law of excluded middle, explain that it is a
-non-constructive result and that it does not come "for free" in a constructive
-logic setting, but that it derives however from the axiom of choice.
+The Law of Excluded Middle (LEM) states that for any proposition `p`, either
+`p` holds or `¬p` holds:
 
+$$
+p \lor \lnot p.
+$$
+
+This looks completely innocuous, yet it has *no* proof in constructive
+(intuitionistic) logic. A proof of `p ∨ ¬p` is a value that commits, for
+*every* `p`, to one side of the disjunction — effectively a decision
+procedure for `p`. There is of course no such general procedure (think of
+an arbitrary, possibly undecidable, mathematical statement), so in a
+purely constructive setting LEM does not come "for free": it has to be
+postulated as an extra axiom if you want it at all.
 -/
 
 #check Classical.em
@@ -530,6 +540,41 @@ logic setting, but that it derives however from the axiom of choice.
 -- 'Classical.em' depends on axioms: [propext, Classical.choice, Quot.sound]
 
 /-!
+And indeed, Lean postulates no dedicated "excluded middle" axiom: `Classical.em`
+depends only on `propext` (propositional extensionality) and `Classical.choice`
+(`Quot.sound` is only pulled in as a dependency of `propext`'s own proof). So
+`Classical.em` is not an axiom at all, but a *theorem*, derived from choice —
+a classical result (pun intended) known as **Diaconescu's theorem**: in a
+logic with propositional extensionality, the axiom of choice implies the law
+of excluded middle.
+
+The idea behind the derivation (which is essentially what the proof term
+below does):
+
+  - build two predicates on `Prop`, `U := fun x => x = True ∨ p` and
+    `V := fun x => x = False ∨ p`. Both are trivially satisfiable
+    (`True` witnesses `U`, `False` witnesses `V`), so `choose`/`choose_spec`
+    hand us `u v : Prop` together with proofs `u = True ∨ p` and
+    `v = False ∨ p`.
+
+  - if `p` holds, every `x` satisfies both `U` and `V` (the right-hand `p`
+    disjunct makes them trivially true), so `U = V` by (functional and
+    propositional) extensionality. Since `choose` is a *function* of the
+    predicate and the existence proof, `U = V` forces `u = v`.
+
+  - contrapositively, if `u ≠ v`, `p` cannot hold (otherwise, by the previous
+    point, `u = v`), so `¬p` holds.
+
+  - it then suffices to decide whether `u = v` or `u ≠ v`, and unlike `p`
+    itself, that question *is* decidable here: case-splitting on
+    `u = True ∨ p` and `v = False ∨ p` gives us either `p` directly
+    (done, `Or.inl`), or `u = True` and `v = False`, hence `u ≠ v` (since
+    `True ≠ False`), hence `¬p` by the previous point (`Or.inr`).
+
+In short, the undecidable question "does `p` hold?" gets replaced by the
+decidable one "are the two witnesses `u` and `v` equal?" — and choice is
+exactly what let us build `u` and `v` in the first place. Here is the
+actual proof term Lean produces:
 
 ```lean
 theorem Classical.em : ∀ (p : Prop), p ∨ ¬p :=
