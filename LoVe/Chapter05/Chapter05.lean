@@ -10,7 +10,6 @@ lang: en
 -/
 
 /-!
-# 5.2 Structural induction
 
 ## Recursor
 -/
@@ -149,7 +148,11 @@ theorem Sandbox.zero_le''' (n : ℕ) : 0 ≤ n := by
 
 /-!
 ## Recursion/induction beyond natural numbers
+
+### Binary trees
 -/
+
+
 
 inductive BTree (α : Type u) where
   | empty : BTree α
@@ -189,6 +192,32 @@ theorem BTree.depth_le_size {α} (t : BTree α) : t.depth ≤ t.size := by
       apply Nat.max_le_add
     linarith
 
+/-!
+### Arithmetic expressions
+-/
+
+inductive Exp : Type where
+  | num : ℤ → Exp
+  | add : Exp → Exp → Exp
+  | mul : Exp → Exp → Exp
+
+def Exp.toString (e : Exp) : String :=
+  match e with
+  | num n => s!"{n}"
+  | add e1 e2 => s!"({toString e1} + {toString e2})"
+  | mul e1 e2 => s!"({toString e1} * {toString e2})"
+
+#eval Exp.mul (Exp.add (Exp.num 1) (Exp.num 2)) (Exp.num 3) |>.toString
+-- "((1 + 2) * 3)"
+
+def Exp.eval (e : Exp) : ℤ :=
+  match e with
+  | num n => n
+  | add e1 e2 => e1.eval + e2.eval
+  | mul e1 e2 => e1.eval * e2.eval
+
+#eval Exp.mul (Exp.add (Exp.num 1) (Exp.num 2)) (Exp.num 3) |>.eval
+-- 9
 
 /-!
 
