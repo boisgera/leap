@@ -4,6 +4,11 @@ namespace My
 
 -- Idea / example : make arithmetic functions that are polymorphic wrt the + and * ops.
 -- (should work for Nat as well as our ZOI number)
+-- TODO: add a field somehow and not merely functions? The zero? one?
+-- yes, that would be nice...
+-- TODO: group mul and add inside a structre before making it a class
+-- TODO: add props, such as add_zero and zero_add.
+
 
 inductive ZOI where
   | zero
