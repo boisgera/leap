@@ -2,6 +2,79 @@ import Std
 open Std (HashMap)
 
 /-!
+CLI where the options are discovered dynamically: there is no know list of
+available options.
+-/
+
+namespace CLIv0
+
+inductive Option where
+  | short (c : Char)
+  | long (s : String)
+
+instance : ToString Option where
+  toString (n : Option) :=
+    match n with
+    | .short c => s!"-{c}"
+    | .long s => s!"--{s}"
+
+instance : Repr Option where
+  reprPrec option _ := repr (toString option)
+
+instance : BEq Option where
+  beq (opt1 opt2 : Option) := toString opt1 == toString opt2
+
+instance : Hashable Option where
+  hash (option : Option) := hash (toString option)
+
+#guard (Option.short 'h' |> toString) = "-h"
+#guard (Option.long "help" |> toString) = "--help"
+
+abbrev OptionMap := HashMap Option (List String)
+
+instance : ToString OptionMap where
+  toString (optionMap : OptionMap) := toString (repr optionMap.toList)
+
+structure Result where
+  options : OptionMap := {}
+  args : List String := []
+
+
+
+def parse (args : List String) (result : Result := {}) : Result :=
+  match args with
+  | [] => result
+  | arg :: args =>
+    if arg.startsWith "--" then
+      let content := arg.drop 2 |>.toString |>.toList
+      let i := content.idxOf '='
+      let option := Option.long (String.ofList content |>.take i |>.toString)
+      let value := content.drop (i + 1) |> String.ofList
+      let values := result.options.getD option []
+      let newValues := values.concat value
+      parse args { result with options := result.options.insert option newValues }
+    else if arg.startsWith "-" then
+      let content := arg.drop 1
+      let option := Option.short content.front
+      let value := content.toString.drop 1 |>.toString
+      let values := result.options.getD option []
+      let newValues := values.concat value
+      parse args { result with options := result.options.insert option newValues }
+    else
+      parse args { result with args := result.args.concat arg }
+
+#eval parse ["Hello", "world!"]
+-- { options := Std.HashMap.ofList [], args := ["Hello", "world!"] }
+
+#eval parse ["-v", "-v", "-z", "-ofile.out", "file.in"]
+-- { options := Std.HashMap.ofList [("-o", ["file.out"]), ("-z", [""]), ("-v", ["", ""])], args := ["file.in"] }
+
+#eval parse ["--verbose=3", "--help", "Hello!"]
+-- { options := Std.HashMap.ofList [("--verbose", ["3"]), ("--help", [""])], args := ["Hello!"] }
+
+end CLIv0
+
+/-!
 TODO: easy CLI where short and long option needs to be a single token
 => there is no need to distinguish flags, optional and required.
 -/
