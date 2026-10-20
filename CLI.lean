@@ -39,8 +39,6 @@ structure Result where
   options : OptionMap := {}
   args : List String := []
 
-
-
 def parse (args : List String) (result : Result := {}) : Result :=
   match args with
   | [] => result
