@@ -102,3 +102,27 @@ made explicit:
 
 
 end Bubble
+
+
+
+
+namespace Sandbox
+
+class UnitaryMagma (α : Type u) where
+  one : α
+  mul : α → α → α
+  one_mul : ∀ (a : α), mul one a = a
+  mul_one : ∀ (a : α), mul a one = a
+
+instance : UnitaryMagma Nat where
+  one := (1 : Nat)
+  mul := Nat.mul
+  one_mul := by simp
+  mul_one := by simp
+
+open UnitaryMagma
+
+theorem one_mul_one {M} [inst : UnitaryMagma M] : mul (one : M) one = one := by
+    apply UnitaryMagma.one_mul
+
+end Sandbox
