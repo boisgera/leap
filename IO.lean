@@ -364,13 +364,13 @@ def succ_v02 (args : List String) : IO UInt32 :=
 Or use the option monad for short-circuiting:
 -/
 
-def extract (args : List String) : Option Nat := do
+def parse (args : List String) : Option Nat := do
   let s <- args.head?
   let n <- s.toNat?
   return n
 
 def succ_v03 (args : List String) : IO UInt32 :=
-  match extract args with
+  match parse args with
   | none => IO.println "💀" *> pure 1
   | some n => IO.println s!"{n + 1}" *> pure 0
 
