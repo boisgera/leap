@@ -36,6 +36,8 @@ def main (args : List String) : IO UInt32 := do
 Common use cases
 --------------------------------------------------------------------------------
 
+TODO: start with `Id`. Then `StateM`, then `Option`/`Except`?
+
 ### `Option` and `Except ε`.
 
 **TODO** Ex with safeFloat, first without sugar, then with ; Specific API : `<|>`,
@@ -63,10 +65,10 @@ def XKCD.getRandomNumber : Nat :=
 
 def getRandomNumber (seed : UInt64) : Nat × UInt64 :=
   let s := seed * 6364136223846793005 + 1442695040888963407
-  (((s >>> 33) % 6).toNat + 1, s)
+  (((s >>> 32) % 6).toNat + 1, s)
 
 #eval getRandomNumber (seed := 42) -- returns a dice roll and a new seed.
--- (5, 10481999410520546993)
+-- (4, 10481999410520546993)
 
 def sumOfThreeDiceBad (seed : UInt64 := 42) : Nat :=
   let (die1, seed1) := getRandomNumber seed
@@ -92,7 +94,7 @@ def sumOfThreeDice (seed : UInt64 := 42) : Nat × UInt64 :=
   (die1 + die2 + die3, seed3)
 
 #eval sumOfThreeDice (seed := 42)
--- (13, 7615522811268512075)
+-- (14, 7615522811268512075)
 
 /-!
 Now we can invoke the
@@ -125,25 +127,92 @@ monad `LCG.Random`.
 
 abbrev LCG.Random := StateM UInt64
 
-def getRandomNumber' : LCG.Random Nat := fun (seed : UInt64) =>
+def getRandomNumberM : LCG.Random Nat := fun (seed : UInt64) =>
   let s := seed * 6364136223846793005 + 1442695040888963407
-  (((s >>> 33) % 6).toNat + 1, s)
+  (((s >>> 32) % 6).toNat + 1, s)
 
 /-!
-We can use `getRandomNumber'` exactly as `getRandomNumber` before:
+We can use `getRandomNumberM` exactly as `getRandomNumber` before
+(well, except for the use of named arguments ; but we can still fake it
+if we want)
 -/
 
-#eval getRandomNumber (seed := 42)
--- (5, 10481999410520546993)
+#eval getRandomNumberM 42
+-- (4, 10481999410520546993)
+
+#eval getRandomNumberM (let seed := 42; seed)
+-- (4, 10481999410520546993)
 
 /-!
-**TODO** Monadic style for sum, then use `set`, `get`.
+We can also use the monadic API of `State64` for a slightly different
+definition of the random generator:
 -/
 
+def getRandomNumberMAlt : LCG.Random Nat := do
+  -- In the rhs: the action that outputs the state and leave it unchanged.
+  let seed : UInt64 <- fun (s) => (s, s)
+  let newSeed := seed * 6364136223846793005 + 1442695040888963407
+  -- In the rhs: the action that replaces the state (and output the unit value)
+  let _ : Unit <- fun (_) => ((), newSeed)
+  let dieRoll : Nat := ((newSeed >>> 32) % 6).toNat + 1
+  -- Now output the die roll value, keep the value of the state
+  fun (s) => (dieRoll, s)
+
+#check getRandomNumberMAlt 42
+-- getRandomNumberMAlt 42 : Id (ℕ × UInt64)
+
+#check getRandomNumberMAlt 42 |>.run
+-- (getRandomNumberMAlt 42).run : ℕ × UInt64
+
+#eval getRandomNumberMAlt 42
+-- (4, 10481999410520546993)
+
+
+/-!
+This is a bit klunky right? Fortunately the last action can be coded using
+the general monadic `return` and the previous one are `get` and `set`. So
+we can do instead:
+-/
+
+def getRandomNumberMAlt2 : LCG.Random Nat := do
+  -- In the rhs: the action that outputs the state and leave it unchanged.
+  let seed <- get
+  let newSeed := seed * 6364136223846793005 + 1442695040888963407
+  set newSeed
+  let dieRoll : Nat := ((newSeed >>> 32) % 6).toNat + 1
+  return dieRoll
+
+#eval getRandomNumberMAlt2 42
+-- (4, 10481999410520546993)
+
+#eval getRandomNumberMAlt2.run 42
+-- (4, 10481999410520546993)
+
+#eval getRandomNumberMAlt2.run' 42
+-- 4
+
+/-!
+Now we can use the same style to reimplement `sumOfTheeDices`
+-/
+
+def sumOfThreeDiceAlt : LCG.Random Nat := do
+  let die1 <- getRandomNumberMAlt2
+  let die2 <- getRandomNumberMAlt2
+  let die3 <- getRandomNumberMAlt2
+  return die1 + die2 + die3
+
+#eval sumOfThreeDiceAlt.run 42
+-- (14, 7615522811268512075)
+
+#eval sumOfThreeDiceAlt.run' 42
+-- 14
 
 /-!
 
-### `Id` !!!
+### `Id`
+
+**TODO.** Explain that the identity monad is useful when one want to
+implement pure functions (no side-effect) in an imperative style.
 
 -/
 
@@ -178,6 +247,9 @@ theorem Id_def : ∀ (α : Type), Id α = α := by
 
 #eval 0...3
 -- { lower := 0, upper := 3 }
+
+#check 0...3 -- Range, closed/open
+-- 0...3 : Std.Rco ℕ
 
 #eval (0...3).toList
 -- [0, 1, 2]
