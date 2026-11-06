@@ -358,7 +358,7 @@ namespace SafeFloat
 
 #eval 0.0 / 0.0 -- NaN
 
-def div (x? y? : Option Float) : Option Float :=
+def div? (x? y? : Option Float) : Option Float :=
   match y? with
   | none => none
   | some y =>
@@ -371,39 +371,185 @@ def div (x? y? : Option Float) : Option Float :=
 
 #eval Float.log (-1.0) -- Nan
 
-def log (x? : Option Float) : Option Float :=
+def log? (x? : Option Float) : Option Float :=
   match x? with
   | none => none
-  | some x => if x ≤ 0 then none else x.log
+  | some x => if x ≤ 0 then none else some x.log
 
 #eval Float.sqrt (-1.0)
 -- NaN
 
-def sqrt (x? : Option Float) : Option Float :=
+def sqrt? (x? : Option Float) : Option Float :=
   match x? with
   | none => none
-  | some x => if x < 0 then none else x.sqrt
+  | some x => if x < 0 then none else some x.sqrt
 
-def Float.f (x : Float) : Float :=
+def f (x : Float) : Float :=
   x.log.sqrt
 
-#eval Float.f 0.1
+#eval f 0.1
 -- NaN
 
-def f (x? : Option Float) : Option Float :=
+def f? (x? : Option Float) : Option Float :=
   match x? with
   | none => none
   | some x =>
-    match (log x) with
+    match (log? x) with
     | none => none
-    | some y => sqrt y
+    | some y => sqrt? y
 
-#eval f (some 0.1)
+#eval f? (some 10.0)
+-- some 1.517427
+
+#eval f? (some 0.1)
+-- none
+
+/-!
+But `Option` is also a monad ; let's use a `do` block to define `f`.
+-/
+
+def fAlt? (x? : Option Float) : Option Float := do
+  let x <- x?
+  let y <- log? x
+  let z <- sqrt? y
+  return z
+
+#eval fAlt? (some 10.0)
+-- some 1.517427
+
+#eval fAlt? (some 0.1)
+-- none
+
+/-!
+or even
+-/
+
+def fAlt2? (x? : Option Float) : Option Float := do
+  sqrt? (<- log? (<- x?))
+
+#eval fAlt2? (some 10.0)
+-- some 1.517427
+
+#eval fAlt2? (some 0.1)
+-- none
+
+/-!
+There are two additional constructs for `Option` that can be useful in this
+context: `failure` is a synonym for `none` that better represent what `none`
+stands for.  The "or else" operator `<|>` applied to two options outputs the
+left option if it is not `none` otherwise it output the right-hand side.
+-/
+
+#eval (failure : Option Float)
+-- none
+
+#eval (some 3.14 <|> some 1.0)
+-- some 3.140000
+
+#eval (none <|> some 1.0)
+-- some 1.000000
+
+#eval (none <|> none : Option Float)
+-- none
+
+def sqrtAlt? (x? : Option Float) : Option Float := do
+  let x <- x?
+  if x < 0 then
+    failure
+  else
+    return x.sqrt
+
+/-!
+We can also use equivalent constructs that will feel more familiar to
+imperative programmers: `throw` and `try/catch`.
+-/
+
+#eval (throw () : Option Float)
+-- none
+
+#eval
+  try
+    some 3.14
+  catch _ =>
+    some 1.0
+-- some 3.140000
+
+#eval
+  try
+    none
+  catch _ =>
+    some 1.0
+-- some 1.000000
+
+#eval
+  try
+    (none : Option Float)
+  catch _ =>
+    none
 -- none
 
 
-
 end SafeFloat
+
+
+/-!
+`throw` and `try-catch` are a bit underwhelming with options.
+They really shine with `Except` values, which are very similar.
+Like options, except values can either hold a value when a computation
+succeed or signal an error; however, they can also hold data in the
+error case, for example an error message, something an option cannot do.
+
+Note: many language call the `Except` type `Result` instead which is probably
+more appropriate (an `Except` value is *not* an exception).
+
+-/
+
+#print Except
+-- inductive Except.{u, v} : Type u → Type v → Type (max u v)
+-- number of parameters: 2
+-- constructors:
+-- Except.error : {ε : Type u} → {α : Type v} → ε → Except ε α
+-- Except.ok : {ε : Type u} → {α : Type v} → α → Except ε α
+
+/-!
+Using this, we could reimplement our safe float computations with error
+messages, using the fact that for any type `α`, `Except α` is a monad.
+-/
+
+namespace SafeFloat2
+
+abbrev FloatResult := Except String Float
+
+def log? (x? : FloatResult) : FloatResult :=
+  match x? with
+  | Except.error e => Except.error e -- return the first error
+  | Except.ok x =>
+    if x ≤ 0 then -- return the appropriate error
+      Except.error s!"{x} is nonpositive"
+    else
+      Except.ok x.log
+
+#eval log? (Except.ok 1.0)
+-- Except.ok 0.000000
+
+#eval log? (Except.ok (-1.0))
+-- Except.error "-1.000000 is nonpositive"
+
+#eval log? (Except.error "already doomed")
+-- Except.error "already doomed"
+
+/-!
+We can have a more concise implementation using a `do` block as well
+-/
+
+def sqrtAlt? (x? : FloatResult) : FloatResult := do
+  let x <- x? -- will re-throw x? if it's an error
+  if x ≤ 0 then
+    throw s!"{x} is nonpositive" -- error + short-circuit
+  return x.log
+
+
+end SafeFloat2
 
 /-
 
@@ -451,12 +597,108 @@ end ListMonad
 
 ### Monad transformers
 
-Ex : Option + State for parsing.
-
-
-
 
 -/
+
+#print StateT
+-- @[implicit_reducible]
+-- def StateT.{u, v} : Type u → (Type u → Type v) → Type u → Type (max u v) :=
+-- fun σ m α => σ → m (α × σ)
+
+/-
+`StateM` that we have used before is actually also a special case of `StateT`
+when the monad `m` is taken to be `Id`.
+-/
+
+example (σ α : Type u) : StateM σ α = StateT σ Id α := by
+  rfl
+
+/-!
+A special useful case: describe operations with a state that can fail.
+-/
+
+example (σ α : Type u) : StateT σ Option α = (σ → Option (α × σ)) := by
+  rfl
+
+/-!
+Now in do block you have all the good stuff from both monads:
+`failure`, `<|>`, `get`, `set`, etc.
+-/
+
+/-!
+TODO: something even simpler, without recursion to begin with.
+Bash argument parsing for example? That's going to be a bit painful
+with the nested quotes maybe... Brainfuck with the 8 symbols and
+arbitrary spaces/newlines between them? Yes, maybe.
+
+-/
+
+
+
+/-!
+
+TODO: a tree parser with parens would be simpler?
+
+Example: tiny language parser:
+-/
+
+inductive Expr where
+  | number (digit : Fin 10)
+  | add (e1 e2 : Expr)
+  deriving Repr
+
+namespace Expr
+
+/-!
+The state here is what's left to parse (a list of chars).
+-/
+abbrev Parser := StateT (List Char) Option
+
+def Parser.number : Parser Expr := do
+  match (<- get) with
+  | [] => failure
+  | c :: cs =>
+    let code := c.toNat
+    let mut digit : Fin 10 := 0
+    if '0'.toNat ≤ code ∧ code ≤ '9'.toNat then
+      let n := code - '0'.toNat
+      digit := Fin.ofNat 10 n
+      set cs
+      return Expr.number digit
+    else
+      failure
+
+#eval Parser.number.run "9".toList
+-- some (Expr.number 9, [])
+
+#eval Parser.number.run "999".toList
+-- some (Expr.number 9, ['9', '9'])
+
+#eval Parser.number.run "".toList
+-- none
+
+#eval Parser.number.run "A".toList
+-- none
+
+
+def Parser.space : Parser Unit := do
+  sorry
+
+def Parser.oneOrMoreSpaces : Parser Unit := do
+  sorry
+
+mutual
+
+def Parser.add : Parser (Expr × Expr) := do
+  sorry
+
+def Parser.expr : Parser Expr := do
+  sorry
+
+end
+
+
+end Expr
 
 /-!
 Desugaring
