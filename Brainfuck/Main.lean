@@ -144,12 +144,6 @@ partial def Tape.exec (code : List Command) : Action Unit := do
     Tape.exec code
 
 /-!
-TODO: write an example code, make a main function.
--/
-
-def main := IO.println "Hello Brainfuck!"
-
-/-!
 --------------------------------------------------------------------------------
 -/
 
@@ -201,38 +195,43 @@ partial def parseCommand : Parser Command := do
 
 end
 
-def parse (source : String) : Option (List Command) :=
+def parse (source : String) : Except String (List Command) :=
   let chars := source.toList
-  parseCommands.run' chars
+  match parseCommands.run chars with
+  | none => unreachable! -- zeroOrMore can't fail.
+  | some (commands, []) => .ok commands
+  | some (_, remain) => .error s!"parsed failed at {String.ofList remain}"
+
 
 #eval parse ""
--- (some )
+-- ok:
 
 #eval parse "+"
--- (some +)
+-- ok: +
 
 #eval parse "++"
--- (some ++)
+-- ok: ++
 
 #eval parse "+-"
--- (some +-)
+-- ok: +-
 
 #eval parse "[]"
--- (some [])
+-- ok: []
 
 #eval parse "[+-]"
---  (some [+-])
+-- ok: [+-]
 
-#eval parse "@" -- How does that not fail? OK, we need to check that we extinguish the source?
--- Think about this a bit more. Consider a "partial" argument in parse (false by default),
--- and fail when needed.
+#eval parse "@"
+-- error: parsed failed at @
 
-#eval "@".toList |> parseCommands.run
--- (some (, [@]))
-
-#eval parse "[+-" -- How does that not fails?
-
-#eval "[+-".toList |> parseCommands.run
--- (some (, [[, +, -]))
+#eval parse "+-[+-"
+-- error: parsed failed at [+-
 
 end Brainfuck
+
+/-!
+TODO: write example codes, make a main function that executes the brainfuck file
+(.bf or .🤯 extension).
+-/
+
+def main := IO.println "Hello Brainfuck!"
