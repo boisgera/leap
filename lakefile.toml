@@ -16,10 +16,6 @@ name = "Python"
 [[lean_lib]]
 name = "Raylib"
 
-#[[lean_exe]]
-#name = "maze"
-#root = "Maze"
-
 [[lean_exe]]
 name = "snake"
 root = "Snake"
@@ -58,7 +54,7 @@ root = "MarkdownOfLean"
 
 [[lean_exe]]
 name = "brainfuck"
-root = "BrainFuck"
+root = "Brainfuck.Main"
 
 [[lean_exe]]
 name = "led"
