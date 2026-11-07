@@ -24,6 +24,9 @@ def Command.toString (cmd : Command) : String :=
 instance : ToString Command where
   toString := Command.toString
 
+instance : ToString (List Command) where
+  toString (commands) := commands.map toString |> "".intercalate
+
 /-!
 Instead of an array of 30,000 bytes, we grow the array dynamically.
 We also use a Zipper design to have each elementary operation
@@ -175,33 +178,61 @@ def parseClosingLoop : Parser Unit := do
 -- Mmm think of an architecture where it's easy to prove termination.
 -- Easy enough as it is? (Grmph ...)
 
-partial def parse : Parser (List Command) := do
-  if (<- get) = [] then return []
-  -- Start with the special case '[' and ']', that's probably easier (?)
+partial def parseZeroOrMore {α} (p : Parser α) : Parser (List α) := do
   try
-    let cmd <- parseSymbol -- fails if we have '[' or ']'
-    return cmd :: (<- parse)
+    let a <- p
+    let as <- parseZeroOrMore p
+    return a :: as
   catch _ =>
-    try
-      parseOpeningLoop
-      let cmd := Command.loop (<- parse)
-      parseClosingLoop -- we need to accomodate the "]" failure here
-      return cmd :: (<- parse)
-    catch _ => -- deal with "]"
-      return []
+    return []
 
+mutual
 
--- #eval parse.run []
--- -- some ([], [])
+partial def parseCommands := parseZeroOrMore parseCommand
 
--- #eval parse.run ['+']
--- -- some ([Brainfuck.Command.incr], [])
+partial def parseCommand : Parser Command := do
+  try
+    parseSymbol
+  catch _ =>
+    parseOpeningLoop
+    let cmds <- parseCommands
+    parseClosingLoop
+    return Command.loop cmds
 
--- #eval parse.run ['+', '-']
--- -- some ([Brainfuck.Command.incr, Brainfuck.Command.decr], [])
+end
 
--- #eval parse.run ['[', ']']
+def parse (source : String) : Option (List Command) :=
+  let chars := source.toList
+  parseCommands.run' chars
 
+#eval parse ""
+-- (some )
 
+#eval parse "+"
+-- (some +)
+
+#eval parse "++"
+-- (some ++)
+
+#eval parse "+-"
+-- (some +-)
+
+#eval parse "[]"
+-- (some [])
+
+#eval parse "[+-]"
+--  (some [+-])
+
+#eval parse "@" -- How does that not fail? OK, we need to check that we extinguish the source?
+-- Think about this a bit more. Consider a "partial" argument in parse (false by default),
+-- and fail when needed.
+
+#eval "@".toList |> parseCommands.run
+-- (some (, [@]))
+
+#eval parse "[+-" -- How does that not fails?
+
+#eval "[+-".toList |> parseCommands.run
+-- (some (, [[, +, -]))
 
 end Brainfuck
