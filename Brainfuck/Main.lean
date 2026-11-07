@@ -177,6 +177,7 @@ def parseClosingLoop : Parser Unit := do
 
 partial def parse : Parser (List Command) := do
   if (<- get) = [] then return []
+  -- Start with the special case '[' and ']', that's probably easier (?)
   try
     let cmd <- parseSymbol -- fails if we have '[' or ']'
     return cmd :: (<- parse)
@@ -184,7 +185,7 @@ partial def parse : Parser (List Command) := do
     try
       parseOpeningLoop
       let cmd := Command.loop (<- parse)
-      parseClosingLoop
+      parseClosingLoop -- we need to accomodate the "]" failure here
       return cmd :: (<- parse)
     catch _ => -- deal with "]"
       return []
