@@ -26,11 +26,10 @@ A Brainfuck program acts on a **tape**: a long row of **cells**, each holding
 one byte (a number between 0 and 255). All cells are initially 0. A **head**
 designates the **current cell**, and is initially on the first cell of the tape.
 
-```
-cells   0   0   0   0   0   0  ...
-        ^
-       head
-```
+| Cell      |  0  |  1  |  2  |  3  |  4  |  5  | ... |
+| --------- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| **Value** |  0  |  0  |  0  |  0  |  0  |  0  | ... |
+| **Head**  |  ▲  |     |     |     |     |     |     |
 
 A program is a sequence of commands, of which there are only eight:
 
