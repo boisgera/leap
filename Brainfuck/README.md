@@ -430,7 +430,31 @@ A parser consumes the beginning of a list of characters. It either fails, or
 produces a value along with the remaining characters. Parsers are made by
 combining smaller ones, which we will build from the bottom up.
 
+The syntax of Brainfuck boils down to three rules, which the following steps
+present as **railroad diagrams**. To read such a diagram, enter at the left dot
+and follow the tracks to the right dot, as a train would: smoothly and without
+reversing. Every possible journey spells out a text that the rule accepts.
+
+  - A yellow box with rounded corners is a character that must be there.
+
+  - A blue rectangular box is another rule, which must be satisfied at this
+    point.
+
+  - A fork is a choice between several tracks.
+
+Each diagram tells you what the corresponding parser must do.
+
 ### Step 1: One Symbol, by Hand
+
+The simplest rule says that a `SYMBOL` is one of six characters:
+
+<p align="center">
+<img src="diagrams/symbol.svg" width="238"
+     alt="Railroad diagram of SYMBOL: a fork between the characters &lt;, &gt;, -, +, . and ,">
+</p>
+
+There is one track per character. Any other character, or the end of the input,
+leaves the train with no track to follow: the parser must then fail.
 
 **Task.** Write a function that recognizes the six commands other than the
 brackets:
@@ -470,6 +494,9 @@ Note that `Parser α` is a function: you run a parser by applying it, or with
 
 ### Step 3: The Brackets
 
+The characters `[` and `]` are missing from the `SYMBOL` diagram. They will
+appear in the diagram of step 5, on each side of the body of a loop.
+
 **Task.** Write two parsers which consume one bracket and produce nothing
 interesting. Avoid repeating yourself: you may first write a more general
 parser that recognizes any given character.
@@ -487,6 +514,19 @@ def parseClosingLoop : Parser Unit
 
 ### Step 4: Repetition
 
+The next rule says that `CMDS`, a sequence of commands, is made of zero or more
+`CMD`. We will come to `CMD` itself in step 5.
+
+<p align="center">
+<img src="diagrams/cmds.svg" width="232"
+     alt="Railroad diagram of CMDS: the box CMD, with a track that skips it and a track that returns before it">
+</p>
+
+The upper track skips the box altogether, which accounts for zero occurrences.
+Otherwise, the train goes through the box and can take the lower track to come
+back before it, as many times as needed. This shape doesn't depend on what is
+inside the box, so we will write it once and for all, for any parser.
+
 **Task.** Write a combinator that applies a parser as many times as possible
 and collects the results.
 
@@ -496,7 +536,7 @@ partial def parseZeroOrMore {α} (p : Parser α) : Parser (List α)
 
 Use a `try ... catch` block: try to run `p` and then, recursively,
 `parseZeroOrMore p`; if `p` fails, return the empty list. Such a parser never
-fails.
+fails: whatever the input, there is always a track that avoids the box.
 
 Note a very handy property of our monad: when an error is caught, the handler
 starts again **with the state as it was at the start of the `try`**. A parser
@@ -516,8 +556,30 @@ of `StateT`?)
 ### Step 5: Commands and Nested Loops
 
 A command is either a symbol or a loop, and a loop is an opening bracket, some
-commands, and a closing bracket. These two definitions refer to each other, so
-the corresponding parsers must be declared in a `mutual` block:
+commands, and a closing bracket:
+
+<p align="center">
+<img src="diagrams/cmd.svg" width="302"
+     alt="Railroad diagram of CMD: a fork between the box SYMBOL and the sequence [, box CMDS, ]">
+</p>
+
+For example, here is the journey for the source code `[+-]`. The train takes
+the lower track of the fork and reads `[`. It then enters the `CMDS` diagram of
+step 4 and goes twice through its `CMD` box, each time by the upper track of the
+fork above, to read `+` and then `-`. Finally, it leaves `CMDS` and reads `]`.
+
+Every box of this diagram corresponds to a parser:
+
+| Box      | Parser             |
+| :------: | ------------------ |
+| `SYMBOL` | `parseSymbol`      |
+| `[`      | `parseOpeningLoop` |
+| `CMDS`   | `parseCommands`    |
+| `]`      | `parseClosingLoop` |
+
+The `CMD` diagram contains a `CMDS` box and the `CMDS` diagram contains a `CMD`
+box. This circularity is what allows loops to be nested, and it means that the
+corresponding parsers must be declared in a `mutual` block:
 
 ```lean
 mutual
@@ -530,13 +592,17 @@ end
 ```
 
 **Task.** Implement them. The first is a one-liner with `parseZeroOrMore`. The
-second tries `parseSymbol` and, if it fails, parses a loop.
+second follows the fork of the `CMD` diagram: it tries `parseSymbol` and, if it
+fails, parses a loop by going through the three boxes of the lower track.
 
 Why do the commands of a loop stop at the right place? On the character `]`,
 `parseCommand` fails, so `parseZeroOrMore` stops and leaves `]` in place for
 `parseClosingLoop`.
 
 ### Step 6: The Complete Parser
+
+A program is valid when the `CMDS` diagram accounts for all of its source code,
+from the first character to the last.
 
 **Task.** Write `parse`, using `String.toList` and `parseCommands`. Three cases
 are possible when you run `parseCommands`:
