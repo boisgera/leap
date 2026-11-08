@@ -45,7 +45,7 @@ structure Tape where
   current : Byte := 0
   after : List Byte := []
 
-abbrev Tape.Action := StateT Tape IO
+abbrev Tape.Action := StateT Tape IO Unit
 
 -- def Tape.left (tape : Tape) : Tape :=
 --   match tape.beforeReversed with
@@ -67,7 +67,7 @@ abbrev Tape.Action := StateT Tape IO
 --       }
 --   )
 
--- def Tape.left : Action Unit := do
+-- def Tape.left : Action := do
 --   let tape : Tape <- get
 --   set (
 --     match tape.beforeReversed with
@@ -84,7 +84,7 @@ We could even define the pure stuff in a given function and have
 modify applied to that.
 -/
 
-def Tape.left : Action Unit := do
+def Tape.left : Action := do
   modify fun tape =>
     match tape.beforeReversed with
     | [] => tape
@@ -94,7 +94,7 @@ def Tape.left : Action Unit := do
         after := tape.current :: tape.after
       }
 
-def Tape.right : Action Unit := do
+def Tape.right : Action := do
   modify fun tape =>
     match tape.after with
     | [] => {
@@ -110,13 +110,13 @@ def Tape.right : Action Unit := do
         : Tape
       }
 
-def Tape.decr : Action Unit :=
+def Tape.decr : Action :=
   modify fun tape => { tape with current := tape.current - 1 }
 
-def Tape.incr : Action Unit :=
+def Tape.incr : Action :=
   modify fun tape => { tape with current := tape.current + 1 }
 
-def Tape.read : Action Unit := do
+def Tape.read : Action := do
   let tape <- get
   let stdin <- IO.getStdin
   let bytes <- stdin.read 1
@@ -124,12 +124,12 @@ def Tape.read : Action Unit := do
   let byte : UInt8 := if bytes.isEmpty then 0 else bytes[0]!
   set { tape with current := byte }
 
-def Tape.write : Action Unit := do
+def Tape.write : Action := do
   let tape <- get
   let stdout <- IO.getStdout
   stdout.write (ByteArray.mk #[tape.current])
 
-partial def Tape.exec (code : List Command) : Action Unit := do
+partial def Tape.exec (code : List Command) : Action := do
   match code with
   | [] => return
   | inst :: code =>
