@@ -134,14 +134,19 @@ partial def Tape.exec (code : List Command) : Action Unit := do
   | [] => return
   | inst :: code =>
     match inst with
-    | .left => Tape.left
-    | .right => Tape.right
-    | .decr => Tape.decr
-    | .incr => Tape.incr
-    | .read => Tape.read
-    | .write => Tape.write
-    | .loop code => Tape.exec code
-    Tape.exec code
+    | .left => Tape.left ; Tape.exec code
+    | .right => Tape.right ; Tape.exec code
+    | .decr => Tape.decr ; Tape.exec code
+    | .incr => Tape.incr ; Tape.exec code
+    | .read => Tape.read ; Tape.exec code
+    | .write => Tape.write ; Tape.exec code
+    | .loop inner =>
+      let tape <- get
+      if tape.current ≠ 0 then
+        Tape.exec inner
+        Tape.exec (inst :: code)
+      else
+        Tape.exec code
 
 /-!
 --------------------------------------------------------------------------------
@@ -156,7 +161,8 @@ def parseSymbol : Parser Command := do
   | '>' :: cs => set cs ; return .right
   | '-' :: cs => set cs ; return .decr
   | '+' :: cs => set cs ; return .incr
-  | ',' :: cs => set cs ; return .write
+  | ',' :: cs => set cs ; return .read
+  | '.' :: cs => set cs ; return .write
   | _ => failure
 
 def parseOpeningLoop : Parser Unit := do
@@ -234,4 +240,20 @@ TODO: write example codes, make a main function that executes the brainfuck file
 (.bf or .🤯 extension).
 -/
 
-def main := IO.println "Hello Brainfuck!"
+def usage : IO Unit :=
+  IO.println "Usage: brainfuck [FILE.bf]"
+
+def main (args : List String) : IO UInt32 := do
+  match args with
+  | [] => usage ; return 1
+  | filename :: _ =>
+    let source <- IO.FS.readFile filename
+    let result := Brainfuck.parse source
+    match result with
+    | Except.error message =>
+      IO.eprintln message
+      return 1
+    | Except.ok code =>
+      let tape : Brainfuck.Tape := {}
+      let _ <-  tape.exec code
+      return 0
