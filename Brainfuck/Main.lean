@@ -206,7 +206,7 @@ def parse (source : String) : Except String (List Command) :=
   match parseCommands.run chars with
   | none => unreachable! -- zeroOrMore can't fail.
   | some (commands, []) => .ok commands
-  | some (_, remain) => .error s!"parsed failed at {String.ofList remain}"
+  | some (_, remain) => .error s!"parse failed at {String.ofList remain}"
 
 
 #eval parse ""
@@ -228,10 +228,10 @@ def parse (source : String) : Except String (List Command) :=
 -- ok: [+-]
 
 #eval parse "@"
--- error: parsed failed at @
+-- error: parse failed at @
 
 #eval parse "+-[+-"
--- error: parsed failed at [+-
+-- error: parse failed at [+-
 
 end Brainfuck
 
