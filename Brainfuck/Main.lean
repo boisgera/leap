@@ -122,6 +122,7 @@ Also, since this is not recursive or partial, we can do proofs with it!
 -/
 
 abbrev Stack := List (List Command)
+abbrev Machine := Stack × Tape
 
 /-!
 TODO: cleaner (Stream?) api for termintation. Mmm Stream doesn't perfectly
@@ -152,8 +153,8 @@ To begin with, just make a helper function that reads if Stack is empty
 feels like it want to return a none.
 
 OK keep this one like that and add a next? version on top of it,
-with signature (Stack × Tape) -> OptionT IO (Stack × Tape)
-(which means IO (Option (Stack × Tape)))
+with signature Machine -> OptionT IO Machine
+(which means Machine -> IO (Option Machine)))
 
 TODO: def Machine := Stack × Tape ?
 -/
