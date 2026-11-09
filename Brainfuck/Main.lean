@@ -119,6 +119,20 @@ Also, since this is not recursive or partial, we can do proofs with it!
 
 abbrev Stack := List (List Command)
 
+/-!
+TODO: cleaner (Stream?) api for termintation. Mmm Stream doesn't perfectly
+      fit, it's not monadic. Arf, shoot... Anyway we need at least a better
+      termination? Or juste test manually with a helper function?
+      Well, actuall we could do some `Stream (Stack × Tape) (IO Unit)`,
+      the use API would be very simple AFAICT.
+      So declare next? as a StateT (Stack × Tape) Option (IO Unit)
+      and `none` represents the end of the iteration (at this stage we
+      have 0 other kind of errors).
+      But then is there a mismatch with the Action API above?
+      Think of it, I felt that the Action modelling was klunky anyway.
+
+TODO: cleaner, more imperative version.
+-/
 def Tape.next : StateT (Stack × Tape) IO Unit  := do
   let (stack, tape) <- get
   match stack with
