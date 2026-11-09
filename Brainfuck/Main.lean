@@ -47,43 +47,6 @@ structure Tape where
 
 abbrev Tape.Action := StateT Tape IO Unit
 
--- def Tape.left (tape : Tape) : Tape :=
---   match tape.beforeReversed with
---   | [] => tape
---   | head :: tail => {
---       beforeReversed := tail,
---       current := head,
---       after := tape.current :: tape.after
---     }
-
--- def Tape.left (tape : Tape) : IO Tape :=
---   return (
---     match tape.beforeReversed with
---     | [] => tape
---     | head :: tail => {
---         beforeReversed := tail,
---         current := head,
---         after := tape.current :: tape.after
---       }
---   )
-
--- def Tape.left : Action := do
---   let tape : Tape <- get
---   set (
---     match tape.beforeReversed with
---     | [] => tape
---     | head :: tail => {
---         beforeReversed := tail,
---         current := head,
---         after := tape.current :: tape.after
---       }
---   )
-
-/-!
-We could even define the pure stuff in a given function and have
-modify applied to that.
--/
-
 def Tape.left : Action := do
   modify fun tape =>
     match tape.beforeReversed with
@@ -147,6 +110,51 @@ partial def Tape.exec (code : List Command) : Action := do
         Tape.exec (inst :: code)
       else
         Tape.exec code
+
+/-!
+A step-by-step evaluator that we could rebuild exec on.
+Useful for pedagogical issues and debugging!
+Also, since this is not recursive or partial, we can do proofs with it!
+-/
+
+abbrev Stack := List (List Command)
+
+def Tape.next : StateT (Stack × Tape) IO Unit  := do
+  let (stack, tape) <- get
+  match stack with
+  | [] => return
+  | code :: stack =>
+    match code with
+    | [] =>
+      set (stack, tape)
+    | inst :: code =>
+      match inst with
+      | .left =>
+        let (_, tape) <- tape.left -- equiv to "Tape.read then 'advance'?"
+        set (code :: stack, tape)
+      | .right =>
+        let (_, tape) <- tape.right
+        set (code :: stack, tape)
+      | .decr =>
+        let (_, tape) <- tape.decr
+        set (code :: stack, tape)
+      | .incr =>
+        let (_, tape) <- tape.incr
+        set (code :: stack, tape)
+      | .read =>
+        let (_, tape) <- tape.read
+        set (code :: stack, tape)
+      | .write =>
+        let (_, tape) <- tape.write
+        set (code :: stack, tape)
+      | .loop inner =>
+        if tape.current ≠ 0 then
+          set (inner :: (inst :: code) :: stack, tape)
+        else
+          set (code :: stack, tape)
+
+
+
 
 /-!
 --------------------------------------------------------------------------------
