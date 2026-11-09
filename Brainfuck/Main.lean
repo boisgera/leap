@@ -46,6 +46,10 @@ structure Tape where
   after : List Byte := []
 
 abbrev Tape.Action := StateT Tape IO Unit
+-- aka Tape -> IO (Unit × Tape) which is a bit dumb...
+-- go for Tape -> Tape × IO Unit instead?
+-- Mmmm there is at least one case where we need Tape inside the IO
+-- So that would be Tape -> IO Tape
 
 def Tape.left : Action := do
   modify fun tape =>
@@ -122,16 +126,36 @@ abbrev Stack := List (List Command)
 /-!
 TODO: cleaner (Stream?) api for termintation. Mmm Stream doesn't perfectly
       fit, it's not monadic. Arf, shoot... Anyway we need at least a better
-      termination? Or juste test manually with a helper function?
-      Well, actuall we could do some `Stream (Stack × Tape) (IO Unit)`,
+      termination? Or just test manually with a helper function?
+      Well, actually we could do some `Stream (Stack × Tape) (IO Unit)`,
       the use API would be very simple AFAICT.
-      So declare next? as a StateT (Stack × Tape) Option (IO Unit)
-      and `none` represents the end of the iteration (at this stage we
+      The associated `next?` function would (def eq to)
+      `StateT (Stack × Tape) Option (IO Unit)`.
+      `none` represents the end of the iteration (at this stage we
       have 0 other kind of errors).
       But then is there a mismatch with the Action API above?
       Think of it, I felt that the Action modelling was klunky anyway.
 
+      Update: that doesn't WORK. read needs to IO context to generate the
+      new tape. Do we need to pick `IO (Stack × Tape)` as the stream
+      type?
+
+
 TODO: cleaner, more imperative version.
+TODO: turn this (Stack × Tape) -> IO (Unit × (Stack × Tape)) into
+a (Stack × Tape) -> Option (IO (Unit × (Stack × Tape)))?
+
+To begin with, just make a helper function that reads if Stack is empty
+(to test the end of the code execution)? I don't know. The
+  match stack with
+  | [] => return
+feels like it want to return a none.
+
+OK keep this one like that and add a next? version on top of it,
+with signature (Stack × Tape) -> OptionT IO (Stack × Tape)
+(which means IO (Option (Stack × Tape)))
+
+TODO: def Machine := Stack × Tape ?
 -/
 def Tape.next : StateT (Stack × Tape) IO Unit  := do
   let (stack, tape) <- get
