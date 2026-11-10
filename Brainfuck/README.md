@@ -636,10 +636,15 @@ def Tape.next? : Machine.Step Unit := do
 ```
 
 The branches get simpler, as the stack is already up to date: there is no
-`code` to deal with anymore. But there is a catch with loops. The command has
-been removed from its frame, and we don't have access to `code` anymore. If the
-current cell is not 0, we therefore push **two** frames: the body of the loop and,
-just below it, a new frame that only holds the loop.
+`code` to deal with anymore. But there is a catch with loops: if the current
+cell is not 0, the loop must be tested again later, and `Machine.advance` has
+just removed it. Fortunately, the frame it came from is still at the top of the
+stack. So pattern match on the stack to put the loop back at the head of that
+frame, and then push `inner` above it, like in step 2.
+
+The stack cannot be empty at this point, as `Machine.advance` has succeeded, but
+Lean doesn't know that. Handle this case with `unreachable!`, which panics if it
+is ever evaluated.
 
 Note that the empty frames do not take one step of their own anymore: a step now
 executes exactly one command. The traces do change:
@@ -654,9 +659,9 @@ executes exactly one command. The traces do change:
 #eval trace [.incr, .loop [.decr], .right]
 -- ["+[-]>"] 0
 -- ["[-]>"] 1
--- ["-", "[-]", ">"] 1
--- ["", "[-]", ">"] 0
--- ["", ">"] 0
+-- ["-", "[-]>"] 1
+-- ["", "[-]>"] 0
+-- [">"] 0
 -- [""] 0
 ```
 
@@ -1116,10 +1121,3 @@ These extensions are optional.
   - **A total `advance`.** `Machine.advancePure` is `partial`, so nothing can be
     proved about it. Write it instead as a function on `Machine` that pattern
     matches on the stack, with `termination_by machine => machine.1.length`.
-
-  - **Empty frames.** Measure the maximum depth of the stack when running
-    `squares.bf` with the code of step 3 and with the code of step 8. Why does
-    the second one grow? (Look at what remains on the stack after each iteration
-    of a loop.) Change `Machine.nextInLoop` to fix this: since
-    `Machine.advance` leaves the frame of the loop on top of the stack, the
-    command can be put back in that frame.
