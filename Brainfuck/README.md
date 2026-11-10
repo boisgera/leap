@@ -11,8 +11,9 @@ Hello World!
 ```
 
 Along the way, you will use inductive types, recursion over a tree, the
-zipper data structure, and the `StateT` monad transformer, twice: once to run
-programs, and once to parse them.
+zipper data structure, and monad transformers: `StateT` to run programs and to
+parse them, then a combination of `StateT` and `OptionT` to run them one step at
+a time.
 
 The work is organized in small steps. Do them in order and make the tests of
 each step pass before moving on. Several steps ask you to *rewrite* what you
@@ -417,6 +418,380 @@ def letterA : List Command :=
 Be careful not to `#eval` a program that never stops, as this would keep your
 editor's Lean server busy until you restart it.
 
+A Step-by-Step Interpreter
+--------------------------------------------------------------------------------
+
+`Tape.exec` runs a program in one go: once it is started, there is no way to
+pause it, to look at the tape halfway through, or to count the commands that
+have been executed. In this section, we build a function that performs **a
+single step** of the execution. This is very handy to debug a program, and a
+function that has no reason to loop forever is also easier to reason about.
+
+The final code will be quite short, but rather abstract, since it combines
+several monads. So we will not start there. Steps 1 to 3 only use pattern
+matching and `IO`: every value that matters is visible in the code. Steps 4 to 8
+then refactor this code, one idea at a time.
+
+The state of the execution is called a **machine**. It holds the tape and what
+remains to be run:
+
+```lean
+abbrev Program := List Command
+abbrev Stack := List Program
+abbrev Machine := Stack × Tape
+```
+
+Why a stack of programs, and not a single program? Because of the loops. While
+we run the body of a loop, we must remember what comes next, once the body is
+over. Each element of the stack, called a **frame**, is a program to complete
+before moving on to the next frame. A new machine has a single frame, which
+holds the whole program: `([code], {})`.
+
+The function `Tape.next?` that we are about to write will perform one step, and
+fail when nothing remains to be run. To watch it work, use this helper, which
+prints after every step the stack (one string per frame) and the value of the
+current cell:
+
+```lean
+def trace (code : Program) : IO Unit := do
+  let mut machine : Machine := ([code], {})
+  repeat
+    IO.println s!"{repr (machine.1.map toString)} {machine.2.current}"
+    match <- Tape.next? machine with
+    | none => break
+    | some next => machine := next
+```
+
+### Step 1: One Step, Without Loops
+
+**Task.** Write the function below, by pattern matching on the stack:
+
+```lean
+def Tape.next? (machine : Machine) : IO (Option Machine)
+```
+
+There are three cases:
+
+  - The stack is empty: the program is over, the result is `none`.
+
+  - The top frame is empty: remove it. This counts as one step.
+
+  - The top frame is `command :: code`: run `command` on the tape, and replace
+    the top frame with `code`.
+
+Temporarily handle the case `.loop _` by skipping the command.
+
+Recall that a `Tape.Action` is a function in disguise, so you can apply it to a
+tape. This gives a value of type `IO (Unit × Tape)`:
+
+```lean
+let ((), tape) <- Tape.left tape
+```
+
+The code of the six branches will be almost identical. This repetition is
+expected, leave it as it is for now!
+
+```lean
+#eval trace [.incr, .right, .incr]
+-- ["+>+"] 0
+-- [">+"] 1
+-- ["+"] 0
+-- [""] 1
+-- [] 1
+```
+
+### Step 2: Loops
+
+**Task.** Handle the case `.loop inner`, when the top frame is
+`.loop inner :: code`.
+
+<details>
+<summary>Hint</summary>
+
+If the current cell is 0, the loop is over and the case is similar to the other
+commands: the top frame becomes `code`.
+
+Otherwise, `inner` must become the new top frame. Just below it, keep the frame
+**with the loop still at its head**, so that the test is performed again when
+`inner` is over.
+
+</details>
+
+```lean
+#eval trace [.incr, .loop [.decr], .right]
+-- ["+[-]>"] 0
+-- ["[-]>"] 1
+-- ["-", "[-]>"] 1
+-- ["", "[-]>"] 0
+-- ["[-]>"] 0
+-- [">"] 0
+-- [""] 0
+-- [] 0
+```
+
+### Step 3: Running a Machine
+
+**Task.** Write a function that repeats `Tape.next?` until it returns `none`,
+and then returns the last machine. Use it to observe the final cell:
+
+```lean
+partial def Machine.run (machine : Machine) : IO Machine
+
+def finalCell' (code : Program) : IO Byte := do
+  let (_, tape) <- Machine.run ([code], {})
+  return tape.current
+```
+
+Only `Machine.run` needs `partial`: `Tape.next?` is not recursive, and always
+completes.
+
+You now have a second interpreter, which must agree with `Tape.exec`:
+
+```lean
+#eval finalCell' []
+-- 0
+#eval finalCell' [.incr, .right, .incr, .incr, .left]
+-- 1
+#eval finalCell' [.loop [.right, .incr]]
+-- 0
+#eval finalCell' [.incr, .incr, .incr, .loop [.decr]]
+-- 0
+#eval finalCell' [.incr, .incr, .loop [.decr, .right, .incr, .incr, .incr, .left], .right]
+-- 6
+```
+
+### Step 4: The Machine Monad
+
+The code works, but look at what it does by hand: it passes a machine along, and
+wraps its results in `some` or `none`. Each of these two chores corresponds to a
+monad transformer: `StateT` handles a state and `OptionT` adds the possibility
+of failure. Let's stack them on top of `IO`:
+
+```lean
+abbrev Machine.Step := StateT Machine (OptionT IO)
+```
+
+This definition is less mysterious when it is unfolded, one layer at a time:
+
+```lean
+Machine.Step α
+-- is StateT Machine (OptionT IO) α
+-- is Machine → OptionT IO (α × Machine)
+-- is Machine → IO (Option (α × Machine))
+```
+
+With `α := Unit`, this is the type of step 1, plus a useless `Unit`. Each layer
+brings its own operations, and all of them are available in a single `do` block:
+
+| Layer             | What it provides                                   |
+| ----------------- | -------------------------------------------------- |
+| `StateT Machine`  | `get` and `set`, instead of passing a machine      |
+| `OptionT`         | `failure`, instead of `return none`                |
+| `IO`              | input and output; these actions are lifted for you |
+
+**Task.** Rewrite your function with the signature below, using `get`, `set` and
+`failure`. Do nothing else for now: keep the same case analysis and the same
+repeated branches. Lean automatically lifts a value of type `IO α` in this
+monad, so the line `let ((), tape) <- Tape.left tape` doesn't change.
+
+```lean
+def Tape.next? : Machine.Step Unit
+```
+
+`Tape.next? machine` now has the type `OptionT IO (Unit × Machine)` and we get
+back to `IO` with `.run`. So adapt `trace` as follows, and do the same in
+`Machine.run`:
+
+```lean
+    match <- (Tape.next? machine).run with
+    | none => break
+    | some ((), next) => machine := next
+```
+
+The traces of steps 1 and 2 and the tests of step 3 must not change.
+
+### Step 5: Fetching the Next Command
+
+Every branch of `Tape.next?` mixes two different jobs: finding the next command
+and executing it. Let's separate them.
+
+**Task.** Write a function that removes the next command from the stack and
+returns it. It skips the empty frames and fails if there is no command left.
+
+```lean
+partial def Machine.advance : Machine.Step Command
+```
+
+Why `partial`, again? To skip the empty frames, the function calls itself, and
+the state is hidden from Lean, which cannot see that the stack gets smaller.
+
+**Task.** Rewrite `Tape.next?` so that it starts as follows:
+
+```lean
+def Tape.next? : Machine.Step Unit := do
+  let command <- Machine.advance
+  let (stack, tape) <- get
+  match command with
+  ...
+```
+
+The branches get simpler, as the stack is already up to date: there is no
+`code` to deal with anymore. But there is a catch with loops. The command has
+been removed from its frame, and we don't have access to `code` anymore. If the
+current cell is not 0, we therefore push **two** frames: the body of the loop and,
+just below it, a new frame that only holds the loop.
+
+Note that the empty frames do not take one step of their own anymore: a step now
+executes exactly one command. The traces do change:
+
+```lean
+#eval trace [.incr, .right, .incr]
+-- ["+>+"] 0
+-- [">+"] 1
+-- ["+"] 0
+-- [""] 1
+
+#eval trace [.incr, .loop [.decr], .right]
+-- ["+[-]>"] 0
+-- ["[-]>"] 1
+-- ["-", "[-]", ">"] 1
+-- ["", "[-]", ">"] 0
+-- ["", ">"] 0
+-- [""] 0
+```
+
+The tests of step 3 must still pass.
+
+### Step 6: Lifting the Tape Actions
+
+The six branches for the tape actions still follow the same pattern. A tape
+action only knows about the tape. It cannot fail and it doesn't touch the stack,
+so we have to adapt it to the machine.
+
+**Task.** Proceed in two passes.
+
+  1. Extract the common pattern of the six branches. You can copy their code
+     almost verbatim, using `get` and `set`:
+
+     ```lean
+     def Machine.liftAction (action : Tape.Action) : Machine.Step Unit
+     ```
+
+     Each branch now looks like `.left => Machine.liftAction Tape.left`. Move
+     the code of the loop branch to its own definition as well, and notice that
+     the `if` doesn't need an `else`: when the loop is skipped, the command has
+     already been removed and there is nothing left to do.
+
+     ```lean
+     def Machine.nextInLoop (inner : Program) : Machine.Step Unit
+     ```
+
+  2. What does `liftAction` actually do? Write it again without `get` and `set`,
+     as a plain function. It must turn a value of type `Tape → IO (Unit × Tape)`
+     into a value of type `Machine → IO (Option (Unit × Machine))`.
+
+<details>
+<summary>Hint</summary>
+
+Start from the machine, as an explicit argument:
+
+```lean
+def Machine.liftAction (action : Tape.Action) : Machine.Step Unit :=
+  fun ((stack, tape) : Machine) => do
+    let ((), tape) <- action tape
+    ...
+```
+
+To end this block, build the expected value and tell Lean which monad you are
+in, so that it picks the right `pure`:
+
+```lean
+    (pure ... : IO (Option (Unit × Machine)))
+```
+
+</details>
+
+### Step 7: An Automatic Conversion
+
+We have to write `Machine.liftAction` in six places, though there is only one
+sensible way to use a `Tape.Action` as a `Machine.Step Unit`. Lean can insert
+this conversion on its own if we declare it as a coercion.
+
+**Task.** Add the following instance, and remove every explicit call to
+`Machine.liftAction` from `Tape.next?`.
+
+```lean
+instance : Coe Tape.Action (Machine.Step Unit) where
+  coe := Machine.liftAction
+```
+
+You should end up with a definition that reads like a specification of the
+language:
+
+```lean
+def Tape.next? : Machine.Step Unit := do
+  let command <- Machine.advance
+  match command with
+  | .left => Tape.left
+  ...
+  | .loop inner => Machine.nextInLoop inner
+```
+
+### Step 8: A More Precise Type
+
+Look again at `Machine.advance`. It works on the machine and may fail, but it
+performs no input or output, and its type should say so:
+
+```lean
+abbrev Machine.Step.Pure := StateT Machine Option
+-- so Machine.Step.Pure α unfolds to: Machine → Option (α × Machine)
+```
+
+**Task.** Rename your function to `Machine.advancePure` and give it the type
+below. If you did the previous steps, its code doesn't change at all, except for
+the name of the recursive call.
+
+```lean
+partial def Machine.advancePure : Machine.Step.Pure Command
+```
+
+**Task.** Define `Machine.advance` on top of it, as a plain function, like you
+did for `liftAction`. This time, you need to get a term of type
+`Machine → IO (Option (Command × Machine))` from a term of type
+`Machine → Option (Command × Machine)`.
+
+```lean
+def Machine.advance : Machine.Step Command
+```
+
+<details>
+<summary>Hint</summary>
+
+```lean
+def Machine.advance : Machine.Step Command :=
+  fun (machine : Machine) =>
+    let result : Option (Command × Machine) := Machine.advancePure machine
+    ...
+```
+
+The value `result` has no effect to perform, so `pure` is all it takes to bring
+it to `IO`. As in the previous hint, annotate its type so that Lean selects the
+right `pure`.
+
+</details>
+
+Is it worth it? Having `Machine.advance` written directly in `Machine.Step`, as
+in step 5, is perfectly pragmatic. The pure version requires an extra conversion,
+but its type guarantees that it will never print anything.
+
+All the tests and the traces of step 5 must still pass. For a last check, this
+program should print the letter `A`:
+
+```lean
+#eval do
+  let _ <- Machine.run ([letterA], {})
+```
+
 The Parser
 --------------------------------------------------------------------------------
 
@@ -737,3 +1112,14 @@ These extensions are optional.
     of the parser? Each successful step of `parseCommand` consumes at least one
     character, so the parser always stops. Can you get rid of `partial`
     and have Lean accept your definitions?
+
+  - **A total `advance`.** `Machine.advancePure` is `partial`, so nothing can be
+    proved about it. Write it instead as a function on `Machine` that pattern
+    matches on the stack, with `termination_by machine => machine.1.length`.
+
+  - **Empty frames.** Measure the maximum depth of the stack when running
+    `squares.bf` with the code of step 3 and with the code of step 8. Why does
+    the second one grow? (Look at what remains on the stack after each iteration
+    of a loop.) Change `Machine.nextInLoop` to fix this: since
+    `Machine.advance` leaves the frame of the loop on top of the stack, the
+    command can be put back in that frame.

@@ -193,12 +193,12 @@ instance : Coe Tape.Action (Machine.Step Unit) where
 def Machine.nextInLoop (inner : Program) : Machine.Step Unit := do
   let (stack, tape) <- get
   if tape.current ≠ 0 then
-    -- Put the loop instructions in a new frame, re-schedule the loop,
-    -- and the rest of the stack
-    set (inner :: [Command.loop inner] :: stack, tape)
-    let stack := inner :: stack
-    let machine := (stack, tape)
-    set machine
+    match stack with
+    | [] => unreachable!
+    | code :: stack =>
+      -- schedule the loop instructions then re-schedule the loop
+      let stack := inner :: (Command.loop inner :: code) :: stack
+      set (stack, tape)
   -- no else clause: if we skip the loop, it's business as usual.
 
 def Tape.next? : Machine.Step Unit := do
