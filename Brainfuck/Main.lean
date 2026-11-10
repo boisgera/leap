@@ -121,47 +121,101 @@ Useful for pedagogical issues and debugging!
 Also, since this is not recursive or partial, we can do proofs with it!
 -/
 
-abbrev Stack := List (List Command)
+abbrev Program := List Command
+abbrev Stack := List Program
 abbrev Machine := Stack × Tape
+abbrev Machine.Step.Pure := StateT Machine Option
+abbrev Machine.Step := StateT Machine (OptionT IO)
 
 /-!
-TODO: cleaner (Stream?) api for termintation. Mmm Stream doesn't perfectly
-      fit, it's not monadic. Arf, shoot... Anyway we need at least a better
-      termination? Or just test manually with a helper function?
-      Well, actually we could do some `Stream (Stack × Tape) (IO Unit)`,
-      the use API would be very simple AFAICT.
-      The associated `next?` function would (def eq to)
-      `StateT (Stack × Tape) Option (IO Unit)`.
-      `none` represents the end of the iteration (at this stage we
-      have 0 other kind of errors).
-      But then is there a mismatch with the Action API above?
-      Think of it, I felt that the Action modelling was klunky anyway.
-
-      Update: that doesn't WORK. read needs to IO context to generate the
-      new tape. Do we need to pick `IO (Stack × Tape)` as the stream
-      type?
-
-
-TODO: cleaner, more imperative version.
-TODO: turn this (Stack × Tape) -> IO (Unit × (Stack × Tape)) into
-a (Stack × Tape) -> Option (IO (Unit × (Stack × Tape)))?
-
-To begin with, just make a helper function that reads if Stack is empty
-(to test the end of the code execution)? I don't know. The
-  match stack with
-  | [] => return
-feels like it want to return a none.
-
-OK keep this one like that and add a next? version on top of it,
-with signature Machine -> OptionT IO Machine
-(which means Machine -> IO (Option Machine)))
-
-TODO: def Machine := Stack × Tape ?
+Tape advance doesn't *require* to access IO:
 -/
-def Tape.next : StateT (Stack × Tape) IO Unit  := do
+partial def Machine.advancePure : Machine.Step.Pure Command := do
   let (stack, tape) <- get
   match stack with
-  | [] => return
+  | [] => failure
+  | code :: stack =>
+    match code with
+    | [] =>
+      set (stack, tape)
+      Machine.advancePure
+    | command :: code =>
+      set (code :: stack, tape)
+      return command
+
+/-!
+However, we need a version with IO to integrate smoothly into Tape.next?
+That means getting a term of type `Machine → IO (Option (Command × Machine))`
+from a term of type `Machine → Option (Command × Machine)`.
+-/
+def Machine.advance : Machine.Step Command :=
+  fun (machine : Machine) =>
+    let command_machine? : Option (Command × Machine) :=
+      Machine.advancePure machine
+    -- annotate the return type to have the right version of `pure` selected
+    (pure command_machine? : IO (Option (Command × Machine)))
+
+/-
+Of course we could also be pragmatic instead and define directly our advance
+method in the the type that we ultimately need:
+-/
+partial def Machine.advance' : Machine.Step Command := do
+  let (stack, tape) <- get
+  match stack with
+  | [] => failure
+  | code :: stack =>
+    match code with
+    | [] =>
+      set (stack, tape)
+      Machine.advance'
+    | command :: code =>
+      set (code :: stack, tape)
+      return command
+
+/-!
+Now we have a similar issue for every method like Tape.left: they cannot fail
+and do not touch the Stack part of the Machine, only the Tape part. So
+we need to produce a term of type `Machine → IO (Option (Unit × Machine))`
+from a term of type `Tape → IO (Unit × Tape)`. Let's do this!
+-/
+def Machine.liftAction (action : Tape.Action) : Machine.Step Unit :=
+  fun ((stack, tape) : Machine) => do
+    let (_, tape) <- action tape
+    let machine := (stack, tape)
+    (pure (some ((), machine)) : IO (Option (Unit × Machine)))
+
+/-!
+Since we don't want that to add too much noise, we automate the conversion.
+-/
+instance : Coe Tape.Action (Machine.Step Unit) where
+  coe := Machine.liftAction
+
+def Machine.nextInLoop (inner : Program) : Machine.Step Unit := do
+  let (stack, tape) <- get
+  if tape.current ≠ 0 then
+    -- Put the loop instructions in a new frame, re-schedule the loop,
+    -- and the rest of the stack
+    set (inner :: [Command.loop inner] :: stack, tape)
+    let stack := inner :: stack
+    let machine := (stack, tape)
+    set machine
+  -- no else clause: if we skip the loop, it's business as usual.
+
+def Tape.next? : Machine.Step Unit := do
+  let command <- Machine.advance
+  match command with
+  | .left => Tape.left
+  | .right => Tape.right
+  | .decr => Tape.decr
+  | .incr => Tape.incr
+  | .read => Tape.read
+  | .write => Tape.write
+  | .loop inner => Machine.nextInLoop inner
+
+def Tape.next?_ : Machine.Step Unit := do
+  let (stack, tape) <- get
+  match stack with
+  | [] => failure
   | code :: stack =>
     match code with
     | [] =>
