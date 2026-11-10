@@ -579,6 +579,25 @@ example {p q r : Prop} : p ∨ (q ∧ r) ↔ (p ∨ q) ∧ (p ∨ r) := by
         · assumption
 
 /-!
+The recursive intro `rintro` can be very useful to replace an `intro`
+immediately followed by some pattern matching. With that and a small amount
+of explicit terms using anonymous constructor,
+we end up with a rather short proof:
+
+-/
+
+example {p q r : Prop} : p ∨ (q ∧ r) ↔ (p ∨ q) ∧ (p ∨ r) := by
+  constructor
+  · rintro (hp | ⟨hq, hr⟩)
+    · exact ⟨.inl hp, .inl hp⟩
+    · exact ⟨.inr hq, .inr hr⟩
+  · rintro ⟨hp | hq, hp' | hr⟩
+    · exact .inl hp
+    · exact .inl hp
+    · exact .inl hp'
+    · exact .inr ⟨hq, hr⟩
+
+/-!
 `False` and negation.
 --------------------------------------------------------------------------------
 
@@ -669,7 +688,7 @@ theorem de_morgan_1 {p q : Prop} : ¬ p ∧ ¬ q → ¬ (p ∨ q)  := by
 
 
 
-/------------------------------------------------------------------------------/
+--------------------------------------------------------------------------------
 
 variable {p q r s: Prop}
 
@@ -869,18 +888,3 @@ theorem de_morgan_theorem_1₂ : ¬(p ∨ q) ↔ ¬p ∧ ¬q :=
     | Or.inl hp => h_not_p hp
     | Or.inr hq => h_not_q hq
   ⟨h₁, h₂⟩
-
-
-
-
-/-
-
-de_morgan_theorem_2
-
-commutation_1
-
-commutation_2
-
-commutation_3
-
--/
