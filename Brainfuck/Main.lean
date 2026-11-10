@@ -344,6 +344,8 @@ TODO: write example codes, make a main function that executes the brainfuck file
 def usage : IO Unit :=
   IO.println "Usage: brainfuck [FILE.bf]"
 
+-- TODO: add a "-v / --verbose" option to use the step by step interpreter
+-- and push the machine state at each step to stderr?
 def main (args : List String) : IO UInt32 := do
   match args with
   | [] => usage ; return 1
