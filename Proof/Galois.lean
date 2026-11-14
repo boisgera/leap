@@ -37,11 +37,56 @@ and stuff. Just check that every CompleteLinearOrder is a Preorder.
 
 example {α : Type*} [CompleteLinearOrder α] : Preorder α := inferInstance
 
-
+/-!
+The `InfSet` type class, that defines a `sInf` operation has no semantics
+whatsoever.
+-/
 #check sInf
 -- InfSet.sInf.{u_1} {α : Type u_1} [self : InfSet α] : Set α → α
 
+#print InfSet
+-- class InfSet.{u_1} (α : Type u_1) : Type u_1
+-- number of parameters: 1
+-- fields:
+--   InfSet.sInf : Set α → α
+-- constructor:
+--   InfSet.mk.{u_1} {α : Type u_1} (sInf : Set α → α) : InfSet α
+
+/-!
+The lawful version is `CompleteSemilatticeInf`:
+-/
+
+#print CompleteSemilatticeInf
+-- class CompleteSemilatticeInf.{u_8} (α : Type u_8) : Type u_8
+-- ...
+--   CompleteSemilatticeInf.isGLB_sInf : ∀ (s : Set α), IsGLB s (sInf s)
+-- ...
+
+#print IsGLB
+-- def IsGLB.{u_1} : {α : Type u_1} → [LE α] → Set α → α → Prop :=
+-- fun {α} [LE α] s => IsGreatest (lowerBounds s)
+
+#print IsGreatest
+-- def IsGreatest.{u_1} : {α : Type u_1} → [LE α] → Set α → α → Prop :=
+-- fun {α} [LE α] s a => a ∈ s ∧ a ∈ upperBounds s
+
+#print lowerBounds
+-- def lowerBounds.{u_1} : {α : Type u_1} → [LE α] → Set α → Set α :=
+-- fun {α} [LE α] s => {x | ∀ ⦃a : α⦄, a ∈ s → x ≤ a}
+
+#print upperBounds
+-- def upperBounds.{u_1} : {α : Type u_1} → [LE α] → Set α → Set α :=
+-- fun {α} [LE α] s => {x | ∀ ⦃a : α⦄, a ∈ s → a ≤ x}
+
+/-!
+Let's quickly forget about these details and just check that everything
+works perfectly in `CompleteLinearOrder`:
+-/
+
 example {α : Type*} [CompleteLinearOrder α] : InfSet α := inferInstance
+
+example {α : Type*} [CompleteLinearOrder α] : CompleteSemilatticeInf α := inferInstance
+
 
 /-!
 --------------------------------------------------------------------------------
@@ -67,6 +112,27 @@ example {α : Type*} [CompleteLinearOrder α] : InfSet α := inferInstance
 -- le_sInf_iff.{u_1} {α : Type u_1} [CompleteSemilatticeInf α] {s : Set α} {a : α} :
 -- a ≤ sInf s ↔ ∀ b ∈ s, a ≤ b
 
+namespace Galois
+
+theorem galois_1 {α β}
+    [CompleteLinearOrder α] [CompleteLinearOrder β]
+    (f : α → β) (fm : Monotone f) :
+    ∃ (g : β → α),
+    (∀ (a : α) (b : β), b ≤ f a ↔ g b ≤ a) := by
+  let g (b : β) := sInf { a | b ≤ f a }
+  use g
+  intro a b
+  simp only [g]
+  constructor
+  · intro hab
+    apply sInf_le
+    simp only [Set.mem_ofPred_eq]
+    exact hab
+  · intro hab
+    rw [sInf_le_iff, lowerBounds] at hab
+    simp only [Set.mem_ofPred_eq] at hab
+    -- apply hab
+    sorry
 
 theorem galois {α β}
     [CompleteLinearOrder α] [CompleteLinearOrder β]
@@ -77,3 +143,5 @@ theorem galois {α β}
   sorry
 
 #check galois
+
+end Galois
