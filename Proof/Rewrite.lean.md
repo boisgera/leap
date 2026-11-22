@@ -129,8 +129,8 @@ example {n : ℕ} : (n + 0) * 1 = n := by
   ]
 ```
 
-By default a rewrite will target the goal. It's actually possible to make it
-target an assumption instead with the syntax `rw [...] at ...`:
+By default a rewrite will target the goal; tt's possible
+target an assumption instead with the syntax `rw [...] at ...` syntax:
 
 ```lean4
 example {n : ℕ} (hn : n + 0 = 1) : n + 1 = 2 := by
