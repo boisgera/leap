@@ -118,8 +118,8 @@ indendation:
 ```lean4
 example {n : ℕ} : (n + 0) * 1 = n := by
   rw [
-      Nat.add_zero, -- ⊢ n * 1 = n
-      Nat.mul_one   -- Goals accomplished!
+    Nat.add_zero, -- ⊢ n * 1 = n
+    Nat.mul_one   -- Goals accomplished!
   ]
 
 example {n : ℕ} : (n + 0) * 1 = n := by
