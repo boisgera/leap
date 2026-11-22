@@ -147,7 +147,7 @@ example {n : ℕ} (hn : n + 0 = 1) : n + 1 = 2 := by
   rw [hn] at ⊢            -- Goals accomplished!
 
 /-!
-You can also try and perform some rewriting at several place at once:
+You can also try and perform some rewriting at several places at once:
 -/
 
 example {n : ℕ} (hn : n + 0 = 1) : (n + 1) + 0 = 2 := by
@@ -253,19 +253,3 @@ you name the rewrite rules, perform the `Set.image_empty` rewrite first,
 which allows you to perform both `sInf_empty` simplifications in one
 go afterwards.
 -/
-
-theorem map_top' {α β} [CompleteLinearOrder α]  [CompleteLinearOrder β]
-    (f : α → β)
-    (hf : ∀ (s : Set α), f (sInf s) = sInf (f '' s)) :
-    f ⊤ = ⊤ := by
-  specialize hf ∅
-  simp_rw [sInf_empty, Set.image_empty, sInf_empty] at hf
-  assumption
-
-theorem map_top'' {α β} [CompleteLinearOrder α]  [CompleteLinearOrder β]
-    (f : α → β)
-    (hf : ∀ (s : Set α), f (sInf s) = sInf (f '' s)) :
-    f ⊤ = ⊤ := by
-  specialize hf ∅
-  simp_rw [Set.image_empty, sInf_empty] at hf
-  assumption
