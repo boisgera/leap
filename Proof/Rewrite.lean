@@ -5,6 +5,10 @@ Rewrite rules
 ================================================================================
 -/
 
+/-!
+The `rewrite` tactic uses an equality to perform a substitution:
+-/
+
 example {n : ℕ} (hn : n = 1) : n + 1 = 2 := by
   rewrite [hn] -- new goal: ⊢ 1 + 1 = 2
   rfl
@@ -17,7 +21,7 @@ The `rewrite` tactic is rarely used; instead one uses `rw`, which has the
 same syntax but applies automatically a weak[^1] version of `rfl` to try and
 close the goal automatically.
 
-[^1] It applies `with_reducible rfl`, which only expands definition marked
+[^1]: It applies `with_reducible rfl`, which only expands definition marked
 explicitly as `@[reducible]`. By default, definitions are only semi-reducible.
 -/
 
