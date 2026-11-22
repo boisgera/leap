@@ -169,10 +169,108 @@ You can even go crazy and try to rewrite all targets at each step:
 example {n : ℕ} (hn : n + 0 = 1) : (n + 1) + 0 = 2 := by
   rw [Nat.add_zero, hn] at * -- Goals accomplished!
 
+/-!
+You can rewrite global definitions:
+-/
+
+def answer := 42
+
+example : answer + 1 = 43 := by
+  rw [answer]
 
 /-!
-rewrite definitions (def -> def eq ?) and local definitions
-(let won't work, use set ... with h ?);
+That works in the simples cases but often, you need to actually
+using the generated equations `.eq_def` associated to the definition:
+-/
+
+#print answer.eq_def
+-- @[backward_defeq] theorem answer.eq_def : answer = 42 :=
+-- Eq.refl answer
+
+example : answer + 1 = 43 := by
+  rw [answer.eq_def]
+
+/-!
+When your definition is a pattern match, several equations are generated:
+-/
+
+def fact : ℕ → ℕ
+  | 0 => 1
+  | n + 1 => (n + 1) * fact n
+
+
+#check fact.eq_def
+-- fact.eq_def (x✝ : ℕ) :
+--   fact x✝ =
+--     match x✝ with
+--     | 0 => 1
+--     | n.succ => (n + 1) * fact n
+
+#check fact.eq_1
+-- fact.eq_1 : fact 0 = 1
+
+#check fact.eq_2
+-- fact.eq_2 (n : ℕ) : fact n.succ = (n + 1) * fact n
+
+example (n : ℕ) : fact (n + 2) = (n + 2) * (n + 1) * fact n := by
+  rw [fact] -- ⊢ (n + 1 + 1) * fact (n + 1) = (n + 2) * (n + 1) * fact n
+  rw [fact] -- ⊢ (n + 1 + 1) * ((n + 1) * fact n) = (n + 2) * (n + 1) * fact n
+  grind
+
+/-!
+Which is equivalent to the more targetted:
+-/
+
+example (n : ℕ) : fact (n + 2) = (n + 2) * (n + 1) * fact n := by
+  rw [fact.eq_2 (n + 1)] -- ⊢ (n + 1 + 1) * fact (n + 1) = (n + 2) * (n + 1) * fact n
+  rw [fact.eq_2 n]       -- ⊢ (n + 1 + 1) * ((n + 1) * fact n) = (n + 2) * (n + 1) * fact n
+  grind
+
+/-!
+If you don't like `grind` and wish to conclude the proof with elementary rewrites:
+-/
+
+example (n : ℕ) : fact (n + 2) = (n + 2) * (n + 1) * fact n := by
+  rw [fact.eq_2 (n + 1)] -- ⊢ (n + 1 + 1) * fact (n + 1) = (n + 2) * (n + 1) * fact n
+  rw [fact.eq_2 n]       -- ⊢ (n + 1 + 1) * ((n + 1) * fact n) = (n + 2) * (n + 1) * fact n
+  have hn : n + 1 + 1 = n + 2 := by rfl
+  rw [hn]
+  rw [Nat.mul_assoc]
+
+/-!
+The compact version where we "inline" the intermediate lemma:
+-/
+
+example (n : ℕ) :  fact (n + 2) = (n + 2) * (n + 1) * fact n := by
+  rw [fact, fact, show n + 1 + 1 = n + 2 from by rfl, Nat.mul_assoc]
+
+/-!
+Rewrite won't work with local definition with `let`, which do not generate
+equations. You have to state the equation yourself and prove it (which is
+easy since it holds by definition, so `rfl` works!)
+-/
+
+example (m n : ℕ) (hmn : m + n = 1) : (m + n) ^ 2 + (m + n) = 2 := by
+  let p := m + n
+  have hp : m + n = p := by rfl
+  rw [hp] at hmn ⊢
+  rw [hmn]
+  rfl
+
+/-!
+Alternatively, you can use `set p := ... with hp` that will automatically
+perform the rewrite for all occurrences of the right-hand side in this
+definition:
+-/
+
+example (m n : ℕ) (hmn : m + n = 1) : (m + n) ^ 2 + (m + n) = 2 := by
+  set p := m + n with hp
+  rw [hmn]
+  rfl
+
+
+/-!
+--------------------------------------------------------------------------------
 -/
 
 /-!
@@ -186,6 +284,10 @@ introduces a new variable)
 
 /-!
 conv can help for targetting AND working under binders.
+-/
+
+/-!
+--------------------------------------------------------------------------------
 -/
 
 /-!
