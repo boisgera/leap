@@ -5,29 +5,166 @@ Rewrite rules
 ================================================================================
 -/
 
-/-!
-eq + goal => rewrite
--/
+example {n : ℕ} (hn : n = 1) : n + 1 = 2 := by
+  rewrite [hn] -- new goal: ⊢ 1 + 1 = 2
+  rfl
 
 /-!
-eq in the wrong way + goal => rewrite <-
+The `rfl` tactic check if the left-hand side and the right-hand are
+**definitionally equal**, which is true.
+
+The `rewrite` tactic is rarely used; instead one uses `rw`, which has the
+same syntax but applies automatically a weak[^1] version of `rfl` to try and
+close the goal automatically.
+
+[^1] It applies `with_reducible rfl`, which only expands definition marked
+explicitly as `@[reducible]`. By default, definitions are only semi-reducible.
 -/
+
+example {n : ℕ} (hn : n = 1) : n + 1 = 2 := by
+  rw [hn] -- ⊢ 1 + 1 = 2, which is automatically closed.
 
 /-!
-rw is actually rewrite with an attempt to close trivial goals afterwards with
-a weak version rfl (only the definition marked as @[reducible] are expanded:
-with_reducible rfl).
-
-(NOBODY uses rewrite)
+By default, rewrites use an equality `a = b` to transform `a` into `b`.
+We can use the symmetry of the equality if we want to perform the
+converse substitution:
 -/
+
+#check Eq.symm
+-- Eq.symm.{u} {α : Sort u} {a b : α} (h : a = b) : b = a
+
+example {n : ℕ} (hn : 1 = n) : n + 1 = 2 := by
+  rw [hn.symm]
 
 /-!
-sequences of rewrites, hover/cursor in between.
+But `rw` has a simpler syntax to do that:
 -/
 
+example {n : ℕ} (hn : 1 = n) : n + 1 = 2 := by
+  rw [← hn]
+
 /-!
-target assumption, assumption, the goal, everything
+The equality can be parametrized, i.e. returned by a function.
+For example, the theorem `Nat.add_zero` and `Nat.mul_one` provide
+equalities given a natural number `n`:
 -/
+
+#check Nat.add_zero
+-- Nat.add_zero (n : ℕ) : n + 0 = n
+
+#check Nat.mul_one
+-- Nat.mul_one (n : ℕ) : n * 1 = n
+
+/-!
+So we can use them to prove that `(n + 0) * 1 = n`:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.add_zero n] -- ⊢ n * 1 = n
+  rw [Nat.mul_one n]  -- Goals accomplished!
+
+/-!
+Equivalently:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.mul_one (n + 0)] -- ⊢ n + 0 = n
+  rw [Nat.add_zero n]      -- Goals accomplished!
+
+/-!
+You can also use the hole `_` argument to let Lean try to infer from the
+context what the argument of the theorem should be:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.add_zero _] -- ⊢ n * 1 = n
+  rw [Nat.mul_one _]  -- Goals accomplished!
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.mul_one _]  -- ⊢ n + 0 = n
+  rw [Nat.add_zero _] -- Goals accomplished!
+
+/-!
+Equivalently, don't mention the argument at all:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.add_zero] -- ⊢ n * 1 = n
+  rw [Nat.mul_one]  -- Goals accomplished!
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.mul_one]  -- ⊢ n + 0 = n
+  rw [Nat.add_zero] -- Goals accomplished!
+
+/-!
+These sequence of rewrites can be rewritten in a terser form:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.add_zero, Nat.mul_one] -- Goals accomplished!
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [Nat.mul_one, Nat.add_zero] -- Goals accomplished!
+
+/-!
+You can still see the stage of the proof if you put your cursor between
+two terms between the brackets. It's even more obvious with the following
+indendation:
+-/
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [
+      Nat.add_zero, -- ⊢ n * 1 = n
+      Nat.mul_one   -- Goals accomplished!
+  ]
+
+example {n : ℕ} : (n + 0) * 1 = n := by
+  rw [
+    Nat.mul_one, -- ⊢ n + 0 = n
+    Nat.add_zero -- Goals accomplished!
+  ]
+
+/-!
+By default a rewrite will target the goal. It's actually possible to make it
+target an assumption instead with the syntax `rw [...] at ...`:
+-/
+
+example {n : ℕ} (hn : n + 0 = 1) : n + 1 = 2 := by
+  rw [Nat.add_zero] at hn -- hn : n = 1
+  rw [hn]                 -- Goals accomplished!
+
+/-!
+The bare `rw` is actually a shortcurt for `rw ... at ⊢` (the turnstile
+symbol `⊢` can be typed as the sequence `\|-`, slash-pipe-minus):
+-/
+
+example {n : ℕ} (hn : n + 0 = 1) : n + 1 = 2 := by
+  rw [Nat.add_zero] at hn -- hn : n = 1
+  rw [hn] at ⊢            -- Goals accomplished!
+
+/-!
+You can also try and perform some rewriting at several place at once:
+-/
+
+example {n : ℕ} (hn : n + 0 = 1) : (n + 1) + 0 = 2 := by
+  rw [Nat.add_zero] at hn ⊢ -- hn : n = 1, ⊢ n + 1 = 2
+  rw [hn]                   -- Goals accomplished!
+
+/-!
+You can even try to target all assumptions and the goal at once:
+-/
+
+example {n : ℕ} (hn : n + 0 = 1) : (n + 1) + 0 = 2 := by
+  rw [Nat.add_zero] at * -- hn : n = 1, ⊢ n + 1 = 2
+  rw [hn]                -- Goals accomplished!
+
+/-!
+You can even go crazy and try to rewrite all targets at each step:
+-/
+
+example {n : ℕ} (hn : n + 0 = 1) : (n + 1) + 0 = 2 := by
+  rw [Nat.add_zero, hn] at * -- Goals accomplished!
+
 
 /-!
 rewrite definitions (def -> def eq ?) and local definitions
