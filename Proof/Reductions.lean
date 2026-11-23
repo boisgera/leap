@@ -5,7 +5,43 @@ open Lean Meta Elab Command Term
 /-!
 Reductions
 ================================================================================
+
+or rename reflexivity? We need to understand what rfl is doing and what
+simp only is doing (roughly speaking).
 -/
+
+example : 1 + 1 = 2 := by rfl
+
+example : some (1 + 1) = some 2 := by rfl
+
+/-! Arf, rfl actually does not apply some whnf, it goes through a formal
+"definition equality" test
+-/
+
+#check isDefEq
+-- Lean.Meta.isDefEq (t s : Expr) : MetaM Bool
+
+
+example : (fun x => x + 1) 2 = 2 + 1 := rfl        -- beta
+def double (n : Nat) := n + n
+example : double 3 = 6 := rfl                      -- delta, then Nat arithmetic
+example : (let x := 5; x + 1) = 5 + 1 := rfl       -- zeta
+example : [1, 2].length = 2 := rfl                 -- iota: the recursor fires on constructors
+example (n : Nat) : n + 0 = n := rfl               -- Nat.add recurses on its 2nd argument; 0 is a constructor
+example (xs : List Nat) : [] ++ xs = xs := rfl     -- append recurses on its 1st argument; [] is a constructor
+example (f : Nat → Nat) : f = fun x => f x := rfl  -- eta (functions)
+example (p : Nat × Nat) : p = (p.1, p.2) := rfl    -- eta (structures)
+example (P : Prop) (h₁ h₂ : P) : h₁ = h₂ := rfl    -- proof irrelevance
+
+example (n : Nat) : 0 + n = n := rfl                         -- stuck: recursion is on n, which is a variable, not a constructor
+example (n : Nat) : n + 1 = 1 + n := rfl                     -- `1 + n` is stuck on the variable n
+example (xs : List Nat) : xs ++ [] = xs := rfl               -- stuck: recursion is on xs
+example : (fun n : Nat => 0 + n) = (fun n => n + 0) := rfl   -- the two functions agree on every input but are not definitionally equal
+example : 2 + 2 = 5 := rfl                                   -- both sides reduce to different literals
+example : some 1 = none := rfl
+
+
+example (ns : List ℕ) : ([1, 2] ++ ns).length = ns.length + 2 := by rfl
 
 /-!
 Typology
