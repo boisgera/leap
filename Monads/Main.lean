@@ -15,6 +15,8 @@ More constructs in IO / do blocks
 
 Mutable variables and for loops.
 
+TODO : Add while and repeat.
+
 -/
 
 def main (args : List String) : IO UInt32 := do
