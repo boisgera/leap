@@ -3,9 +3,11 @@ import Mathlib
 /-!
 Already done at this stage in `IO`:
 
-  - `do` blocks and sequencing
-  - `return`
+  - `do` blocks
+  - sequencing
   - `<-`
+  - `return`
+
 
 -/
 
@@ -15,7 +17,7 @@ More constructs in IO / do blocks
 
 Mutable variables and for loops.
 
-TODO : Add while and repeat.
+TODO : Add while, repeat, break and continue.
 
 -/
 

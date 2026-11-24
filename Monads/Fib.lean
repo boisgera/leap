@@ -151,8 +151,7 @@ def StateM.fib (n : ℕ) : CounterM ℕ := fun count =>
 #eval (StateM.fib 10).run' 0 -- 55
 
 def StateM.fib2 (n : ℕ) : CounterM ℕ := do
-  let count ← fun c => (c, c) -- get the state
-  let _ ←  fun _ => ((), count + 1)  -- set the new state
+  fun (count) => ((), count + 1) -- increase the count, return the unit
   match n with
   | 0 => return 0
   | 1 => return 1
