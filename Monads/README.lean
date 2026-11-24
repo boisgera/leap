@@ -3,6 +3,8 @@
 Practical:
   - [ ] The `IO` monad, sequencing, `do` blocks, `←` and `return` (example).
   - [ ] `for`, `while`, `repeat`, `break`, `continue` and mutable variables.
+        Warning: the mutability is *local* to the do block and the *data*
+        is still immutable
   - [ ] Fibonacci : the naive FP version and the efficient one.
   - [ ] The second version, rewritten in `IO`.
   - [ ] The second version, rewritten in `Id`. `Id α = α` and `Id.run`.
