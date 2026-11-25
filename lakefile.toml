@@ -57,6 +57,10 @@ name = "brainfuck"
 root = "Brainfuck.Main"
 
 [[lean_exe]]
+name = "brainfuck2"
+root = "Brainfuck2.Main"
+
+[[lean_exe]]
 name = "led"
 root = "Tasks.LED"
 
