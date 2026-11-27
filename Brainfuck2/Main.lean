@@ -1,90 +1,12 @@
-/-!
-
-Preamble
---------------------------------------------------------------------------------
-
-  - [ ] Learn the basics about [Brainfuck], its syntax, data and execution.
-
-  - [ ] Create a top-level `Brainfuck` namespace and child namespaces
-    `V1`, `V2` and `V3` version namespaces.
-
-[Brainfuck]: https://en.wikipedia.org/wiki/Brainfuck
-
-
-
-Version 1 : Data
---------------------------------------------------------------------------------
-
-In this section, everything takes place in `V1` (the root namespace).
-
-### Data structure
-
-  - [ ] Create a new `Data` structure that represents the tape and the data
-    pointer.
-
-  - [ ] Implement `Data` methods `incr`, `decr`, `left` and `right`
-    with a common `Data → Data` signature which correspond to the
-    `+`, `-`, `<` and `>` instructions.
-
-  - [ ] Create a `Data` method `toString` that represent cell values in
-    hexadecimal and adds a bracket around the cell which is pointed to.
-    For example, you could associates to the tape with cells values
-    0, 255, 127 and 255 and with a pointer to the third cell like
-    `00 ff [7f] ff`.
-
-    Then declare an instance of `ToString Data` with:
-    ```
-    instance : ToString Data where
-      toString := Data.toString
-    ```
-
-  - [ ] With `DataM` an alias for `StateM Data`, implement variants of the
-    `incr`, `decr`, `left` and `right` in the root namespace
-    with type `DataM Unit` using your previous implementations.
-
-
-### Program execution
-
-  - [ ] Define a new `Command` type with constructors `incr`, `decr`,
-    `left` and `right` (with no arguments) and its `toString` method
-    that return the original symbol as a `String`.
-    Define the corresponding instance of `ToString Command`.
-
-  - [ ] Define a `Command.exec` method of type `Command → DataM Unit`
-    that executes a single command.
-
-  - [ ] Define `Program` as a structure that contains a list of commands,
-    and the associated `toString` method that is a valid source representation
-    of the Brainfuck program. Define the corresponding instance of
-    `ToString Program`.
-
-  - [ ] Implement the `Program.exec` method which executes a program.
-
-### Parser
-
-  - [ ] Define a `parse` function that turns a `String` supposed to represent
-    the content of a valid Brainfuck program into an `Option Program`
-    (use `none` when the source is actually invalid). Use a monadic style
-    when appropriate!
-
-### Command-line interface
-
-  - [ ] Define a `main` function that reads the filename of a Brainfuck program,
-    parses it, executes it and display the tape at the end of the execution.
-
--/
-
 namespace Brainfuck
 
 namespace V1
+
 
 structure Data where
   tape : List UInt8 := [0] -- reversed
   index : Nat := 0         -- *not* reversed (convenient to have index ≥ 0)
 
-/-!
-OF COURSE NOT! That's truncating the tape!
--/
 partial def Data.incr (data : Data) : Data :=
   match data.tape with
   | head :: tail =>
@@ -135,9 +57,6 @@ def Data.toString (data : Data) : String :=
     |>.reverse
     |> " ".intercalate
 
-instance : ToString Data where
-  toString := Data.toString
-
 def testData : Data := ({} : Data).right.incr.right.incr.incr
 
 #guard testData.toString = "00 01 [02]"
@@ -185,11 +104,10 @@ def Command.exec (command : Command) : DataM Unit :=
   | right => V1.right
 
 structure Program where
-  commands : List Command := [] -- reversed
+  commands : List Command := []
 
 def Program.toString (program : Program) : String :=
   program.commands
-    |>.reverse
     |>.map Command.toString
     |> "".intercalate
 
@@ -225,8 +143,8 @@ This is how we would parse & run a program and display the tape
 -/
 #eval (do
   let prg ← parse ">+>++"
-  return (prg.exec {}) |>.2
-  : Option Data
+  return (prg.exec {}) |>.2 |>.toString
+  : Option String
 )
 
 /-!
@@ -238,8 +156,8 @@ This is how we would parse & run a program and display the tape
   let mut data : Data := {}
   (_, data) := prg1.exec data
   (_, data) := prg2.exec data
-  return data
-  : Option Data
+  return data.toString
+  : Option String
 )
 
 /-!
@@ -251,15 +169,10 @@ combination of program executions.
   let prg1 ← parse ">+>++"
   let prg2 ← parse "<+<++"
   let combinedExec : DataM Unit := do prg1.exec ; prg2.exec
-  return combinedExec.run {} |>.2
-  : Option Data
+  return combinedExec.run {} |>.2 |>.toString
+  : Option String
 )
 
-end V1
-
-end Brainfuck
-
-open Brainfuck.V1 in
 def main (args : List String) : IO UInt32 := do
   let stderr ← IO.getStderr
   match args with
@@ -271,5 +184,293 @@ def main (args : List String) : IO UInt32 := do
     | none => stderr.putStrLn "invalid program" ; return 1
     | some prg =>
       let data := (prg.exec {}).2
-      IO.println data
+      IO.println data.toString
   return 0
+
+
+end V1
+
+namespace V2
+
+mutual
+
+inductive Command where
+  | incr
+  | decr
+  | left
+  | right
+  | read
+  | write
+  | loop (program : Program)
+
+structure Program where
+  commands : List Command := []
+
+end
+
+mutual
+
+partial def Command.toString (command : Command) : String :=
+  match command with
+  | .incr => "+"
+  | .decr => "-"
+  | .left => "<"
+  | .right => ">"
+  | .read => ","
+  | .write => "."
+  | .loop program => s!"[{program.toString}]"
+
+partial def Program.toString (program : Program) : String :=
+  program.commands
+    |>.map Command.toString
+    |> "".intercalate
+
+end
+
+structure Data where
+  tape : List UInt8 := [0] -- reversed
+  index : Nat := 0         -- *not* reversed (convenient to have index ≥ 0)
+
+partial def Data.set (byte : UInt8) (data : Data) : Data :=
+  match data.tape with
+  | head :: tail =>
+    if data.index = data.tape.length - 1 then
+      { data with tape := byte :: tail }
+    else
+      let newData := Data.set byte { data with tape := tail }
+      { newData with tape := head :: newData.tape }
+  | [] => data -- unreachable code, return junk
+
+partial def Data.get (data : Data) : UInt8 :=
+  match data.tape with
+  | head :: tail =>
+    if data.index = data.tape.length - 1 then
+      head
+    else
+      Data.get { data with tape := tail }
+  | [] => 0 -- unreachable code, return junk
+
+partial def Data.read (data : Data) : IO Data := do
+  let stdin ← IO.getStdin
+  let bytes ← stdin.read 1
+  let byte := bytes[0]!
+  return data.set byte
+
+partial def Data.write (data : Data) : IO Unit := do
+  let byte := data.get
+  let byteArray := ByteArray.mk #[byte]
+  let stdout ← IO.getStdout
+  stdout.write byteArray
+  stdout.flush
+
+partial def Data.incr (data : Data) : Data :=
+  data.get |> (· + 1) |> data.set
+
+partial def Data.decr (data : Data) : Data :=
+  data.get |> (· - 1) |> data.set
+
+def Data.right (data : Data) : Data :=
+  let index := data.index + 1
+  let tape := if index < data.tape.length then data.tape else 0 :: data.tape
+  { tape, index }
+
+def Data.left (data : Data) : Data :=
+  { data with index := data.index - 1 }
+
+partial def Data.toStringAux (data : Data) (tag : Bool) : List String :=
+  match data.tape with
+  | head :: tail =>
+    let (current, tag) :=
+      if tag = true ∧ data.index = data.tape.length - 1 then
+        (s!"[{head.toHex}]", false)
+      else
+        (head.toHex, tag)
+    let data : Data := { tape := tail, index := data.index }
+    let remain := data.toStringAux tag
+    current :: remain
+  | [] => []
+
+def Data.toString (data : Data) : String :=
+  data.toStringAux (tag := true)
+    |>.reverse
+    |> " ".intercalate
+
+def testData : Data := ({} : Data).right.incr.right.incr.incr
+
+#guard testData.toString = "00 01 [02]"
+#guard testData.right.toString = "00 01 02 [00]"
+#guard testData.left.toString = "00 [01] 02"
+#guard testData.incr.toString = "00 01 [03]"
+#guard testData.decr.toString = "00 01 [01]"
+
+abbrev DataM := StateT Data IO
+
+def read : DataM Unit := fun data => do
+  let data ← data.read ; return ((), data)
+def write : DataM Unit := fun data => do
+  data.write ; return ((), data)
+def incr : DataM Unit := modify Data.incr
+def decr : DataM Unit := modify Data.decr
+def left: DataM Unit := modify Data.left
+def right : DataM Unit := modify Data.right
+
+mutual
+
+partial def Command.exec (command : Command) : DataM Unit := do
+  match command with
+  | .incr => V2.incr
+  | .decr => V2.decr
+  | .left => V2.left
+  | .right => V2.right
+  | .read => V2.read
+  | .write => V2.write
+  | .loop program => do
+      let data ← get
+      if data.get ≠ 0 then
+        let prg : Program := {
+          commands := program.commands ++ [Command.loop program]
+        }
+        prg.exec
+
+partial def Program.exec (program : Program) : DataM Unit := do
+  match program.commands with
+  | [] => return
+  | command :: commands =>
+    -- dbg_trace (s!"command: {command.toString}")
+    command.exec
+    { commands : Program }.exec
+
+end
+
+/--
+Read one symbol, display the symbol and the next two in ASCII order
+-/
+def test : IO Unit := do
+  let program : Program := {
+    commands := [
+      .read,
+      .right,
+      .incr,
+      .incr,
+      .incr,
+      .loop { commands := [.left, .write, .incr, .right, .decr] }
+    ]
+  }
+  IO.println s!"program: {program.toString}"
+  _ ← program.exec.run {}
+
+abbrev ParserM := StateT (List Char) Option
+
+def parseIncr : ParserM Command := do
+  match (← get) with
+  | '+' :: tokens =>
+    set tokens
+    return Command.incr
+  | _ => failure
+
+def parseDecr : ParserM Command := do
+  match (← get) with
+  | '-' :: tokens =>
+    set tokens
+    return Command.decr
+  | _ => failure
+
+def parseLeft : ParserM Command := do
+  match (← get) with
+  | '<' :: tokens =>
+    set tokens
+    return Command.left
+  | _ => failure
+
+def parseRight : ParserM Command := do
+  match (← get) with
+  | '>' :: tokens =>
+    set tokens
+    return Command.right
+  | _ => failure
+
+def parseRead : ParserM Command := do
+  match (← get) with
+  | ',' :: tokens =>
+    set tokens
+    return Command.read
+  | _ => failure
+
+def parseWrite : ParserM Command := do
+  match (← get) with
+  | '.' :: tokens =>
+    set tokens
+    return Command.write
+  | _ => failure
+
+def parseSimpleCommand : ParserM Command :=
+  parseIncr
+  <|> parseDecr
+  <|> parseLeft
+  <|> parseRight
+  <|> parseRead
+  <|> parseWrite
+
+def parseOpenBracket : ParserM Unit := do
+  match (← get) with
+  | '[' :: tokens =>
+    set tokens
+  | _ => failure
+
+def parseClosedBracket : ParserM Unit := do
+  match (← get) with
+  | ']' :: tokens =>
+    set tokens
+  | _ => failure
+
+mutual
+
+partial def parseCommand : ParserM Command :=
+  parseSimpleCommand <|> parseLoop
+
+partial def parseLoop : ParserM Command := do
+  parseOpenBracket
+  let commands ← parseCommands
+  parseClosedBracket
+  return Command.loop { commands := commands }
+
+partial def parseCommands : ParserM (List Command) := do
+  let mut commands := []
+  repeat
+    try
+      commands := (← parseCommand) :: commands
+    catch _ =>
+      break
+  return commands.reverse
+
+end
+
+def parse (src : String) : Option Program :=
+  let tokens := src.toList
+  match parseCommands.run tokens with
+  | some (commands, []) => return { commands } -- parsed up to the end
+  | _ => failure -- error (impossible actually) or partial parse
+
+#eval do
+  let prg ← parse ",>+++[<.+>-]"
+  return prg.toString
+
+def main (args : List String) : IO UInt32 := do
+  let stderr ← IO.getStderr
+  match args with
+  | [] => stderr.putStrLn "brainfuck2 [FILE.bf]" ; return 1
+  | filename :: _ =>
+    let src ← IO.FS.readFile filename
+    let prg? := parse src
+    match prg? with
+    | none =>
+      stderr.putStrLn "invalid program" ; return 1
+    | some prg =>
+      _ ←  prg.exec {} -- discard data
+  return 0
+end V2
+
+end Brainfuck
+
+-- def main := Brainfuck.V1.main
+def main := Brainfuck.V2.main
