@@ -61,8 +61,9 @@ In this section, everything takes place in `V1`.
 
 ### Command-line interface
 
-  - [ ] Define a `main` function that reads the filename of a Brainfuck program,
-    parses it, executes it and display the tape at the end of the execution.
+  - [ ] Define a `main` function that reads the filename of a Brainfuck program
+    with only the `+`, `-`, `<` and `>` symbols, parses it, executes it and
+    displays the tape at the end of the execution.
 
 
 IO & Loops
@@ -134,7 +135,7 @@ for some type `α`, or equivalently if we define `ParserM` as
 ### Command-line interface
 
   - [ ] Define a `main` function that reads the filename of a Brainfuck program,
-    parses it, executes it and display the tape at the end of the execution.
+    parses it and executes it.
 
 
 Appendix/notes
